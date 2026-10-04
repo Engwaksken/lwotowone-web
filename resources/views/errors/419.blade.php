@@ -1,0 +1,1 @@
+@extends('layout') @section('content')<div class="narrow panel"><span class="eyebrow">419</span><h1>Session expired</h1><p>Please refresh the page and try again.</p><a class="button" href="/dashboard">Return to dashboard</a></div>@endsection

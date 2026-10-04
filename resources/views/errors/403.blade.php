@@ -1,0 +1,1 @@
+@extends('layout') @section('content')<div class="narrow panel"><span class="eyebrow">403</span><h1>Access restricted</h1><p>You do not have permission to perform this action.</p><a class="button" href="/dashboard">Return to dashboard</a></div>@endsection

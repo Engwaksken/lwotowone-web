@@ -1,0 +1,1 @@
+@extends('layout') @section('content')<div class="narrow panel"><span class="eyebrow">422</span><h1>Action unavailable</h1><p>Please check the requirements for this action and try again.</p><a class="button" href="/dashboard">Return to dashboard</a></div>@endsection

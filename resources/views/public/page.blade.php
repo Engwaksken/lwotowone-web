@@ -1,0 +1,1 @@
+@extends('layout') @section('title',$page->title.' | Lwotowone') @section('description',$page->meta_description) @section('content')<span class="eyebrow">Lwotowone Enterprises Ltd</span><h1>{{ $page->title }}</h1><div class="prose">{{ $page->body }}</div>@endsection

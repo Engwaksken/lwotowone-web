@@ -1,0 +1,1 @@
+@extends('layout') @section('content')<div class="narrow panel"><span class="eyebrow">500</span><h1>Something went wrong</h1><p>Please try again shortly or contact support.</p><a class="button" href="/dashboard">Return to dashboard</a></div>@endsection

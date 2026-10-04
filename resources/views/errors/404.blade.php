@@ -1,0 +1,1 @@
+@extends('layout') @section('content')<div class="narrow panel"><span class="eyebrow">404</span><h1>Page not found</h1><p>The page or record you requested could not be found.</p><a class="button" href="/dashboard">Return to dashboard</a></div>@endsection

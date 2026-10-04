@@ -1,0 +1,1 @@
+<nav class="pagination" aria-label="Pagination">@if($rows->previousPageUrl())<a href="{{ $rows->previousPageUrl() }}">← Previous</a>@endif<span>Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }}</span>@if($rows->nextPageUrl())<a href="{{ $rows->nextPageUrl() }}">Next →</a>@endif</nav>

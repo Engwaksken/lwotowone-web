@@ -1,0 +1,25 @@
+<?php
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\{AuthController,PublicController,CmsController,PortalController,ReviewController};
+Route::get('/',[PublicController::class,'home']);
+Route::get('/pages/{slug}',[PublicController::class,'page']);
+Route::get('/contact',[PublicController::class,'contact']);
+Route::post('/contact',[PublicController::class,'sendContact'])->middleware('throttle:5,1');
+Route::get('/explore/{type}',[PublicController::class,'listing']);
+Route::get('/explore/{type}/{id}',[PublicController::class,'detail']);
+Route::middleware('guest')->group(function(){
+ Route::get('/login',[AuthController::class,'form'])->name('login');Route::post('/login',[AuthController::class,'login'])->middleware('throttle:login');
+ Route::get('/register',[AuthController::class,'registerForm']);Route::post('/register',[AuthController::class,'register'])->middleware('throttle:5,1');
+ Route::get('/forgot-password',[AuthController::class,'forgot'])->name('password.request');Route::post('/forgot-password',[AuthController::class,'sendReset'])->middleware('throttle:5,1');
+ Route::get('/reset-password/{token}',[AuthController::class,'resetForm'])->name('password.reset');Route::post('/reset-password',[AuthController::class,'reset']);
+});
+Route::middleware(['auth','active'])->group(function(){
+ Route::post('/logout',[AuthController::class,'logout']);Route::get('/dashboard',[PortalController::class,'dashboard']);
+ Route::get('/portal/{section}',[PortalController::class,'section']);Route::get('/learning/{id}',[PortalController::class,'course']);
+ Route::post('/actions/{action}',[PortalController::class,'action']);Route::post('/profile',[PortalController::class,'profile']);
+ Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);Route::get('/files/{type}/{id}',[PortalController::class,'download']);Route::get('/certificates/{id}',[PortalController::class,'certificate']);
+ Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
+ Route::get('/admin/reviews/{type}',[ReviewController::class,'index']);Route::post('/admin/reviews/{type}/{id}',[ReviewController::class,'update']);
+ Route::get('/admin/{module}',[CmsController::class,'index']);Route::get('/admin/{module}/create',[CmsController::class,'form']);Route::get('/admin/{module}/{id}/edit',[CmsController::class,'form']);
+ Route::post('/admin/{module}',[CmsController::class,'save']);Route::put('/admin/{module}/{id}',[CmsController::class,'save']);Route::delete('/admin/{module}/{id}',[CmsController::class,'delete']);
+});

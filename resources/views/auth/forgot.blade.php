@@ -1,0 +1,1 @@
+@extends('layout') @section('content')<div class="narrow"><h1>Reset your password</h1><form class="panel" method="post">@csrf<div class="field"><label for="email">Email address</label><input id="email" type="email" name="email" required></div><button>Send reset link</button></form></div>@endsection
