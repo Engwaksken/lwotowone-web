@@ -1,106 +1,61 @@
-# Lwotowone Enterprises Ltd — Laravel CMS and web platform
+# Lwotowone development update
 
-A new standalone application built from the supplied Lwotowone organisation brief. PHP 8.3+, Laravel 13, Blade, Sanctum, SQLite for local use and MySQL for deployment. Local CSS and JavaScript need no Node build step.
+This package contains patches for your existing Laravel and Flutter projects.
+They are based on these main branch commits:
+- web: 149c9ead8e54292cfed7a33deb7941f16a7322b5
+- mobile: 45b82261bcc4c7a4b2b6a08bb0ba0aac41a04ed8
 
-## Included
+Changes: participant enterprise editing with ownership checks; earnings filters by period and enterprise; custom dates and description search; Flutter API configuration validation; Android release signing setup; local APK build script; Laravel/Flutter CI and manual test APK workflow.
 
-- Responsive public homepage, organisation pages, programme and course catalogues, opportunities, events, news/impact stories and enquiry form.
-- CMS with create, edit, delete, publication status, validated forms, search, pagination, private resource uploads, SEO descriptions and editable homepage hero text.
-- Participant registration, login, password reset, profile and consent.
-- Course enrolment, ordered lessons, external video links, private resource downloads, progress and practical assignment submission with optional evidence.
-- Instructor assessment, feedback, returned work and passing scores.
-- Practical skills catalogue, activity logs and manager verification.
-- Mentor profiles, availability, booking requests, confirmation, completion, cancellation and session notes.
-- Jobs, internships, apprenticeships, enterprise opportunities, market linkages, applications and staff decisions.
-- Enterprise ideas, business plans, stages and participant income/expense records in UGX.
-- Events, capacity-limited registration and staff attendance recording.
-- Queued email and in-app notices, mentorship reminders, impact CSV export and audit records.
-- Internal completion certificates printable to PDF after all published lessons and practical assessments are passed.
-- Participant mobile API with expiring Sanctum tokens, account ownership checks and idempotent offline-action replay.
+## Apply in PowerShell
 
-## Local setup — Windows PowerShell
-
-Extract the ZIP and open the `lwotowone-web` directory. Use PHP 8.3 or newer, Composer 2 and PHP extensions PDO, pdo_sqlite, pdo_mysql (for MySQL), mbstring, XML, ctype, curl, fileinfo, openssl and zip.
+Extract this ZIP to D:\projects\lwotowone-update. Commit or stash any local changes first.
 
 ```powershell
+Set-Location D:\projects\lwotowone-web
+git switch -c development/enterprise-updates
+git apply --check D:\projects\lwotowone-update\lwotowone-web.patch
+git apply D:\projects\lwotowone-update\lwotowone-web.patch
 composer install
-Copy-Item .env.example .env
-if (!(Test-Path database/database.sqlite)) { New-Item -ItemType File -Path database/database.sqlite }
-php artisan key:generate
+php artisan test
+git add .
+git commit -m "Add enterprise editing and earnings filters"
+git push -u origin development/enterprise-updates
+
+Set-Location D:\projects\lwotowone-mobile
+git switch -c development/enterprise-and-builds
+git apply --check D:\projects\lwotowone-update\lwotowone-mobile.patch
+git apply D:\projects\lwotowone-update\lwotowone-mobile.patch
+flutter pub get
+flutter analyze
+flutter test
+git add .
+git commit -m "Add enterprise filters and Android build workflow"
+git push -u origin development/enterprise-and-builds
 ```
 
-Edit `.env`: set your real `ADMIN_EMAIL` and a unique `ADMIN_PASSWORD` of at least 12 characters. Keep `SEED_DEMO=false` for real use. Then:
+If a check fails, stop before applying that patch. It may already be applied or your files may differ from the base commit. Never force the patch over local work.
+
+Create pull requests into main for review. No database migration is required by this update. Deploy the web API update before using the mobile enterprise-edit action.
+
+## Build your APK
+
+From D:\projects\lwotowone-mobile, run the command below after replacing the URL with your deployed Laravel API URL:
 
 ```powershell
-php artisan migrate --seed
-php artisan serve
+.\scripts\build-apk.ps1 -ApiBaseUrl "https://YOUR-ACTUAL-HOST/api"
 ```
 
-Open http://127.0.0.1:8000. All accounts sign in at `/login` and use `/dashboard`. Only participants can self-register. Administrators create staff under **People and roles**. No administrator password is hard-coded or included in this ZIP.
+Output: build\app\outputs\flutter-apk\app-release.apk.
+For production signing, configure android\key.properties and your upload keystore as described in the mobile README, then add -RequireReleaseKey. Keep signing passwords and keys out of Git.
 
-For a local content demonstration only, set `SEED_DEMO=true` before seeding. This adds a labelled sample course, sample instructor and sample mentor. Their password uses the administrator password you configured; do not enable these sample users on production. Seeding preserves existing organisation content. Sample content is for demonstration and requires instructor review.
+After merging the workflow into main, GitHub Actions also provides a manual test APK build. Open "Flutter checks and test APK", select "Run workflow", and supply the actual HTTPS API URL ending in /api. Download lwotowone-test-apk from the completed run. This workflow uses debug signing for testing.
 
-## First administration session
+## Validation
 
-1. Create active instructor and mentor accounts.
-2. Review Website pages: About, Approach, Impact, Privacy and Terms. The privacy and terms pages are initial drafts requiring your organisation's details and review.
-3. Under Organisation settings, edit `hero_title`, `hero_eyebrow` and `hero_summary`.
-4. Create a course under an existing programme and assign an instructor.
-5. Add lessons, private resources and practical assignments. Publish items when ready.
-6. Create mentorship slots, opportunities, events and announcements.
-7. Register a participant and test enrolment, practical work, mentorship and applications end-to-end.
+Laravel: 17 tests, 95 assertions passed.
+Flutter analysis: no issues found.
+Flutter automated tests: 11 tests passed.
+See the included source VALIDATION.md for the automated test result and remaining native/device checks.
 
-Programme descriptions reflect intended work from the brief. No invented impact figures, accreditation or guaranteed employment claims are included.
-
-## Roles
-
-| Role | Access |
-|---|---|
-| Administrator | All CMS modules, people/roles, settings, reviews and reports |
-| Programme manager | Programme/content management, reviews and reports; cannot manage roles or settings |
-| Instructor | Own courses, lessons, assignments and resources; practical submissions for those courses |
-| Mentor | Own availability and mentorship bookings |
-| Participant | Own learning, submissions, skill logs, mentorship, applications, enterprises and transactions |
-
-Participants cannot access CMS routes. Instructors and mentors are constrained to assigned records on the server, including downloads. Draft content is excluded from public views and participant snapshots. Income is self-recorded; the platform does not collect or transfer money.
-
-## Production — cPanel / Apache
-
-1. Create a MySQL database and user. Upload the source outside the public document root where possible. Point the domain document root at `public/`.
-2. Configure `.env` with `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://your-domain`, `SESSION_SECURE_COOKIE=true`, `DB_CONNECTION=mysql` and the database credentials. Retain your generated `APP_KEY` across updates.
-3. Run `composer install --no-dev --optimize-autoloader`, `php artisan key:generate` on the first installation only, `php artisan migrate --seed --force` on first installation, then `php artisan optimize`.
-4. Give the web process write access to `storage` and `bootstrap/cache`; never expose `.env`, `database`, `vendor` or private uploads to the web.
-5. Configure SMTP (`MAIL_MAILER=smtp`, host, port, credentials and sender). The default `log` transport records messages locally and does not deliver email.
-6. Run a supervised queue worker: `php artisan queue:work --tries=3 --timeout=60`.
-7. Add the scheduler cron every minute: `* * * * * /path/to/php /path/to/lwotowone-web/artisan schedule:run`.
-8. After code updates, run `php artisan migrate --force`, `php artisan optimize` and `php artisan queue:restart`.
-9. Back up MySQL, private uploads and `.env` securely, and test restoration. Configure HTTPS, production email and hosting before inviting participants.
-
-`storage:link` is unnecessary for lesson resources and submissions because they use authenticated private downloads. Browser print provides certificate PDF output; there is no third-party PDF dependency.
-
-## Mobile API
-
-Base URL: `https://your-domain/api`. JSON requests use `Accept: application/json` and `Authorization: Bearer TOKEN` after login.
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/register` | Name, email, password, password_confirmation, consent=1; optional phone/district |
-| POST | `/login` | Email and password; returns user and token |
-| GET | `/snapshot` | Published content and current participant's records |
-| POST | `/actions/{action}` | Execute participant workflow |
-| POST | `/profile` | Update name, phone and district |
-| POST | `/notifications/{id}/read` | Mark own notice read |
-| GET | `/resources/{id}/download` | Private resource download for enrolled course |
-| POST | `/logout` | Revoke current token |
-
-Actions: `enrol`, `complete`, `submit`, `practice`, `book`, `cancel-booking`, `apply`, `enterprise`, `income`, `register-event`. Optional UUID `client_id` makes action replay idempotent per participant. The Flutter source shows each action's validated payload. `submit` accepts a multipart `file` on the web; mobile currently submits written evidence.
-
-Snapshot sync is a full account-scoped refresh, not delta sync. It deliberately downloads text and records, and excludes automatic video downloading. Pending mobile actions are replayed before refreshing the snapshot. Maximum file upload is 10 MB.
-
-## Validation and operational limits
-
-Run `composer test` to execute feature tests. See `VALIDATION.md` for results from this build.
-
-This delivery is source code, not a hosted deployment. SMTP, real learning content, mentor availability, staff identities, verified organisation contact details and release configuration must be supplied by Lwotowone. SMS, FCM/APNs device push, payment gateways, live classroom video, quizzes, multi-tenant operation, external accreditation and automatic opportunity scraping are not implemented. Email/in-app notices are implemented. Background sync is not scheduled; mobile users synchronise explicitly or when the app opens. Data privacy and terms drafts need organisation review before launch. Production MySQL and real Android/iOS device acceptance testing remain necessary.
-
-Official references: https://laravel.com/docs/13.x/releases ; https://laravel.com/docs/13.x/sanctum ; https://docs.flutter.dev/app-architecture/design-patterns/offline-first
+GitHub publication was blocked by integration write permissions. No remote development branch, commit, pull request, or deployment was created by this update.

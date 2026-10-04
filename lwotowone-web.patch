@@ -1,0 +1,266 @@
+diff --git a/.github/workflows/tests.yml b/.github/workflows/tests.yml
+new file mode 100644
+index 0000000..8a415ca
+--- /dev/null
++++ b/.github/workflows/tests.yml
+@@ -0,0 +1,19 @@
++name: Laravel checks
++on:
++  push:
++  pull_request:
++  workflow_dispatch:
++permissions:
++  contents: read
++jobs:
++  test:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: shivammathur/setup-php@v2
++        with:
++          php-version: '8.3'
++          extensions: mbstring, xml, pdo_sqlite, curl, fileinfo
++          coverage: none
++      - run: composer install --prefer-dist --no-interaction
++      - run: composer test
+diff --git a/.gitignore b/.gitignore
+index 8b5832f..8f2e09a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -4,3 +4,6 @@
+ /storage/app/private/*
+ /storage/logs/*
+ /bootstrap/cache/*.php
++
++/.phpunit.result.cache
++/storage/framework/testing/
+diff --git a/README.md b/README.md
+index a5a86ba..fe90fab 100644
+--- a/README.md
++++ b/README.md
+@@ -93,7 +93,7 @@ Base URL: `https://your-domain/api`. JSON requests use `Accept: application/json
+ | GET | `/resources/{id}/download` | Private resource download for enrolled course |
+ | POST | `/logout` | Revoke current token |
+ 
+-Actions: `enrol`, `complete`, `submit`, `practice`, `book`, `cancel-booking`, `apply`, `enterprise`, `income`, `register-event`. Optional UUID `client_id` makes action replay idempotent per participant. The Flutter source shows each action's validated payload. `submit` accepts a multipart `file` on the web; mobile currently submits written evidence.
++Actions: `update-enterprise` (owned enterprise_id plus title, sector, idea, business_plan and stage), `enrol`, `complete`, `submit`, `practice`, `book`, `cancel-booking`, `apply`, `enterprise`, `income`, `register-event`. Optional UUID `client_id` makes action replay idempotent per participant. The Flutter source shows each action's validated payload. `submit` accepts a multipart `file` on the web; mobile currently submits written evidence.
+ 
+ Snapshot sync is a full account-scoped refresh, not delta sync. It deliberately downloads text and records, and excludes automatic video downloading. Pending mobile actions are replayed before refreshing the snapshot. Maximum file upload is 10 MB.
+ 
+@@ -104,3 +104,11 @@ Run `composer test` to execute feature tests. See `VALIDATION.md` for results fr
+ This delivery is source code, not a hosted deployment. SMTP, real learning content, mentor availability, staff identities, verified organisation contact details and release configuration must be supplied by Lwotowone. SMS, FCM/APNs device push, payment gateways, live classroom video, quizzes, multi-tenant operation, external accreditation and automatic opportunity scraping are not implemented. Email/in-app notices are implemented. Background sync is not scheduled; mobile users synchronise explicitly or when the app opens. Data privacy and terms drafts need organisation review before launch. Production MySQL and real Android/iOS device acceptance testing remain necessary.
+ 
+ Official references: https://laravel.com/docs/13.x/releases ; https://laravel.com/docs/13.x/sanctum ; https://docs.flutter.dev/app-architecture/design-patterns/offline-first
++
++## Continued development
++
++Participants can now edit their own enterprise name, sector, idea, business plan and stage from the Enterprise & earnings page. Updates retain the enterprise ID, existing transactions and creation timestamp. The new `update-enterprise` action is available through the same participant API and uses the existing ownership and replay checks.
++
++The earnings page filters by enterprise, all time, current week/month/year or an inclusive custom date range. Income, expenses and net income use those filters. Description search affects transaction history only. Date validation and enterprise ownership are enforced on the server. No database migration is needed for this update.
++
++GitHub Actions runs the PHPUnit suite for pushes and pull requests using an isolated SQLite database. See `.github/workflows/tests.yml`.
+diff --git a/VALIDATION.md b/VALIDATION.md
+index 203fc32..6edf462 100644
+--- a/VALIDATION.md
++++ b/VALIDATION.md
+@@ -1,4 +1,4 @@
+-# Build validation — 4 October 2026
++# Initial build validation — 4 October 2026
+ 
+ | Check | Result |
+ |---|---|
+@@ -24,3 +24,9 @@ Flutter tests cover empty login validation, all participant module screen render
+ Offline tests use mocked HTTP responses and secure storage. Native device secure storage, external resource opening, actual low-bandwidth use, release signing and hardware-specific behaviour still require device acceptance testing. The complete acceptance scenario is in the mobile README.
+ 
+ Web screenshot files in `docs/screenshots` show a locally seeded demo, not measured impact or live deployment data.
++
++## Continued development validation
++
++Laravel enterprise update and earnings filter tests: **17 tests, 95 assertions passed**. Coverage includes update ownership, duplicate-safe replay, date boundaries, enterprise filtering, and search without changing totals.
++
++Flutter static analysis: **No issues found**. Flutter automated tests: **11 tests passed**. New tests cover earnings periods and API configuration. Native APK compilation and device acceptance testing remain pending.
+diff --git a/app/Http/Controllers/PortalController.php b/app/Http/Controllers/PortalController.php
+index 9d379d3..7be4ac1 100644
+--- a/app/Http/Controllers/PortalController.php
++++ b/app/Http/Controllers/PortalController.php
+@@ -8,7 +8,7 @@ class PortalController extends Controller {
+   if($r->user()->staff())return view('admin.dashboard',['counts'=>collect(['users','courses','enrolments','submissions','bookings','applications','enterprises'])->mapWithKeys(fn($t)=>[$t=>DB::table($t)->count()])->all()]);
+   return view('portal.dashboard',['data'=>Snapshot::get($r->user())]);
+  }
+- public function section(Request $r,string $section){abort_unless($r->user()->role==='participant',403);abort_unless(in_array($section,['learn','practice','mentorship','opportunities','enterprise','events','notifications','profile']),404);return view('portal.section',['section'=>$section,'data'=>Snapshot::get($r->user())]);}
++ public function section(Request $r,string $section){abort_unless($r->user()->role==='participant',403);abort_unless(in_array($section,['learn','practice','mentorship','opportunities','enterprise','events','notifications','profile']),404);$data=Snapshot::get($r->user());if($section==='enterprise')$data=\App\Services\EarningsFilter::apply($r,$data);return view('portal.section',['section'=>$section,'data'=>$data]);}
+  public function course(Request $r,string $id){Workflow::enrolled($r->user(),$id);$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);return view('portal.course',compact('data','course'));}
+  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}
+  public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);return Snapshot::get($r->user());}
+diff --git a/app/Services/EarningsFilter.php b/app/Services/EarningsFilter.php
+new file mode 100644
+index 0000000..2d8cf06
+--- /dev/null
++++ b/app/Services/EarningsFilter.php
+@@ -0,0 +1,31 @@
++<?php
++namespace App\Services;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\DB;
++use Carbon\CarbonImmutable;
++class EarningsFilter {
++ public static function apply(Request $request,array $data): array {
++  $filters=$request->validate([
++   'period'=>'nullable|in:all,week,month,year,custom',
++   'enterprise_id'=>'nullable|integer|exists:enterprises,id',
++   'from'=>'required_if:period,custom|nullable|date_format:Y-m-d',
++   'to'=>'required_if:period,custom|nullable|date_format:Y-m-d|after_or_equal:from',
++   'q'=>'nullable|string|max:255',
++  ]);
++  if(!empty($filters['enterprise_id']))abort_unless(DB::table('enterprises')->where('id',$filters['enterprise_id'])->where('user_id',$request->user()->id)->exists(),403);
++  $period=$filters['period']??'all';$today=CarbonImmutable::today();
++  [$from,$to]=match($period){
++   'week'=>[$today->startOfWeek()->toDateString(),$today->toDateString()],
++   'month'=>[$today->startOfMonth()->toDateString(),$today->toDateString()],
++   'year'=>[$today->startOfYear()->toDateString(),$today->toDateString()],
++   'custom'=>[$filters['from'],$filters['to']],default=>[null,null],
++  };
++  $data['transactions']=collect($data['transactions'])->filter(function($t)use($filters,$from,$to){
++   $date=substr($t->occurred_on,0,10);
++   return (empty($filters['enterprise_id'])||(string)$t->enterprise_id===(string)$filters['enterprise_id'])&&(!$from||$date>=$from)&&(!$to||$date<=$to);
++  })->values();
++  $data['transaction_history']=$data['transactions']->filter(fn($t)=>empty($filters['q'])||mb_stripos($t->description,$filters['q'])!==false)->values();
++  $data['earnings_period']=['period'=>$period,'from'=>$from,'to'=>$to];
++  return $data;
++ }
++}
+diff --git a/app/Services/Workflow.php b/app/Services/Workflow.php
+index 2228479..1e5fdc4 100644
+--- a/app/Services/Workflow.php
++++ b/app/Services/Workflow.php
+@@ -28,11 +28,12 @@ class Workflow {
+    'book'=>['slot_id'=>'required|integer|exists:slots,id','goal'=>'required|string|max:5000'],
+    'cancel-booking'=>['booking_id'=>'required|integer|exists:bookings,id'],
+    'apply'=>['opportunity_id'=>'required|integer|exists:opportunities,id','motivation'=>'required|string|max:10000'],
+-   'enterprise'=>['title'=>'required|string|max:255','sector'=>'required|string|max:100','idea'=>'required|string|max:20000','business_plan'=>'nullable|string|max:30000','stage'=>'required|in:idea,planning,operating,growing'],
++   'enterprise','update-enterprise'=>['title'=>'required|string|max:255','sector'=>'required|string|max:100','idea'=>'required|string|max:20000','business_plan'=>'nullable|string|max:30000','stage'=>'required|in:idea,planning,operating,growing'],
+    'income'=>['enterprise_id'=>'required|integer|exists:enterprises,id','type'=>'required|in:income,expense','amount'=>'required|numeric|min:0.01|max:9999999999.99','description'=>'required|string|max:255','occurred_on'=>'required|date|before_or_equal:today'],
+    'register-event'=>['event_id'=>'required|integer|exists:events,id'],
+    default=>abort(404)
+   };
++  if($action==='update-enterprise')$rules['enterprise_id']='required|integer|exists:enterprises,id';
+   $d=Validator::make($in,$rules)->validate();$id=null;
+   switch($action){
+    case 'enrol':
+@@ -67,6 +68,10 @@ class Workflow {
+     if(DB::table('applications')->where('user_id',$u->id)->where('opportunity_id',$o->id)->exists())self::invalid('opportunity_id','You have already applied.');
+     $id=self::insert('applications',$d+['user_id'=>$u->id]);break;
+    case 'enterprise':$id=self::insert('enterprises',$d+['user_id'=>$u->id]);break;
++   case 'update-enterprise':
++    $id=$d['enterprise_id'];unset($d['enterprise_id']);
++    abort_unless(DB::table('enterprises')->where('id',$id)->where('user_id',$u->id)->exists(),403);
++    DB::table('enterprises')->where('id',$id)->where('user_id',$u->id)->update($d+['updated_at'=>now()]);break;
+    case 'income':
+     abort_unless(DB::table('enterprises')->where('user_id',$u->id)->where('id',$d['enterprise_id'])->exists(),403);
+     $id=self::insert('transactions',$d+['user_id'=>$u->id]);break;
+diff --git a/resources/views/portal/enterprise-form.blade.php b/resources/views/portal/enterprise-form.blade.php
+new file mode 100644
+index 0000000..83cd05c
+--- /dev/null
++++ b/resources/views/portal/enterprise-form.blade.php
+@@ -0,0 +1,7 @@
++<form method="post" action="/actions/{{ $enterprise?'update-enterprise':'enterprise' }}">@csrf
++@if($enterprise)<input type="hidden" name="enterprise_id" value="{{ $enterprise->id }}">@endif
++@foreach(['title'=>'Enterprise name','sector'=>'Sector'] as $field=>$label)<div class="field"><label>{{ $label }}</label><input name="{{ $field }}" value="{{ $enterprise?->{$field} }}" required></div>@endforeach
++<div class="field"><label>Business idea</label><textarea name="idea" required>{{ $enterprise?->idea }}</textarea></div>
++<div class="field"><label>Business plan (optional)</label><textarea name="business_plan">{{ $enterprise?->business_plan }}</textarea></div>
++<div class="field"><label>Stage</label><select name="stage">@foreach(['idea','planning','operating','growing'] as $stage)<option value="{{ $stage }}" @selected(($enterprise?->stage??'idea')===$stage)>{{ ucfirst($stage) }}</option>@endforeach</select></div>
++<button>{{ $enterprise?'Update enterprise':'Save enterprise' }}</button></form>
+diff --git a/resources/views/portal/enterprise.blade.php b/resources/views/portal/enterprise.blade.php
+new file mode 100644
+index 0000000..c760ae0
+--- /dev/null
++++ b/resources/views/portal/enterprise.blade.php
+@@ -0,0 +1,26 @@
++@php
++ $income=collect($data['transactions'])->where('type','income')->sum('amount');
++ $expense=collect($data['transactions'])->where('type','expense')->sum('amount');
++@endphp
++<form class="panel form-grid" method="get" action="/portal/enterprise">
++ <div class="field"><label for="period">Reporting period</label><select id="period" name="period">@foreach(['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom dates'] as $key=>$label)<option value="{{ $key }}" @selected(request('period','all')===$key)>{{ $label }}</option>@endforeach</select></div>
++ <div class="field"><label for="enterprise_filter">Enterprise</label><select id="enterprise_filter" name="enterprise_id"><option value="">All enterprises</option>@foreach($data['enterprises'] as $e)<option value="{{ $e->id }}" @selected((string)request('enterprise_id')===(string)$e->id)>{{ $e->title }}</option>@endforeach</select></div>
++ <div class="field"><label for="from">From (for custom dates)</label><input id="from" name="from" type="date" value="{{ request('from') }}"></div>
++ <div class="field"><label for="to">To (for custom dates)</label><input id="to" name="to" type="date" value="{{ request('to') }}"></div>
++ <div class="field"><label for="transaction_search">Search transaction description</label><input id="transaction_search" name="q" value="{{ request('q') }}"></div>
++ <div class="actions"><button>Apply filters</button><a href="/portal/enterprise">Reset</a></div>
++</form>
++@if($data['earnings_period']['from'])<p class="muted">{{ $data['earnings_period']['from'] }} to {{ $data['earnings_period']['to'] }}</p>@endif
++<div class="stats">@foreach(['Income'=>$income,'Expenses'=>$expense,'Net recorded income'=>$income-$expense] as $label=>$value)<div class="stat"><strong>{{ number_format($value) }}</strong><span>{{ $label }} · UGX</span></div>@endforeach</div>
++<p class="muted">Totals use the period and enterprise filters. Description search filters the history below.</p>
++<details><summary>Add an enterprise idea</summary>@include('portal.enterprise-form',['enterprise'=>null])</details>
++<div class="grid">@foreach($data['enterprises'] as $e)<article class="card"><span class="tag">{{ $e->stage }} · {{ $e->sector }}</span><h3>{{ $e->title }}</h3><p>{{ $e->idea }}</p><details><summary>Business plan</summary><p class="prose">{{ $e->business_plan }}</p></details><details><summary>Edit enterprise and stage</summary>@include('portal.enterprise-form',['enterprise'=>$e])</details></article>@endforeach</div>
++@if(count($data['enterprises']))<details><summary>Record income or expense</summary><form method="post" action="/actions/income">@csrf
++ <div class="field"><label>Enterprise</label><select name="enterprise_id">@foreach($data['enterprises'] as $e)<option value="{{ $e->id }}">{{ $e->title }}</option>@endforeach</select></div>
++ <div class="field"><label>Type</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div>
++ <div class="field"><label>Amount (UGX)</label><input type="number" name="amount" step="0.01" min="0.01" required></div>
++ <div class="field"><label>Description</label><input name="description" required></div>
++ <div class="field"><label>Date</label><input type="date" name="occurred_on" required></div><button>Save transaction</button>
++</form></details>@endif
++<div class="panel table-wrap"><table><thead><tr><th>Date</th><th>Enterprise</th><th>Description</th><th>Type</th><th>UGX</th></tr></thead><tbody>@forelse($data['transaction_history'] as $t)<tr><td>{{ $t->occurred_on }}</td><td>{{ collect($data['enterprises'])->firstWhere('id',$t->enterprise_id)?->title }}</td><td>{{ $t->description }}</td><td>{{ $t->type }}</td><td>{{ number_format($t->amount,2) }}</td></tr>@empty<tr><td colspan="5">No transactions match these filters.</td></tr>@endforelse</tbody></table></div>
++<p class="muted">These are your recorded business transactions; this platform does not move money.</p>
+diff --git a/resources/views/portal/section.blade.php b/resources/views/portal/section.blade.php
+index 9bed110..cfc665d 100644
+--- a/resources/views/portal/section.blade.php
++++ b/resources/views/portal/section.blade.php
+@@ -3,7 +3,8 @@
+ @elseif($section==='practice')<p>Record what you practised and what you learned. Programme staff can verify your practical experience.</p><form class="panel" method="post" action="/actions/practice">@csrf<div class="field"><label>Skill</label><select name="skill_id" required>@foreach($data['skills'] as $s)<option value="{{ $s->id }}">{{ $s->title }}</option>@endforeach</select></div>@foreach(['title'=>'What did you practise?','minutes'=>'Minutes spent','practised_on'=>'Date'] as $f=>$label)<div class="field"><label>{{ $label }}</label><input type="{{ $f==='minutes'?'number':($f==='practised_on'?'date':'text') }}" name="{{ $f }}" required></div>@endforeach<div class="field"><label>Describe your activity and learning</label><textarea name="body" required></textarea></div><button>Save practical log</button></form>@foreach($data['practice_logs'] as $log)<article class="panel"><span class="tag">{{ $log->status }}</span><h3>{{ $log->title }}</h3><p>{{ $log->body }}</p><small>{{ $log->practised_on }} · {{ $log->minutes }} minutes</small>@if($log->feedback)<p>Feedback: {{ $log->feedback }}</p>@endif</article>@endforeach
+ @elseif($section==='mentorship')<h2>Find a mentor</h2><div class="grid">@foreach($data['mentors'] as $m)<article class="card"><h3>{{ $m->name }}</h3><span class="tag">{{ $m->expertise }}</span><p>{{ $m->bio }}</p></article>@endforeach</div><h2>Available sessions</h2>@forelse($data['slots'] as $s)<details><summary>{{ $s->title }} · {{ $s->starts_at }} · {{ $s->mode }}</summary><p>{{ $s->location }} · {{ collect($data['mentors'])->firstWhere('id',$s->mentor_id)?->name }}</p><form method="post" action="/actions/book">@csrf<input type="hidden" name="slot_id" value="{{ $s->id }}"><div class="field"><label>What would you like help with?</label><textarea name="goal" required></textarea></div><button>Request session</button></form></details>@empty<p class="muted">No available sessions. Check back soon.</p>@endforelse<h2>My requests</h2>@foreach($data['bookings'] as $b)<article class="panel"><span class="tag">{{ $b->status }}</span><h3>{{ $b->session_title }}</h3><small>{{ $b->starts_at }} · {{ $b->mentor_name }} · {{ $b->mode }}</small><p>{{ $b->location }}</p><p>{{ $b->goal }}</p><p>{{ $b->notes }}</p>@if(in_array($b->status,['requested','confirmed']))<form method="post" action="/actions/cancel-booking" data-confirm="Cancel your mentorship request?">@csrf<input type="hidden" name="booking_id" value="{{ $b->id }}"><button class="secondary">Cancel request</button></form>@endif</article>@endforeach
+ @elseif($section==='opportunities')@forelse($data['opportunities'] as $o)<details><summary>{{ $o->title }} · {{ $o->type }}</summary><p>{{ $o->organisation }} · {{ $o->location }} · Apply by {{ $o->deadline }}</p><p class="prose">{{ $o->description }}</p>@php $app=collect($data['applications'])->firstWhere('opportunity_id',$o->id); @endphp @if($app)<p><strong>Application: {{ $app->status }}</strong> {{ $app->feedback }}</p>@else<form method="post" action="/actions/apply">@csrf<input type="hidden" name="opportunity_id" value="{{ $o->id }}"><div class="field"><label>Tell us why you are interested and what skills you bring</label><textarea name="motivation" required></textarea></div><button>Submit application</button></form>@endif</details>@empty<div class="empty">No open opportunities.</div>@endforelse<h2>My application history</h2>@foreach($data['applications'] as $a)<p>Opportunity #{{ $a->opportunity_id }} · {{ $a->status }} · {{ $a->feedback }}</p>@endforeach
+-@elseif($section==='enterprise')@php $income=collect($data['transactions'])->where('type','income')->sum('amount');$expense=collect($data['transactions'])->where('type','expense')->sum('amount'); @endphp<div class="stats">@foreach(['Income'=>$income,'Expenses'=>$expense,'Net recorded income'=>$income-$expense] as $label=>$value)<div class="stat"><strong>{{ number_format($value) }}</strong><span>{{ $label }} · UGX</span></div>@endforeach</div><details><summary>Add an enterprise idea</summary><form method="post" action="/actions/enterprise">@csrf @foreach(['title'=>'Enterprise name','sector'=>'Sector'] as $f=>$label)<div class="field"><label>{{ $label }}</label><input name="{{ $f }}" required></div>@endforeach<div class="field"><label>Business idea</label><textarea name="idea" required></textarea></div><div class="field"><label>Business plan (optional)</label><textarea name="business_plan"></textarea></div><div class="field"><label>Stage</label><select name="stage">@foreach(['idea','planning','operating','growing'] as $v)<option>{{ $v }}</option>@endforeach</select></div><button>Save enterprise</button></form></details><div class="grid">@foreach($data['enterprises'] as $e)<article class="card"><span class="tag">{{ $e->stage }} · {{ $e->sector }}</span><h3>{{ $e->title }}</h3><p>{{ $e->idea }}</p><details><summary>Business plan</summary><p class="prose">{{ $e->business_plan }}</p></details></article>@endforeach</div>@if(count($data['enterprises']))<details><summary>Record income or expense</summary><form method="post" action="/actions/income">@csrf<div class="field"><label>Enterprise</label><select name="enterprise_id">@foreach($data['enterprises'] as $e)<option value="{{ $e->id }}">{{ $e->title }}</option>@endforeach</select></div><div class="field"><label>Type</label><select name="type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div class="field"><label>Amount (UGX)</label><input type="number" name="amount" step="0.01" min="0.01" required></div><div class="field"><label>Description</label><input name="description" required></div><div class="field"><label>Date</label><input type="date" name="occurred_on" required></div><button>Save transaction</button></form></details>@endif<div class="panel table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>UGX</th></tr></thead><tbody>@foreach($data['transactions'] as $t)<tr><td>{{ $t->occurred_on }}</td><td>{{ $t->description }}</td><td>{{ $t->type }}</td><td>{{ number_format($t->amount,2) }}</td></tr>@endforeach</tbody></table></div><p class="muted">These are your recorded business transactions; this platform does not move money.</p>
++@elseif($section==='enterprise')
++@include('portal.enterprise')
+ @elseif($section==='events')@forelse($data['events'] as $e)<article class="panel"><h3>{{ $e->title }}</h3><p>{{ $e->description }}</p><small>{{ $e->starts_at }} · {{ $e->location }}</small>@if(collect($data['event_registrations'])->contains('event_id',$e->id))<p class="tag">Registered</p>@else<form method="post" action="/actions/register-event">@csrf<input type="hidden" name="event_id" value="{{ $e->id }}"><button>Register for event</button></form>@endif</article>@empty<div class="empty">No upcoming events.</div>@endforelse
+ @elseif($section==='notifications')@forelse($data['notifications'] as $n)<article class="panel"><small>{{ $n->created_at }} · {{ $n->read_at?'Read':'Unread' }}</small><h3>{{ $n->data['title']??'Notification' }}</h3><p>{{ $n->data['body']??'' }}</p>@if(!$n->read_at)<form method="post" action="/notifications/{{ $n->id }}/read">@csrf<button class="secondary">Mark as read</button></form>@endif</article>@empty<div class="empty">No notifications yet.</div>@endforelse
+ @elseif($section==='profile')<form class="panel" method="post" action="/profile">@csrf @foreach(['name','phone','district'] as $f)<div class="field"><label>{{ ucfirst($f) }}</label><input name="{{ $f }}" value="{{ old($f,$data['user'][$f]) }}" @required($f==='name')></div>@endforeach<p>Email: {{ $data['user']['email'] }}</p><button>Save profile</button></form>@endif @endsection
+diff --git a/tests/Feature/EnterpriseTest.php b/tests/Feature/EnterpriseTest.php
+new file mode 100644
+index 0000000..0c44504
+--- /dev/null
++++ b/tests/Feature/EnterpriseTest.php
+@@ -0,0 +1,41 @@
++<?php
++namespace Tests\Feature;
++use Tests\TestCase;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Support\Facades\DB;
++use App\Models\User;
++use App\Services\Workflow;
++class EnterpriseTest extends TestCase {
++ use RefreshDatabase;
++ private function user(){return User::create(['name'=>'Learner','email'=>uniqid().'@example.test','password'=>'A-long-test-password','role'=>'participant','status'=>'active']);}
++ private function enterprise($u){return Workflow::run($u,'enterprise',['title'=>'Poultry','sector'=>'Agriculture','idea'=>'Sell eggs','stage'=>'idea'])['id'];}
++ public function test_owner_updates_plan_and_stage_without_creating_a_duplicate():void {
++  $u=$this->user();$id=$this->enterprise($u);$created=DB::table('enterprises')->find($id)->created_at;
++  $payload=['enterprise_id'=>$id,'title'=>'Lwotowone poultry','sector'=>'Agriculture','idea'=>'Sell eggs locally','business_plan'=>'Sell to shops','stage'=>'operating','user_id'=>999,'client_id'=>'d1e5754f-390c-42b9-aa4f-7d9b2ca12fbd'];
++  $token=$u->createToken('test')->plainTextToken;
++  $this->withToken($token)->postJson('/api/actions/update-enterprise',$payload)->assertOk()->assertJsonPath('id',$id);
++  $this->postJson('/api/actions/update-enterprise',$payload)->assertOk();
++  $this->assertDatabaseCount('enterprises',1);$this->assertDatabaseCount('sync_actions',1);
++  $this->assertDatabaseHas('enterprises',['id'=>$id,'user_id'=>$u->id,'stage'=>'operating','business_plan'=>'Sell to shops','created_at'=>$created]);
++ }
++ public function test_another_participant_cannot_update_or_filter_owned_enterprise():void {
++  $owner=$this->user();$id=$this->enterprise($owner);$this->actingAs($this->user());
++  $this->postJson('/actions/update-enterprise',['enterprise_id'=>$id,'title'=>'Bad edit','sector'=>'Other','idea'=>'Other','stage'=>'growing'])->assertForbidden();
++  $this->get('/portal/enterprise?enterprise_id='.$id)->assertForbidden();
++  $this->assertDatabaseHas('enterprises',['id'=>$id,'title'=>'Poultry']);
++ }
++ public function test_month_and_enterprise_filters_include_boundary_and_search_only_changes_history():void {
++  $this->travelTo(now()->setDate(2026,10,4)->startOfDay());$u=$this->user();$e=$this->enterprise($u);$other=$this->enterprise($u);
++  foreach([[$e,'income',1000,'2026-10-01','Egg sale'],[$e,'expense',300,'2026-10-04','Feed'],[$e,'income',9000,'2026-09-30','Old sale'],[$other,'income',5000,'2026-10-01','Other enterprise']] as [$id,$type,$amount,$date,$description])Workflow::run($u,'income',['enterprise_id'=>$id,'type'=>$type,'amount'=>$amount,'description'=>$description,'occurred_on'=>$date]);
++  $response=$this->actingAs($u)->get('/portal/enterprise?period=month&enterprise_id='.$e.'&q=Egg');$response->assertOk();$data=$response->viewData('data');
++  $this->assertCount(2,$data['transactions']);$this->assertCount(1,$data['transaction_history']);$this->assertEquals(1000,$data['transactions']->where('type','income')->sum('amount'));$this->assertEquals(300,$data['transactions']->where('type','expense')->sum('amount'));
++  $response->assertSee('Edit enterprise and stage')->assertSee('Lwotowone',false);
++ }
++ public function test_custom_range_is_inclusive_and_rejects_invalid_dates():void {
++  $this->travelTo(now()->setDate(2026,10,4)->startOfDay());$u=$this->user();$e=$this->enterprise($u);
++  foreach(['2026-10-01','2026-10-02','2026-10-03'] as $date)Workflow::run($u,'income',['enterprise_id'=>$e,'type'=>'income','amount'=>100,'description'=>'Sale','occurred_on'=>$date]);
++  $r=$this->actingAs($u)->get('/portal/enterprise?period=custom&from=2026-10-01&to=2026-10-02');$r->assertOk();$this->assertCount(2,$r->viewData('data')['transactions']);
++  $this->getJson('/portal/enterprise?period=custom&from=2026-10-03&to=2026-10-01')->assertUnprocessable();
++  $this->getJson('/portal/enterprise?period=custom')->assertUnprocessable();
++ }
++}
