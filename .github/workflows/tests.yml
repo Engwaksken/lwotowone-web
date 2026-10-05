@@ -1,0 +1,42 @@
+name: PHPUnit Tests
+
+on:
+  push:
+    branches: [development/enterprise-updates]
+  pull_request:
+    branches: [development/enterprise-updates]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.3']
+
+    env:
+      APP_KEY: base64:some-generated-key
+      DB_CONNECTION: sqlite
+      SEED_DEMO: 'false'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Install Node.js dependencies
+        run: npm ci || yarn install
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Run migrations and seed
+        run: php artisan migrate --seed --force
+
+      - name: Execute feature tests
+        run: php artisan test
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
