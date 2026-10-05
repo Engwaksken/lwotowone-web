@@ -14,18 +14,22 @@ jobs:
         php-version: ['8.3']
 
     env:
-      APP_KEY: base64:some-generated-key
       DB_CONNECTION: sqlite
       SEED_DEMO: 'false'
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo pdo_sqlite mbstring xml ctype curl fileinfo openssl zip
 
-      - name: Install Node.js dependencies
-        run: npm ci || yarn install
+      - name: Install Composer dependencies
+        uses: actions/composer@v3
+        with:
+          php-version: ${{ matrix.php-version }}
 
       - name: Generate application key
         run: php artisan key:generate
@@ -36,7 +40,7 @@ jobs:
       - name: Execute feature tests
         run: php artisan test
 
-      - name: Upload coverage reports to Codecov
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
