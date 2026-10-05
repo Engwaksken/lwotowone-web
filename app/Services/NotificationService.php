@@ -20,7 +20,7 @@ class NotificationService
         $response = Http::withHeaders([
             'Authorization' => "key=$serverKey",
             'Content-Type' => 'application/json',
-        ])->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+        ]->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
             'message' => [
                 'token' => $token,
                 'notification' => [
@@ -47,6 +47,36 @@ class NotificationService
         return ['sent' => true, 'response' => $result];
     }
 
+    public function sendSms(string $to, string $body, string $from = null): array
+    {
+        $accountSid = config('services.twilio.account_sid');
+        $authToken = config('services.twilio.auth_token');
+        $fromNumber = $from ?? config('services.twilio.from_number');
+
+        if (empty($accountSid) || empty($authToken) || empty($fromNumber)) {
+            Log::warning('Twilio config missing, cannot send SMS');
+            return ['sent' => false, 'error' => 'missing_config'];
+        }
+
+        $response = Http::basicAuth($accountSid, $authToken)->post('https://api.twilio.com/2010-04-01/Accounts/' . $accountSid . '/Messages.json', [
+            'From' => $fromNumber,
+            'To' => $to,
+            'Body' => $body,
+        ]);
+
+        if ($response->failed()) {
+            Log::error('SMS send failed', [
+                'to' => substr($to, 0, 20) . '...',
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return ['sent' => false, 'error' => $response->body()];
+        }
+
+        $result = $response->json();
+        return ['sent' => true, 'response' => $result];
+    }
+
     public function sendToParticipants(string $title, string $body, array $data = []): int
     {
         $tokens = \App\Models\User::whereNotNull('fcm_token')
@@ -57,6 +87,23 @@ class NotificationService
         $count = 0;
         foreach ($tokens as $token) {
             $result = $this->sendToDevice($token, $title, $body, $data);
+            if ($result['sent']) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    public function sendSmsToParticipants(string $title, string $body, string $from = null): int
+    {
+        $users = \App\Models\User::whereNotNull('phone')
+            ->where('role', 'participant')
+            ->get();
+
+        $count = 0;
+        foreach ($users as $user) {
+            $result = $this->sendSms($user->phone, $body, $from);
             if ($result['sent']) {
                 $count++;
             }

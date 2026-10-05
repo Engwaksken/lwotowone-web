@@ -10,6 +10,12 @@ class PortalController extends Controller {
   return ['ok'=>true,'sent'=>$count,'message'=>'Push notification sent to '.$count.' participants.'];
 }
 
+public function sendSms(Request $r){
+  $r->validate(['body'=>'required|string']);
+  $count = (new \App\Services\NotificationService())->sendSmsToParticipants('Notification',$r->body);
+  return ['ok'=>true,'sent'=>$count,'message'=>'SMS sent to '.$count.' participants.'];
+}
+
 public function dashboard(Request $r){
   if($r->user()->staff())return view('admin.dashboard',['counts'=>collect(['users','courses','enrolments','submissions','bookings','applications','enterprises'])->mapWithKeys(fn($t)=>[$t=>DB::table($t)->count()])->all()]);
   return view('portal.dashboard',['data'=>Snapshot::get($r->user())]);
