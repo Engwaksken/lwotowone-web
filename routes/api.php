@@ -7,4 +7,5 @@ Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
  Route::post('/actions/{action}',[PortalController::class,'action']);Route::post('/profile',[PortalController::class,'profile']);
  Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);
  Route::get('/resources/{id}/download',fn(\Illuminate\Http\Request $r,string $id)=>(new PortalController)->download($r,'resources',$id));
+Route::post('/notifications/push',[PortalController::class,'pushNotice']);
 });

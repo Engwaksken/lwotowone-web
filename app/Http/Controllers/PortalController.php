@@ -4,7 +4,13 @@ use App\Services\{Workflow,Snapshot};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 class PortalController extends Controller {
- public function dashboard(Request $r){
+ public function pushNotice(Request $r){
+  $r->validate(['title'=>'required|string','body'=>'required|string']);
+  $count = (new \App\Services\NotificationService())->sendToParticipants($r->title,$r->body,$r->all());
+  return ['ok'=>true,'sent'=>$count,'message'=>'Push notification sent to '.$count.' participants.'];
+}
+
+public function dashboard(Request $r){
   if($r->user()->staff())return view('admin.dashboard',['counts'=>collect(['users','courses','enrolments','submissions','bookings','applications','enterprises'])->mapWithKeys(fn($t)=>[$t=>DB::table($t)->count()])->all()]);
   return view('portal.dashboard',['data'=>Snapshot::get($r->user())]);
  }
