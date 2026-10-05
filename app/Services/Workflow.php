@@ -28,11 +28,13 @@ class Workflow {
    'book'=>['slot_id'=>'required|integer|exists:slots,id','goal'=>'required|string|max:5000'],
    'cancel-booking'=>['booking_id'=>'required|integer|exists:bookings,id'],
    'apply'=>['opportunity_id'=>'required|integer|exists:opportunities,id','motivation'=>'required|string|max:10000'],
-   'enterprise'=>['title'=>'required|string|max:255','sector'=>'required|string|max:100','idea'=>'required|string|max:20000','business_plan'=>'nullable|string|max:30000','stage'=>'required|in:idea,planning,operating,growing'],
+   'enterprise','update-enterprise'=>['title'=>'required|string|max:255','sector'=>'required|string|max:100','idea'=>'required|string|max:20000','business_plan'=>'nullable|string|max:30000','stage'=>'required|in:idea,planning,operating,growing'],
    'income'=>['enterprise_id'=>'required|integer|exists:enterprises,id','type'=>'required|in:income,expense','amount'=>'required|numeric|min:0.01|max:9999999999.99','description'=>'required|string|max:255','occurred_on'=>'required|date|before_or_equal:today'],
    'register-event'=>['event_id'=>'required|integer|exists:events,id'],
+   'cancel-event'=>['registration_id'=>'required|integer|exists:event_registrations,id'],
    default=>abort(404)
   };
+  if($action==='update-enterprise')$rules['enterprise_id']='required|integer|exists:enterprises,id';
   $d=Validator::make($in,$rules)->validate();$id=null;
   switch($action){
    case 'enrol':
@@ -67,15 +69,29 @@ class Workflow {
     if(DB::table('applications')->where('user_id',$u->id)->where('opportunity_id',$o->id)->exists())self::invalid('opportunity_id','You have already applied.');
     $id=self::insert('applications',$d+['user_id'=>$u->id]);break;
    case 'enterprise':$id=self::insert('enterprises',$d+['user_id'=>$u->id]);break;
+   case 'update-enterprise':
+    $id=$d['enterprise_id'];unset($d['enterprise_id']);
+    abort_unless(DB::table('enterprises')->where('id',$id)->where('user_id',$u->id)->exists(),403);
+    DB::table('enterprises')->where('id',$id)->where('user_id',$u->id)->update($d+['updated_at'=>now()]);break;
    case 'income':
     abort_unless(DB::table('enterprises')->where('user_id',$u->id)->where('id',$d['enterprise_id'])->exists(),403);
     $id=self::insert('transactions',$d+['user_id'=>$u->id]);break;
    case 'register-event':
     $e=DB::table('events')->where('id',$d['event_id'])->lockForUpdate()->first();
     if($e->status!=='published'||now()->gte($e->starts_at))self::invalid('event_id','Event registration is closed.');
-    if(DB::table('event_registrations')->where('user_id',$u->id)->where('event_id',$e->id)->exists())self::invalid('event_id','You are already registered.');
+    $existing=DB::table('event_registrations')->where('user_id',$u->id)->where('event_id',$e->id)->first();
+    if($existing&&$existing->status!=='cancelled')self::invalid('event_id','You are already registered.');
     if($e->capacity>0&&DB::table('event_registrations')->where('event_id',$e->id)->where('status','!=','cancelled')->count()>=$e->capacity)self::invalid('event_id','This event is full.');
-    $id=self::insert('event_registrations',$d+['user_id'=>$u->id]);break;
+    if($existing){$id=$existing->id;DB::table('event_registrations')->where('id',$id)->update(['status'=>'registered','updated_at'=>now()]);}
+    else $id=self::insert('event_registrations',$d+['user_id'=>$u->id]);break;
+   case 'cancel-event':
+    $registration=DB::table('event_registrations')->where('id',$d['registration_id'])->where('user_id',$u->id)->first();abort_unless($registration,403);
+    $event=DB::table('events')->where('id',$registration->event_id)->lockForUpdate()->first();
+    $registration=DB::table('event_registrations')->where('id',$registration->id)->where('user_id',$u->id)->lockForUpdate()->first();abort_unless($registration,403);
+    if(now()->gte($event->starts_at))self::invalid('registration_id','This event has already started. Contact the programme team.');
+    if($registration->status==='cancelled'){$id=$registration->id;break;}
+    if($registration->status!=='registered')self::invalid('registration_id','This registration cannot be cancelled.');
+    $id=$registration->id;DB::table('event_registrations')->where('id',$id)->update(['status'=>'cancelled','updated_at'=>now()]);break;
   }
   DB::table('audit_logs')->insert(['user_id'=>$u->id,'action'=>$action,'module'=>'participant','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);
   return ['ok'=>true,'id'=>$id,'message'=>'Saved successfully.'];

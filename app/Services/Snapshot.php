@@ -11,6 +11,9 @@ class Snapshot {
   $out['slots']=DB::table('slots')->where('status','open')->where('starts_at','>',now())->whereIn('mentor_id',User::where('role','mentor')->where('status','active')->select('id'))->whereNotIn('id',DB::table('bookings')->select('slot_id'))->get();
   $out['mentors']=User::where('role','mentor')->where('status','active')->get(['id','name','bio','expertise']);
   foreach(['enrolments','lesson_progress','submissions','practice_logs','bookings','applications','enterprises','transactions','event_registrations'] as $t)$out[$t]=DB::table($t)->where('user_id',$u->id)->orderByDesc('id')->get()->map(function($r)use($t){if($t==='submissions')unset($r->file_path);if($t==='bookings'){$slot=DB::table('slots')->find($r->slot_id);$r->session_title=$slot?->title;$r->starts_at=$slot?->starts_at;$r->ends_at=$slot?->ends_at;$r->location=$slot?->location;$r->mode=$slot?->mode;$r->mentor_name=User::find($slot?->mentor_id)?->name;}return $r;});
+  $out['events']=$out['events']->map(function($event){$event->registration_open=now()->lt($event->starts_at);return $event;});
+  $out['course_progress']=LearningProgress::fromSnapshot($out);
+  $out['event_registrations']=$out['event_registrations']->map(function($r){$event=DB::table('events')->find($r->event_id);$r->event_title=$event?->title;$r->can_cancel=$r->status==='registered'&&$event&&now()->lt($event->starts_at);return $r;});
   $out['notifications']=$u->notifications()->latest()->limit(100)->get(['id','data','read_at','created_at']);
   return $out;
  }
