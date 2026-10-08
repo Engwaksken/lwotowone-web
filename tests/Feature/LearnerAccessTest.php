@@ -40,19 +40,33 @@ class LearnerAccessTest extends TestCase
     {
         $learner = $this->learner();
         $course = $this->course();
-        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Course selection')->assertDontSee('Verified learner outcomes');
+        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Personal and course')->assertSee('Background')->assertSee('Employment and goals')->assertSee('Course selection')->assertSee('Are you employed?')->assertDontSee('Youth in Work before')->assertDontSee('Verified learner outcomes');
         $this->get('/dashboard')->assertRedirect('/profile');
         $this->post('/profile', [
             'name' => 'Learner Name', 'phone' => '+256700000000', 'selected_course_id' => $course,
             'gender' => 'Female', 'location' => 'Kampala',
             'urban_rural' => 'Urban', 'learner_age' => 22, 'refugee' => 0, 'pwd' => 0,
-            'education_level' => 'Secondary', 'learner_status' => 'Active',
+            'education_level' => 'Secondary', 'employed' => 0,
         ])->assertRedirect();
         $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learning_access_paid' => false, 'learner_no' => null, 'enrollment_category' => null, 'enrollment_date' => null]);
         $this->get('/portal/learn')->assertRedirect('/portal/payment');
         $token = $learner->createToken('test')->plainTextToken;
         $this->withToken($token)->getJson('/api/snapshot')->assertForbidden();
         $this->postJson('/actions/enrol', ['course_id' => $course])->assertForbidden();
+
+        $this->post('/profile', [
+            'name' => 'Learner Name', 'phone' => '+256700000000', 'selected_course_id' => $course,
+            'gender' => 'Female', 'location' => 'Kampala', 'urban_rural' => 'Urban', 'learner_age' => 22,
+            'refugee' => 0, 'pwd' => 0, 'education_level' => 'Secondary', 'employed' => 1,
+        ])->assertSessionHasErrors('employer_name');
+
+        $this->post('/profile', [
+            'name' => 'Learner Name', 'phone' => '+256700000000', 'selected_course_id' => $course,
+            'gender' => 'Female', 'location' => 'Kampala', 'urban_rural' => 'Urban', 'learner_age' => 22,
+            'refugee' => 0, 'pwd' => 0, 'education_level' => 'Secondary',
+            'employed' => 1, 'employer_name' => 'Lwotowone Farms',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('users',['id'=>$learner->id,'employed'=>true,'employer_name'=>'Lwotowone Farms']);
 
         $manager = User::create(['name'=>'Manager','email'=>uniqid().'@example.test','password'=>'A-long-test-password','role'=>'manager','status'=>'active']);
         $this->actingAs($manager)->post('/admin/mel/cohorts', [

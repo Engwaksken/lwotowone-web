@@ -33,7 +33,7 @@ class PlatformTest extends TestCase {
   $this->actingAs($this->user('admin'));
   foreach(array_keys(config('modules')) as $module){$this->get('/admin/'.$module)->assertOk();$this->get('/admin/'.$module.'/create')->assertOk();}
   foreach(['submissions','practice_logs','bookings','applications','event_registrations','contacts','audit_logs'] as $type)$this->get('/admin/reviews/'.$type)->assertOk();
-  $this->actingAs($this->user());$this->get('/dashboard')->assertOk();
+   $this->actingAs($this->user());$this->get('/dashboard')->assertOk()->assertSee('Dashboard')->assertDontSee('About us');
   foreach(['learn','practice','mentorship','opportunities','enterprise','events','notifications','profile'] as $section)$this->get('/portal/'.$section)->assertOk();
  }
  public function test_private_resources_require_enrolment_and_never_expose_storage_paths():void {

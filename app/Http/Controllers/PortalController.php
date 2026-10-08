@@ -123,7 +123,7 @@ class PortalController extends Controller {
      $d=$r->validate(['name'=>'required|string|max:100','phone'=>'nullable|string|max:40','district'=>'nullable|string|max:100','expertise'=>'nullable|string|max:255','bio'=>'nullable|string|max:5000']);
      $r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Profile updated.');
     }
-     $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>'required|string|max:100','yiw_before'=>'nullable|string|max:100','transformation_objective'=>'nullable|string|max:5000']);
+     $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>'required|string|max:100','employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
      $samePaidCourse=$r->user()->learning_access_paid&&(int)$r->user()->selected_course_id===(int)$d['selected_course_id'];
      abort_unless($samePaidCourse||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
      abort_unless(!$r->user()->learning_access_paid||$samePaidCourse,422,'Contact your programme administrator to change your paid course selection.');
@@ -131,6 +131,7 @@ class PortalController extends Controller {
      abort_unless(empty($d['settlement_id'])||$d['settlement']!==null,422,'Select a current settlement.');
      unset($d['settlement_id']);$d['pwd']=(bool)$d['pwd'];$d['refugee']=(bool)$d['refugee'];
      if(!$d['pwd'])$d['impairment']=null;
+     $d['employed']=(bool)$d['employed'];if(!$d['employed'])$d['employer_name']=null;
      $d['learner_status']=$r->user()->learning_access_paid?'Active':'Pending Payment';$d['profile_complete']=true;$r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Learner profile saved.');
    }
  public function download(Request $r,string $type,string $id){

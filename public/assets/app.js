@@ -94,6 +94,18 @@ document.querySelectorAll('[data-tabs]').forEach(tabs=>{
     });
 });
 
+document.querySelectorAll('form[data-learner-profile]').forEach(form=>form.addEventListener('submit',event=>{
+    const invalid=[...form.elements].find(field=>field.required&&!field.disabled&&!field.checkValidity());
+    if(!invalid)return;
+    event.preventDefault();
+    const panel=invalid.closest('[role="tabpanel"]');
+    if(panel?.hidden){
+        const tab=form.querySelector(`[aria-controls="${CSS.escape(panel.id)}"]`);
+        tab?.click();
+    }
+    requestAnimationFrame(()=>{invalid.focus();invalid.reportValidity();});
+}));
+
 document.querySelectorAll('[data-dialog-open]').forEach(button=>button.addEventListener('click',()=>{
     document.getElementById(button.dataset.dialogOpen)?.showModal();
 }));

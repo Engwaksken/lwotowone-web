@@ -15,8 +15,10 @@
 <header>
     <a class="brand" href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'site-logo'])</a>
     <nav aria-label="Main navigation">
+        @if(!auth()->check()||auth()->user()->role!=='participant')
         <a href="/pages/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
         <a href="/explore/opportunities">Opportunities</a><a href="/explore/events">Events</a><a href="/explore/posts">Stories</a><a href="/contact">Contact</a>
+        @endif
         @auth<a class="button small" href="/dashboard">Dashboard</a>@else<a href="/login">Sign in</a><a class="button small" href="/register">Join us</a>@endauth
     </nav>
 </header>

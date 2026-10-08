@@ -5,15 +5,15 @@ Verified locally with PHP **8.3.33** and the installed extensions:
 | Check | Result |
 |---|---|
 | `composer lint` | Passed PHP syntax checks across application, migrations and tests |
-| `composer test` | **48 tests, 272 assertions passed** |
+| `composer test` | **48 tests, 283 assertions passed** |
 | `composer validate --strict --no-check-publish` | Passed |
 | `node --check public/assets/app.js` | Passed |
 | `git diff --check` | Passed (Git reports configured LF/CRLF conversion notices) |
-| `php artisan migrate --force` | Passed; learner MEL, payment gateway, cohort, settlement, and course-selection migrations applied |
+| `php artisan migrate --force` | Passed; learner MEL, payment gateway, cohort, settlement, course-selection, and employment migrations applied |
 | `php artisan view:cache` / `route:list` | Passed; MEL management routes registered |
 | Local HTTP smoke check | Home, login, registration, and health endpoints returned HTTP 200 |
 
-Coverage includes onboarding/payment gating, cohort-based learner number generation, MEL payment destinations and settlements, staff-owned learner outcome updates, document downloads, notifications, enterprise workflows, event registration and table filtering. The CI matrix uses PHP 8.3 and 8.4.
+Coverage includes onboarding/payment gating, cohort-based learner number generation, conditional employment/employer validation, profile tabs and participant navigation, MEL payment destinations and settlements, staff-owned learner outcome updates, document downloads, notifications, enterprise workflows, event registration and table filtering. The CI matrix uses PHP 8.3 and 8.4.
 
 ## Previous development verification — 7 October 2026
 
