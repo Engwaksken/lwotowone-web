@@ -2,7 +2,7 @@
 @section('title','Learner profile | Lwotowone')
 @section('content')
 <span class="eyebrow">Learner onboarding</span><h1>Finalize your learner profile</h1>
-<p>Complete these details after signup. They help us understand learner reach and outcomes.</p>
+<p>Complete your details and select a course. Your enrollment cohort, category, date, and learner number are assigned by the programme administrator after payment is confirmed.</p>
 @if($user->role!=='participant')
 <form class="panel profile-form" method="post" action="/profile">@csrf
 <div class="field"><label for="profile-name">Full name</label><input id="profile-name" name="name" value="{{ old('name',$user->name) }}" required></div>
@@ -15,16 +15,27 @@
 @else
 <form class="panel profile-form" method="post" action="/profile">@csrf
 <div class="grid">
-@php $fields=[['learner_no','Learner number','text'],['venture','Venture','text'],['enrollment_date','Enrollment date','date'],['enrollment_category','Enrollment category','text'],['gender','Gender','select',['Female','Male','Other','Prefer not to say']],['phone','Phone','tel'],['location','Location','text'],['urban_rural','Urban/Rural','select',['Urban','Rural']],['learner_age','Age of learner','number'],['refugee','Refugee','select',['0'=>'No','1'=>'Yes']],['settlement','Settlement','text'],['pwd','PWD','select',['0'=>'No','1'=>'Yes']],['impairment','Impairment','text'],['education_level','Education level','text'],['learner_status','Learner status','text'],['verified_outcomes','Verified learner outcomes','textarea'],['other_verified_outcome','Other verified learner outcome','textarea'],['yiw_before','Youth in Work before','text'],['transformation_objective','Transformation objective','textarea'],['after_work_status','After-work status','text'],['after_work_pathway','After-work pathway','text']]; @endphp
-@foreach($fields as $field)@php [$key,$label,$type]=$field; $choices=$field[3]??[]; @endphp
-<div class="field"><label for="profile-{{ $key }}">{{ $label }}</label>
-@if($type==='select')<select id="profile-{{ $key }}" name="{{ $key }}" @if(!in_array($key,['settlement']))required @endif><option value="">Select</option>@foreach($choices as $value=>$choice)@php $booleanField=in_array($key,['refugee','pwd'],true);$optionValue=$booleanField?(string)(int)($choice==='Yes'):(is_int($value)?$choice:$value);$selectedValue=old($key,$user->$key);if($booleanField&&$selectedValue!==null)$selectedValue=(string)(int)(bool)$selectedValue; @endphp<option value="{{ $optionValue }}" @selected((string)$selectedValue===(string)$optionValue)>{{ $choice }}</option>@endforeach</select>
-@elseif($type==='textarea')<textarea id="profile-{{ $key }}" name="{{ $key }}">{{ old($key,$user->$key) }}</textarea>
-@else<input id="profile-{{ $key }}" type="{{ $type }}" name="{{ $key }}" value="{{ old($key,$user->$key) }}" @if(!in_array($key,['learner_no','venture','enrollment_date']))required @endif @if($type==='number')min="10" max="100"@endif>@endif</div>
-@endforeach
 <div class="field"><label for="profile-name">Full name</label><input id="profile-name" name="name" value="{{ old('name',$user->name) }}" required></div>
 <div class="field"><label>Email address</label><input value="{{ $user->email }}" disabled></div>
-</div><div class="profile-actions"><button type="submit">Save learner profile</button></div></form>
+<div class="field"><label for="profile-phone">Phone</label><input id="profile-phone" type="tel" name="phone" value="{{ old('phone',$user->phone) }}" required></div>
+<div class="field"><label for="profile-course">Course selection</label>
+@if($user->learning_access_paid)<input type="hidden" name="selected_course_id" value="{{ $user->selected_course_id }}"><input id="profile-course" value="{{ $courses->firstWhere('id',$user->selected_course_id)?->title??'Assigned course' }}" disabled><small>Contact your programme administrator if you need to change this course.</small>
+@else<select id="profile-course" name="selected_course_id" required><option value="">Choose a course</option>@foreach($courses as $course)<option value="{{ $course->id }}" @selected((string)old('selected_course_id',$user->selected_course_id)===(string)$course->id)>{{ $course->title }}</option>@endforeach</select>@endif</div>
+<div class="field"><label for="profile-gender">Gender</label><select id="profile-gender" name="gender" required><option value="">Select</option>@foreach(['Female','Male','Other','Prefer not to say'] as $gender)<option @selected(old('gender',$user->gender)===$gender)>{{ $gender }}</option>@endforeach</select></div>
+<div class="field"><label for="profile-location">Location</label><input id="profile-location" name="location" value="{{ old('location',$user->location) }}" required></div>
+<div class="field"><label for="profile-urban-rural">Urban/Rural</label><select id="profile-urban-rural" name="urban_rural" required><option value="">Select</option>@foreach(['Urban','Rural'] as $area)<option @selected(old('urban_rural',$user->urban_rural)===$area)>{{ $area }}</option>@endforeach</select></div>
+<div class="field"><label for="profile-age">Age of learner</label><input id="profile-age" type="number" name="learner_age" min="10" max="100" value="{{ old('learner_age',$user->learner_age) }}" required></div>
+@php $refugee=(string)old('refugee',(int)$user->refugee)==='1';$pwd=(string)old('pwd',(int)$user->pwd)==='1'; @endphp
+<div class="field"><label for="profile-refugee">Refugee</label><select id="profile-refugee" name="refugee" data-toggle="refugee" required><option value="0" @selected(!$refugee)>No</option><option value="1" @selected($refugee)>Yes</option></select></div>
+<div class="field" data-dependent="refugee" @if(!$refugee)hidden @endif><label for="profile-settlement">Settlement</label><select id="profile-settlement" name="settlement_id" @if($refugee)required @endif><option value="">Select settlement</option>@foreach($settlements as $settlement)<option value="{{ $settlement->id }}" @selected((string)old('settlement_id')===(string)$settlement->id || ($user->settlement===$settlement->name && !old('settlement_id')))>{{ $settlement->name }}</option>@endforeach</select></div>
+<div class="field"><label for="profile-pwd">Person with disability (PWD)</label><select id="profile-pwd" name="pwd" data-toggle="pwd" required><option value="0" @selected(!$pwd)>No</option><option value="1" @selected($pwd)>Yes</option></select></div>
+<div class="field" data-dependent="pwd" @if(!$pwd)hidden @endif><label for="profile-impairment">Impairment type</label><select id="profile-impairment" name="impairment" @if($pwd)required @endif><option value="">Select impairment</option>@foreach(['Physical','Visual','Hearing','Speech','Intellectual','Psychosocial','Multiple','Other'] as $impairment)<option @selected(old('impairment',$user->impairment)===$impairment)>{{ $impairment }}</option>@endforeach</select></div>
+<div class="field"><label for="profile-education">Education level</label><input id="profile-education" name="education_level" value="{{ old('education_level',$user->education_level) }}" required></div>
+<div class="field"><label for="profile-yiw">Youth in Work before</label><input id="profile-yiw" name="yiw_before" value="{{ old('yiw_before',$user->yiw_before) }}"></div>
+<div class="field"><label for="profile-objective">Transformation objective</label><textarea id="profile-objective" name="transformation_objective">{{ old('transformation_objective',$user->transformation_objective) }}</textarea></div>
+</div>
+@if($user->profile_complete)<div class="panel learner-enrollment-summary"><h2>Enrollment details</h2><p><strong>Learner number:</strong> {{ $user->learner_no??'Assigned after payment is confirmed' }}</p><p><strong>Enrollment category:</strong> {{ $user->enrollment_category??'Set by your programme cohort' }}</p><p><strong>Enrollment date:</strong> {{ $user->enrollment_date??'Set when payment is confirmed' }}</p></div>@endif
+<div class="profile-actions"><button type="submit">Save learner profile</button></div></form>
 @if($user->profile_complete)<p class="notice success">Profile complete. Learning access: {{ $user->learning_access_paid?'Payment confirmed':'Payment required' }}.</p>@endif
 @endif
 @endsection

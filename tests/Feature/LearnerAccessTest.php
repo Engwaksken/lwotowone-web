@@ -20,23 +20,51 @@ class LearnerAccessTest extends TestCase
         ]);
     }
 
+    private function course(): int
+    {
+        $program = Workflow::insert('programs', [
+            'title' => 'Programme', 'slug' => uniqid(), 'category' => 'TVET',
+            'summary' => 'Programme', 'body' => 'Programme', 'status' => 'published',
+        ]);
+        $instructor = User::create([
+            'name' => 'Instructor', 'email' => uniqid().'@example.test', 'password' => 'A-long-test-password',
+            'role' => 'instructor', 'status' => 'active',
+        ]);
+        return Workflow::insert('courses', [
+            'title' => 'Learning course', 'program_id' => $program, 'instructor_id' => $instructor->id,
+            'summary' => 'Course', 'duration_hours' => 1, 'status' => 'published',
+        ]);
+    }
+
     public function test_signup_requires_profile_then_payment_before_learning_access(): void
     {
         $learner = $this->learner();
-        $this->actingAs($learner)->get('/dashboard')->assertRedirect('/profile');
+        $course = $this->course();
+        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Course selection')->assertDontSee('Verified learner outcomes');
+        $this->get('/dashboard')->assertRedirect('/profile');
         $this->post('/profile', [
-            'name' => 'Learner Name', 'phone' => '+256700000000', 'learner_no' => 'LW-1001',
-            'enrollment_category' => 'Youth', 'gender' => 'Female', 'location' => 'Kampala',
+            'name' => 'Learner Name', 'phone' => '+256700000000', 'selected_course_id' => $course,
+            'gender' => 'Female', 'location' => 'Kampala',
             'urban_rural' => 'Urban', 'learner_age' => 22, 'refugee' => 0, 'pwd' => 0,
             'education_level' => 'Secondary', 'learner_status' => 'Active',
         ])->assertRedirect();
-        $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learning_access_paid' => false]);
+        $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learning_access_paid' => false, 'learner_no' => null, 'enrollment_category' => null, 'enrollment_date' => null]);
         $this->get('/portal/learn')->assertRedirect('/portal/payment');
         $token = $learner->createToken('test')->plainTextToken;
         $this->withToken($token)->getJson('/api/snapshot')->assertForbidden();
-        $this->postJson('/actions/enrol', ['course_id' => 1])->assertForbidden();
+        $this->postJson('/actions/enrol', ['course_id' => $course])->assertForbidden();
 
-        $learner->refresh()->update(['learning_access_paid' => true]);
+        $manager = User::create(['name'=>'Manager','email'=>uniqid().'@example.test','password'=>'A-long-test-password','role'=>'manager','status'=>'active']);
+        $this->actingAs($manager)->post('/admin/mel/cohorts', [
+            'name'=>'2026 Youth', 'enrollment_category'=>'Youth', 'learner_number_prefix'=>'LW',
+            'learner_number_format'=>'{prefix}-{year}-{sequence}', 'next_sequence'=>1, 'sequence_padding'=>4, 'active'=>1,
+        ])->assertRedirect();
+        $cohort = DB::table('mel_cohorts')->value('id');
+        $this->post('/admin/mel/learners/'.$learner->id.'/confirm-payment',['cohort_id'=>$cohort])->assertRedirect();
+        $this->assertDatabaseHas('users',['id'=>$learner->id,'learning_access_paid'=>true,'learner_no'=>'LW-'.now()->format('Y').'-0001','enrollment_category'=>'Youth','learner_status'=>'Active']);
+        $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$course]);
+        $learner->refresh();
+        $this->actingAs($learner);
         $this->get('/portal/learn')->assertOk();
         $this->withToken($token)->getJson('/api/snapshot')->assertOk();
     }
@@ -45,17 +73,7 @@ class LearnerAccessTest extends TestCase
     {
         $learner = $this->learner();
         $learner->update(['profile_complete' => true]);
-        $course = Workflow::insert('courses', [
-            'title' => 'Learning course', 'program_id' => Workflow::insert('programs', [
-                'title' => 'Programme', 'slug' => uniqid(), 'category' => 'TVET',
-                'summary' => 'Programme', 'body' => 'Programme', 'status' => 'published',
-            ]),
-            'instructor_id' => User::create([
-                'name' => 'Instructor', 'email' => uniqid().'@example.test', 'password' => 'A-long-test-password',
-                'role' => 'instructor', 'status' => 'active',
-            ])->id,
-            'summary' => 'Course', 'duration_hours' => 1, 'status' => 'published',
-        ]);
+        $course = $this->course();
         DB::table('enrolments')->insert(['user_id' => $learner->id, 'course_id' => $course, 'created_at' => now(), 'updated_at' => now()]);
 
         $this->actingAs($learner)->get('/learning/'.$course)->assertForbidden();

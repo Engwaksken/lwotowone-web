@@ -118,5 +118,22 @@ document.querySelectorAll('form').forEach(form=>{
     updateDateRange();
 });
 
+document.querySelectorAll('[data-dependent] input,[data-dependent] select,[data-dependent] textarea').forEach(input=>{
+    input.dataset.requiredWhenActive='true';
+    input.required=true;
+});
+document.querySelectorAll('select[data-toggle]').forEach(control=>{
+    const updateDependent=()=>document.querySelectorAll(`[data-dependent="${CSS.escape(control.dataset.toggle)}"]`).forEach(field=>{
+        const active=control.value==='1';
+        field.hidden=!active;
+        field.querySelectorAll('input,select,textarea').forEach(input=>{
+            input.disabled=!active;
+            if(input.dataset.requiredWhenActive==='true')input.required=active;
+        });
+    });
+    control.addEventListener('change',updateDependent);
+    updateDependent();
+});
+
 const reopen=document.querySelector('[data-reopen-dialog]');
 if(reopen){document.getElementById(reopen.dataset.reopenDialog)?.showModal();}

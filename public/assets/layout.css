@@ -84,9 +84,10 @@ aside i{width:18px;text-align:center}
 .footer-bottom p{margin:0;color:#d3e2d9;font-size:13px}
 .site-page{display:flex;flex-direction:column;min-height:100vh}
 .site-page>.shell{flex:1;width:100%}
+.site-page>.shell{max-width:none;margin:0}
 .site-page>.site-footer{width:100%;margin-top:auto}
 .site-page>.shell>main{min-height:0}
-.site-sidebar{display:flex;flex-direction:column;gap:17px}
+.site-sidebar{display:flex;flex:0 0 260px;flex-direction:column;gap:17px;width:260px;min-height:calc(100vh - 90px)}
 .sidebar-identity{padding:0 10px 15px;border-bottom:1px solid var(--line)}
 .sidebar-identity strong{display:block;line-height:1.35}
 .sidebar-nav{display:grid;gap:18px;align-content:start}
@@ -205,4 +206,5 @@ main .field input::placeholder,main .field textarea::placeholder{color:#78897f;o
 @media(max-width:460px){.auth-shell{justify-content:flex-start;padding:22px 12px}.auth-card{padding:25px 20px;border-radius:17px}.auth-fields-grid{grid-template-columns:1fr}.auth-options{font-size:13px}.footer-main{grid-template-columns:1fr}.footer-column h2{margin-bottom:10px}}
 @media(max-width:920px){.filter-form{grid-template-columns:repeat(2,minmax(0,1fr))}.filter-form .search-field{grid-column:1/-1}.filter-actions{grid-column:1/-1}}
 @media(max-width:680px){.practice-form{grid-template-columns:1fr}.practice-description,.practice-submit{grid-column:auto}.profile-layout{grid-template-columns:1fr}.profile-summary{padding:22px}.filter-form{grid-template-columns:1fr}.filter-form .search-field,.filter-actions{grid-column:auto}.enterprise-card{align-items:flex-start;flex-direction:column}.enterprise-card button{width:100%}.site-sidebar{gap:12px}.sidebar-nav{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sidebar-signout{margin-top:0}.course-resource{align-items:flex-start;flex-direction:column}.course-resource .button{width:100%;text-align:center}}
+@media(max-width:800px){.site-page>.shell{display:flex;flex-direction:column}.site-sidebar{width:100%;flex:0 0 auto;min-height:0;border-right:0;border-bottom:1px solid var(--line)}}
 @media(max-width:680px){.tab-list{margin-right:-12px}.tab-list [role=tab]{padding:9px 11px;font-size:14px}.dialog-heading{padding:15px 18px}.dialog-form{padding:8px 18px 20px}}

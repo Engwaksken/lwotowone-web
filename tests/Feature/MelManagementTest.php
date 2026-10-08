@@ -33,7 +33,9 @@ class MelManagementTest extends TestCase
         $this->assertDatabaseHas('payment_gateways', [
             'name' => 'IOTEC Tuition', 'merchant_code' => 'MERCHANT-42', 'active' => true,
         ]);
-        $this->actingAs($this->account('participant'))->get('/portal/payment')
+        $participant = $this->account('participant');
+        $participant->update(['profile_complete' => true]);
+        $this->actingAs($participant)->get('/portal/payment')
             ->assertOk()->assertSee('IOTEC Tuition')->assertSee('MERCHANT-42');
     }
 
@@ -48,5 +50,26 @@ class MelManagementTest extends TestCase
         $document = \Illuminate\Support\Facades\DB::table('mel_documents')->first();
         $this->get('/admin/mel/documents/'.$document->id.'/download')->assertOk();
         $this->actingAs($this->account('participant'))->get('/admin/mel/documents/'.$document->id.'/download')->assertForbidden();
+    }
+
+    public function test_managers_configure_settlements_and_update_staff_owned_learner_outcomes(): void
+    {
+        $manager = $this->account('manager');
+        $participant = $this->account('participant');
+        $this->actingAs($manager)->post('/admin/mel/settlements', ['name' => 'Nakivale'])->assertRedirect();
+        $this->actingAs($participant)->get('/profile')->assertOk()->assertSee('Settlement')->assertSee('Nakivale');
+
+        $this->actingAs($manager)->put('/admin/mel/learners/'.$participant->id, [
+            'verified_outcomes' => 'Completed vocational training',
+            'other_verified_outcome' => 'Started a cooperative',
+            'after_work_status' => 'Self-employed',
+            'after_work_pathway' => 'Enterprise',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('users', [
+            'id' => $participant->id, 'verified_outcomes' => 'Completed vocational training',
+            'other_verified_outcome' => 'Started a cooperative', 'after_work_status' => 'Self-employed',
+            'after_work_pathway' => 'Enterprise',
+        ]);
+        $this->actingAs($participant)->put('/admin/mel/learners/'.$participant->id, [])->assertForbidden();
     }
 }
