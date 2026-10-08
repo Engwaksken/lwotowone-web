@@ -5,8 +5,12 @@ use App\Notifications\PlatformNotice;
 use Illuminate\Support\Facades\{DB,Validator};
 use Illuminate\Validation\ValidationException;
 class Workflow {
- public static function run(User $u,string $action,array $input): array {
-  abort_unless($u->role==='participant',403,'Participant access required.');
+  public static function run(User $u,string $action,array $input): array {
+   abort_unless($u->role==='participant',403,'Participant access required.');
+   if($action==='enrol'||$action==='complete'||$action==='submit'){
+    abort_unless($u->profile_complete,403,'Complete your learner profile first.');
+    abort_unless($u->learning_access_paid,403,'Payment is required to access learning materials.');
+   }
   return DB::transaction(function()use($u,$action,$input){
    // Serialise actions for one participant. Also protects uniqueness and sync replay.
    User::whereKey($u->id)->lockForUpdate()->firstOrFail();

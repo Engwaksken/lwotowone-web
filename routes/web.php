@@ -15,10 +15,19 @@ Route::middleware('guest')->group(function(){
 });
 Route::middleware(['auth','active'])->group(function(){
  Route::post('/logout',[AuthController::class,'logout']);Route::get('/dashboard',[PortalController::class,'dashboard']);
+ Route::get('/profile',[PortalController::class,'section'])->defaults('section','profile');
  Route::get('/portal/{section}',[PortalController::class,'section']);Route::get('/learning/{id}',[PortalController::class,'course']);
  Route::post('/actions/{action}',[PortalController::class,'action']);Route::post('/profile',[PortalController::class,'profile']);
  Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);Route::get('/files/{type}/{id}',[PortalController::class,'download']);Route::get('/certificates/{id}',[PortalController::class,'certificate']);
- Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
+  Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
+  Route::get('/admin/mel',[\App\Http\Controllers\MelController::class,'index']);
+   Route::post('/admin/mel/learners/{id}/confirm-payment',[\App\Http\Controllers\MelController::class,'confirmPayment']);
+   Route::post('/admin/mel/payment-gateways', [\App\Http\Controllers\MelController::class,'saveGateway']);
+   Route::delete('/admin/mel/payment-gateways/{id}', [\App\Http\Controllers\MelController::class,'deleteGateway']);
+  Route::post('/admin/mel/{category}',[\App\Http\Controllers\MelController::class,'save']);
+  Route::delete('/admin/mel/{category}/{id}',[\App\Http\Controllers\MelController::class,'delete']);
+  Route::post('/admin/mel/documents',[\App\Http\Controllers\MelController::class,'upload']);
+  Route::delete('/admin/mel/documents/{id}',[\App\Http\Controllers\MelController::class,'deleteDocument']);
  Route::get('/admin/reviews/{type}',[ReviewController::class,'index']);Route::post('/admin/reviews/{type}/{id}',[ReviewController::class,'update']);
  Route::get('/admin/{module}',[CmsController::class,'index']);Route::get('/admin/{module}/create',[CmsController::class,'form']);Route::get('/admin/{module}/{id}/edit',[CmsController::class,'form']);
  Route::post('/admin/{module}',[CmsController::class,'save']);Route::put('/admin/{module}/{id}',[CmsController::class,'save']);Route::delete('/admin/{module}/{id}',[CmsController::class,'delete']);
