@@ -86,9 +86,11 @@ Base URL: `https://your-domain/api`. JSON requests use `Accept: application/json
 |---|---|---|
 | POST | `/register` | Name, email, password, password_confirmation, consent=1; optional phone/district |
 | POST | `/login` | Email and password; returns user and token |
-| GET | `/snapshot` | Published content and current participant's records |
+| GET | `/snapshot` | Published content and current participant's records (profile completion and confirmed learning payment required) |
 | POST | `/actions/{action}` | Execute participant workflow |
-| POST | `/profile` | Update name, phone and district |
+| POST | `/profile` | Update staff account details or complete a participant learner profile |
+| POST | `/device-token` | Register or replace the participant's FCM device token (`token`) |
+| DELETE | `/device-token` | Remove the participant's FCM device token |
 | POST | `/notifications/{id}/read` | Mark own notice read |
 | GET | `/resources/{id}/download` | Private resource download for enrolled course |
 | POST | `/logout` | Revoke current token |
@@ -101,7 +103,7 @@ Snapshot sync is a full account-scoped refresh, not delta sync. It deliberately 
 
 Run `composer test` to execute feature tests. See `VALIDATION.md` for results from this build.
 
-This delivery is source code, not a hosted deployment. SMTP, real learning content, mentor availability, staff identities, verified organisation contact details and release configuration must be supplied by Lwotowone. SMS, FCM/APNs device push, payment gateways, live classroom video, quizzes, multi-tenant operation, external accreditation and automatic opportunity scraping are not implemented. Email/in-app notices are implemented. Background sync is not scheduled; mobile users synchronise explicitly or when the app opens. Data privacy and terms drafts need organisation review before launch. Production MySQL and real Android/iOS device acceptance testing remain necessary.
+This delivery is source code, not a hosted deployment. SMTP, real learning content, mentor availability, staff identities, verified organisation contact details and release configuration must be supplied by Lwotowone. Stripe PaymentIntents and signed webhook recording are implemented for enterprise transactions; configure `STRIPE_SECRET`, `STRIPE_KEY` and `STRIPE_WEBHOOK_SECRET` before provider acceptance testing. Admins can manage learner payment instructions (IOTEC, banks, merchant codes and other methods) in MEL; receipt is currently confirmed by a manager rather than automatically reconciled. FCM v1 push and Twilio SMS delivery are implemented and require provider credentials. Participant FCM-token registration is available through the API; queued broadcasts and APNs are not implemented. Live classroom video, quizzes, multi-tenant operation, external accreditation and automatic opportunity scraping are not implemented. Email/in-app notices are implemented. Background sync is not scheduled; mobile users synchronise explicitly or when the app opens. Data privacy and terms drafts need organisation review before launch. Production MySQL and real Android/iOS device acceptance testing remain necessary.
 
 Official references: https://laravel.com/docs/13.x/releases ; https://laravel.com/docs/13.x/sanctum ; https://docs.flutter.dev/app-architecture/design-patterns/offline-first
 
@@ -111,7 +113,7 @@ Participants can now edit their own enterprise name, sector, idea, business plan
 
 The earnings page filters by enterprise, all time, current week/month/year or an inclusive custom date range. Income, expenses and net income use those filters. Description search affects transaction history only. Date validation and enterprise ownership are enforced on the server. No database migration is needed for this update.
 
-GitHub Actions runs the PHPUnit suite for pushes and pull requests using an isolated SQLite database. See `.github/workflows/tests.yml`.
+GitHub Actions runs source lint, dependency checks, clean-install checks and the PHPUnit suite for pushes and pull requests on every branch using PHP 8.3 / 8.4 and an isolated SQLite database. Coverage is generated and retained as a workflow artifact. See `.github/workflows/tests.yml`. Local checks: `composer lint` and `composer test`.
 
 ## Learning progress and event update
 
@@ -120,3 +122,19 @@ Participant course cards, course pages and the dashboard now show lesson complet
 Participants can cancel their own registered events before the start time. Cancellation keeps the registration record and releases capacity. Re-registration reuses the same record when space remains and registration is open. Past or attended registrations cannot be cancelled. Event history shows the saved status.
 
 API additions: `POST /api/actions/cancel-event` with `registration_id` (optional UUID `client_id` for replay); `/api/snapshot` adds `course_progress`, `events[].registration_open`, and `event_registrations[].event_title` / `can_cancel`. Event changes require an online server response. No schema migration is required.
+
+## Production baseline repair — 7 October 2026
+
+The Enterprise & earnings page includes enterprise creation/editing, income/expense recording, paginated history, and server-validated enterprise/date filters. Description search is literal and filters history without changing summary totals. Current week starts on Monday; periods use the application timezone. No database migration is needed.
+
+Bulk push/SMS API methods now require an active administrator or programme manager and accept bounded, validated payloads. FCM uses service-account OAuth with cached access tokens; Twilio uses configured account credentials and form-encoded requests. Participants can register/remove their device token, and unregistered tokens are cleared. Set `FCM_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_JSON`, `ACCOUNT_SID`, `AUTH_TOKEN` and `FROM_NUMBER`; the service account JSON is a single-line environment value. Queued broadcasts and live provider delivery checks remain operational follow-ups. Stripe payment processing and webhook handling are implemented; live-mode provider acceptance and operational configuration remain required before production use.
+
+Stripe PaymentIntent creation is restricted to a participant's own enterprise. Signed `payment_intent.succeeded` webhooks record payments idempotently; transaction reads are scoped to the signed-in participant. Configure the three `STRIPE_*` values and register `/api/stripe/webhook` in Stripe. Failed or pending intents are not counted as transactions.
+
+The participant practical-skills area now separates activity logging, the skills catalogue and activity history. Activity history and staff review/CMS tables support literal search, date periods and pagination. Profile forms are responsive; dashboard statistics use compact responsive cards. Font Awesome 5 icons are used throughout the shared navigation and page headers.
+
+Use PHP 8.3+ for both Composer and the application. PHPUnit forces an in-memory SQLite database and test-only queue/session/cache settings; it does not use the deployment database. The current verification result is recorded in `VALIDATION.md`; earlier results describe earlier deliveries, including mobile source outside this repository.
+
+## Learner onboarding and MEL — 8 October 2026
+
+New participants complete the learner profile at `/profile` after signup. Learning enrolment, course pages, certificates, API snapshots and private learning resources require a completed profile and manager-confirmed payment. Managers use `/admin/mel` to review learner profiles, confirm payments, manage educator/school/other-user/employment/finance/partnership/revenue records, manage active IOTEC/bank/merchant-code payment instructions, and upload/download supporting documents. Apply all migrations with `php artisan migrate --force` before deployment. Configured payment methods display instructions and destinations; online processing/reconciliation for those methods is not enabled.

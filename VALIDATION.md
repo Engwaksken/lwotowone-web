@@ -1,4 +1,54 @@
-# Initial build validation — 4 October 2026
+# Current checkout verification — 8 October 2026
+
+Checks available in the current Windows workspace:
+
+| Check | Result |
+|---|---|
+| `composer lint` | Passed PHP syntax checks across application, migrations and tests |
+| `composer validate --strict --no-check-publish` | Passed |
+| `node --check public/assets/app.js` | Passed |
+| `git diff --check` | Passed (Git reports configured LF/CRLF conversion notices) |
+| `composer test` | Not run: installed PHP is 8.2.12; the project requires PHP 8.3+ and PHPUnit 12 refuses to start |
+| `php artisan view:cache` / `route:list` | Not run for the same PHP 8.3 platform requirement |
+
+The test suite contains additional learner-access, payment, notification, enterprise, event and table-filter coverage. Run it with PHP 8.3 or later; the CI matrix uses PHP 8.3 and 8.4.
+
+## Previous development verification — 7 October 2026
+
+Checks run locally under PHP **8.5.11** using the locked dependencies:
+
+| Check | Result |
+|---|---|
+| `composer lint` | Passed without PHP syntax errors |
+| `composer test` | **40 tests, 219 assertions passed** |
+| `composer validate --strict --no-check-publish` | Passed |
+| `git diff --check` | Passed |
+| JavaScript syntax (`node --check public/assets/app.js`) | Passed |
+
+New notification coverage verifies FCM service-account token exchange and caching, FCM v1 requests, clearing unregistered device tokens, participant-only token registration/removal, Twilio form requests, and safe behavior when provider configuration is absent. Table-filter coverage checks practical activity search/date filtering/pagination, review queue search/status/week filtering, and CMS record search/date filtering. Provider HTTP calls are mocked; live Google/Twilio delivery is not validated. The FCM token column requires applying the new migration before deployment.
+
+## Previous web baseline validation — 7 October 2026
+
+Verified against this checkout using an isolated PHP **8.3.35** runtime and locked Composer dependencies:
+
+| Check | Result |
+|---|---|
+| Locked dependency installation | Passed; no dependency versions changed |
+| `composer validate --strict --no-check-publish` | Passed |
+| `composer audit --locked` | No security vulnerability advisories found |
+| PHP source lint (`composer lint`) | Passed, including the repaired notification service |
+| Feature suite (`composer test`) | **27 tests, 173 assertions passed** |
+| Clean SQLite migration and production-content seed | Passed against a separate temporary database with `SEED_DEMO=false` |
+| Route and scheduler registration | Passed; 44 application routes and 3 scheduled commands listed |
+| Patch whitespace check | Passed |
+
+New regression tests cover bulk-messaging role authorization, validated broadcast payloads, enterprise page rendering, account isolation, enterprise update ownership/replay/history preservation, inclusive custom dates, current week/month/year boundaries, invalid filters, literal description search, pagination and summary totals unaffected by search.
+
+The CI workflow now prepares its own environment, installs locked dependencies, lints source, checks a clean installation and runs PHPUnit on PHP 8.3 / 8.4 with generated coverage artifacts. Remote GitHub Actions execution and coverage generation have not been observed locally; the local runtime has no coverage extension.
+
+Provider delivery, Stripe live-mode payments, MySQL concurrency, live SMTP, browser accessibility, production deployment/recovery and native mobile acceptance remain unverified. Flutter source is outside this repository. The earlier test counts below describe prior deliveries and are not the current checkout's test inventory.
+
+## Historical initial build validation — 4 October 2026
 
 | Check | Result |
 |---|---|

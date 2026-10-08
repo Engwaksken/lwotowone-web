@@ -27,6 +27,7 @@ Route::middleware(['auth','active'])->group(function(){
   Route::post('/admin/mel/{category}',[\App\Http\Controllers\MelController::class,'save']);
   Route::delete('/admin/mel/{category}/{id}',[\App\Http\Controllers\MelController::class,'delete']);
   Route::post('/admin/mel/documents',[\App\Http\Controllers\MelController::class,'upload']);
+  Route::get('/admin/mel/documents/{id}/download',[\App\Http\Controllers\MelController::class,'downloadDocument']);
   Route::delete('/admin/mel/documents/{id}',[\App\Http\Controllers\MelController::class,'deleteDocument']);
  Route::get('/admin/reviews/{type}',[ReviewController::class,'index']);Route::post('/admin/reviews/{type}/{id}',[ReviewController::class,'update']);
  Route::get('/admin/{module}',[CmsController::class,'index']);Route::get('/admin/{module}/create',[CmsController::class,'form']);Route::get('/admin/{module}/{id}/edit',[CmsController::class,'form']);

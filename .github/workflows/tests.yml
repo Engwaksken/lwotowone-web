@@ -1,46 +1,59 @@
-name: PHPUnit Tests
+name: Platform Checks
 
 on:
   push:
-    branches: [development/enterprise-updates]
   pull_request:
-    branches: [development/enterprise-updates]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.3']
-
+        php-version: ['8.3', '8.4']
     env:
+      APP_ENV: testing
       DB_CONNECTION: sqlite
+      DB_DATABASE_SQLITE: ${{ github.workspace }}/database/database.sqlite
+      ADMIN_EMAIL: ci-admin@example.test
+      ADMIN_PASSWORD: ci-only-isolated-test-password
       SEED_DEMO: 'false'
-
+      MAIL_MAILER: log
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: pdo pdo_sqlite mbstring xml ctype curl fileinfo openssl zip
-
-      - name: Install Composer dependencies
-        uses: actions/composer@v3
+          extensions: pdo, pdo_sqlite, mbstring, xml, ctype, curl, fileinfo, openssl, zip
+          coverage: xdebug
+          tools: composer:v2
+      - name: Prepare isolated environment
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache build
+      - name: Validate and install locked dependencies
+        run: |
+          composer validate --strict --no-check-publish
+          composer install --no-interaction --prefer-dist
+          composer audit --locked
+      - name: Lint PHP sources
+        run: composer lint
+      - name: Check clean installation and seed
+        run: |
+          php artisan key:generate
+          php artisan migrate --seed --force
+          php artisan route:list --except-vendor
+          php artisan schedule:list
+      - name: Execute feature tests with coverage
+        run: composer test -- --coverage-clover build/coverage.xml
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         with:
-          php-version: ${{ matrix.php-version }}
-
-      - name: Generate application key
-        run: php artisan key:generate
-
-      - name: Run migrations and seed
-        run: php artisan migrate --seed --force
-
-      - name: Execute feature tests
-        run: php artisan test
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-php-${{ matrix.php-version }}
+          path: build/coverage.xml
+          if-no-files-found: error

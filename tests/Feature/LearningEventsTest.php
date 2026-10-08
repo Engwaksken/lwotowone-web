@@ -7,14 +7,14 @@ use App\Models\User;
 use App\Services\{Workflow,Snapshot};
 class LearningEventsTest extends TestCase {
  use RefreshDatabase;
- private function learner(){return User::create(['name'=>'Learner','email'=>uniqid().'@example.test','password'=>'Test-password-long','role'=>'participant','status'=>'active']);}
+ private function learner(){return User::create(['name'=>'Learner','email'=>uniqid().'@example.test','password'=>'Test-password-long','role'=>'participant','status'=>'active','profile_complete'=>true,'learning_access_paid'=>true]);}
  private function event(){return Workflow::insert('events',['title'=>'Youth skills day','description'=>'Hands-on learning','starts_at'=>now()->addDay(),'ends_at'=>now()->addDay()->addHours(2),'location'=>'Kampala','capacity'=>1,'status'=>'published']);}
  private function course(){
   $teacher=$this->learner();$teacher->update(['role'=>'instructor']);
   $program=Workflow::insert('programs',['title'=>'Skills','slug'=>uniqid(),'category'=>'TVET','summary'=>'Skills','body'=>'Skills','status'=>'published']);
   return Workflow::insert('courses',['title'=>'Poultry skills','program_id'=>$program,'instructor_id'=>$teacher->id,'summary'=>'Practical training','duration_hours'=>4,'status'=>'published']);
  }
- public function test_cancellation_retains_history_frees_capacity_and_enforces_ownership():void {
+  public function test_cancellation_retains_history_frees_capacity_and_enforces_ownership():void {
   $e=$this->event();$owner=$this->learner();$other=$this->learner();
   $id=Workflow::run($owner,'register-event',['event_id'=>$e])['id'];
   $this->actingAs($other)->postJson('/api/actions/cancel-event',['registration_id'=>$id])->assertForbidden();
@@ -24,9 +24,17 @@ class LearningEventsTest extends TestCase {
   Workflow::run($other,'register-event',['event_id'=>$e]);
   $this->postJson('/actions/register-event',['event_id'=>$e])->assertUnprocessable();
   $this->assertDatabaseCount('event_registrations',2);
-  $this->assertDatabaseCount('sync_actions',1);
-  $this->get('/portal/events')->assertOk()->assertSee('Cancelled')->assertSee('Register again');
- }
+   $this->assertDatabaseCount('sync_actions',1);
+   $this->get('/portal/events')->assertOk()->assertSee('Cancelled')->assertSee('Register again');
+  }
+  public function test_course_content_is_grouped_into_tabs():void {
+   $u=$this->learner();$c=$this->course();Workflow::run($u,'enrol',['course_id'=>$c]);
+   Workflow::insert('lessons',['course_id'=>$c,'title'=>'First lesson','body'=>'Lesson details','position'=>1,'status'=>'published']);
+   Workflow::insert('resources',['course_id'=>$c,'title'=>'Course guide','description'=>'Read before practice','status'=>'published']);
+   Workflow::insert('assignments',['course_id'=>$c,'title'=>'Field assignment','instructions'=>'Describe your work','pass_mark'=>60,'status'=>'published']);
+   $this->actingAs($u)->get('/learning/'.$c)->assertOk()->assertSee('Course content')->assertSee('First lesson')
+    ->assertSee('Course guide')->assertSee('Field assignment')->assertSee('panel-course-lessons')->assertSee('panel-course-assignments');
+  }
  public function test_re_registration_reuses_record_and_preserves_created_date():void {
   $u=$this->learner();$e=$this->event();$id=Workflow::run($u,'register-event',['event_id'=>$e])['id'];
   $created=DB::table('event_registrations')->find($id)->created_at;

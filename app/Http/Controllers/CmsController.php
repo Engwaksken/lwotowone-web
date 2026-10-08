@@ -4,9 +4,32 @@ use App\Services\Catalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use Carbon\CarbonImmutable;
 class CmsController extends Controller {
  private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
- public function index(Request $r,string $module){$this->access($r,$module);$q=Catalog::scope(Catalog::query($module),$r->user(),$module);$field=$module==='users'?'name':($module==='settings'?'key':'title');if($s=$r->query('q'))$q->where($field,'like','%'.$s.'%');return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString()]);}
+ public function index(Request $r,string $module){
+  $this->access($r,$module);
+  $filters=$r->validate([
+   'q'=>'nullable|string|max:255','period'=>'sometimes|required|in:all,week,month,year,custom',
+   'start_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d',
+   'end_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d|after_or_equal:start_date',
+  ]);
+  $filters+=['q'=>'','period'=>'all','start_date'=>null,'end_date'=>null];$filters['q']=$filters['q']??'';
+  $q=Catalog::scope(Catalog::query($module),$r->user(),$module);
+  $field=$module==='users'?'name':($module==='settings'?'key':'title');
+  if($filters['q']!==''){$search=str_replace(['!','%','_'],['!!','!%','!_'],$filters['q']);$q->whereRaw("{$field} LIKE ? ESCAPE '!'",['%'.$search.'%']);}
+  if($filters['period']!=='all'){
+   $today=CarbonImmutable::today(config('app.timezone'));
+   [$start,$end]=match($filters['period']){
+    'week'=>[$today->startOfWeek(CarbonImmutable::MONDAY),$today->endOfWeek(CarbonImmutable::SUNDAY)],
+    'month'=>[$today->startOfMonth(),$today->endOfMonth()],
+    'year'=>[$today->startOfYear(),$today->endOfYear()],
+    'custom'=>[CarbonImmutable::parse($filters['start_date']),CarbonImmutable::parse($filters['end_date'])],
+   };
+   $q->whereBetween('created_at',[$start->startOfDay()->toDateTimeString(),$end->endOfDay()->toDateTimeString()]);
+  }
+  return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters]);
+ }
  public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
  public function save(Request $r,string $module,?string $id=null){
   $this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):Catalog::model($module);

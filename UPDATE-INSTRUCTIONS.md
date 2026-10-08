@@ -11,8 +11,11 @@ Project: D:\projects\lwotowone-web
 
 ```powershell
 Set-Location D:\projects\lwotowone-web
+composer install --no-interaction --prefer-dist
+php artisan migrate --force
 php artisan optimize:clear
-php artisan test
+composer lint
+composer test
 ```
 
 Deploy the web update before the mobile update. Existing cancelled registrations can register again if the event is published, has not started and has capacity. Cancellation preserves the original registration ID and created date. Start-time and capacity checks are enforced on the server.

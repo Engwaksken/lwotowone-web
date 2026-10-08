@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\Workflow;
+use Carbon\CarbonImmutable;
 class ReviewController extends Controller {
  private function query(Request $r,string $type){
   abort_unless($r->user()->staff(),403);
@@ -14,7 +15,47 @@ class ReviewController extends Controller {
    else abort(403);
   }return $q;
  }
- public function index(Request $r,string $type){$q=$this->query($r,$type);if($status=$r->query('status'))$q->where('status',$status);return view('admin.reviews',['type'=>$type,'rows'=>$q->orderByDesc('id')->paginate(20)->withQueryString()]);}
+  public function index(Request $r,string $type){
+   $filters=$r->validate([
+    'q'=>'nullable|string|max:255','status'=>'nullable|string|max:40',
+    'period'=>'sometimes|required|in:all,week,month,year,custom',
+    'start_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d',
+    'end_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d|after_or_equal:start_date',
+   ]);
+   $filters+=['q'=>'','status'=>'','period'=>'all','start_date'=>null,'end_date'=>null];
+   $filters['q']=$filters['q']??'';$filters['status']=$filters['status']??'';
+   $q=$this->query($r,$type);
+   if($filters['status']!==''&&$type!=='audit_logs')$q->where('status',$filters['status']);
+   if($filters['q']!==''){
+    $fields=match($type){
+     'submissions'=>['body','feedback','status'],
+     'practice_logs'=>['title','body','status','feedback'],
+     'bookings'=>['goal','status','notes'],
+     'applications'=>['motivation','status','feedback'],
+     'event_registrations'=>['status'],
+     'contacts'=>['name','email','message','status'],
+     'audit_logs'=>['action','module'],
+     default=>[],
+    };
+    $needle=str_replace(['!','%','_'],['!!','!%','!_'],$filters['q']);$pattern='%'.$needle.'%';
+    $q->where(function($query)use($fields,$pattern){foreach($fields as $index=>$field){$method=$index===0?'whereRaw':'orWhereRaw';$query->{$method}("{$field} LIKE ? ESCAPE '!'",[$pattern]);}});
+   }
+   $today=CarbonImmutable::today(config('app.timezone'));
+   [$start,$end]=match($filters['period']){
+    'week'=>[$today->startOfWeek(CarbonImmutable::MONDAY),$today->endOfWeek(CarbonImmutable::SUNDAY)],
+    'month'=>[$today->startOfMonth(),$today->endOfMonth()],
+    'year'=>[$today->startOfYear(),$today->endOfYear()],
+    'custom'=>[CarbonImmutable::parse($filters['start_date']),CarbonImmutable::parse($filters['end_date'])],
+    default=>[null,null],
+   };
+   if($start){
+    $dateColumn=$type==='practice_logs'?'practised_on':'created_at';
+    $from=$dateColumn==='created_at'?$start->startOfDay()->toDateTimeString():$start->toDateString();
+    $to=$dateColumn==='created_at'?$end->endOfDay()->toDateTimeString():$end->toDateString();
+    $q->whereBetween($dateColumn,[$from,$to]);
+   }
+   return view('admin.reviews',['type'=>$type,'rows'=>$q->orderByDesc('id')->paginate(20)->withQueryString(),'filters'=>$filters]);
+  }
  public function update(Request $r,string $type,string $id){
   $item=$this->query($r,$type)->where('id',$id)->first();abort_unless($item,404);
   $rules=match($type){

@@ -27,7 +27,8 @@
       "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
       "@php artisan package:discover --ansi"
     ],
-    "test": "@php vendor/bin/phpunit"
+    "test": "@php vendor/bin/phpunit",
+    "lint": "@php tools/lint.php"
   },
   "config": {
     "sort-packages": true,
