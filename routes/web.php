@@ -21,6 +21,7 @@ Route::middleware(['auth','active'])->group(function(){
   Route::post('/logout',[AuthController::class,'logout']);Route::get('/dashboard',[PortalController::class,'dashboard']);
    Route::get('/admin/site-settings',[CmsController::class,'siteSettings']);Route::put('/admin/site-settings',[CmsController::class,'saveSiteSettings']);
    Route::put('/admin/site-settings/ai',[CmsController::class,'saveAiSettings']);
+   Route::post('/admin/site-settings/ai/test',[CmsController::class,'testAiConnection'])->middleware('throttle:5,1');
   Route::post('/admin/site-settings/payment-gateways', [\App\Http\Controllers\MelController::class,'saveGateway']);
   Route::delete('/admin/site-settings/payment-gateways/{id}', [\App\Http\Controllers\MelController::class,'deleteGateway']);
   Route::get('/admin/enrollment', [\App\Http\Controllers\MelController::class,'enrollment']);

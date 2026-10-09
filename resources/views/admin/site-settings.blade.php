@@ -55,18 +55,27 @@
     </section></section>
     @if(auth()->user()->role==='admin')
     <section class="tab-panel" role="tabpanel" id="settings-panel-ai" aria-labelledby="settings-tab-ai" hidden>
-        <form class="panel settings-form ai-settings-form" method="post" action="/admin/site-settings/ai">@csrf @method('PUT')
+        <form class="panel settings-form ai-settings-form" data-ai-settings method="post" action="/admin/site-settings/ai">@csrf @method('PUT')
             <span class="eyebrow">Chatbot and mentor matching</span><h2>AI API connection</h2>
-            <p>Connect an OpenAI-compatible API. The key is encrypted at rest and never shown after saving. Chat messages and non-identifying learning goals may be sent to this provider for responses and recommendations.</p>
+            <p>Select a provider to fill in its API URL and model choices, then add your API key. You can also enter a custom model or HTTPS endpoint. The key is encrypted at rest and never shown after saving. Chat messages and learning goals may be sent to this provider for responses and recommendations.</p>
+            @php
+                $aiProviders=config('ai.providers');
+                $selectedProvider=old('ai_provider',$settings['ai_provider']??'openai');
+                $providerPreset=$aiProviders[$selectedProvider]??$aiProviders['openai'];
+                $selectedModel=old('ai_api_model',$settings['ai_api_model']??$providerPreset['models'][0]);
+            @endphp
             <div class="settings-fields">
-                <div class="field"><label for="ai-provider">API provider</label><select id="ai-provider" name="ai_provider" required><option value="openai-compatible">OpenAI-compatible API</option></select></div>
-                <div class="field"><label for="ai-model">Model</label><input id="ai-model" name="ai_api_model" value="{{ old('ai_api_model',$settings['ai_api_model']??'gpt-4o-mini') }}" placeholder="e.g. gpt-4o-mini" required></div>
-                <div class="field"><label for="ai-base-url">API base URL</label><input id="ai-base-url" type="url" name="ai_api_base_url" value="{{ old('ai_api_base_url',$settings['ai_api_base_url']??'https://api.openai.com/v1') }}" placeholder="https://api.openai.com/v1" required><small>Use a trusted HTTPS OpenAI-compatible endpoint.</small></div>
-                <div class="field"><label for="ai-api-key">API key {{ $aiConfigured?'(configured; leave blank to keep it)':' ' }}</label><input id="ai-api-key" type="password" name="ai_api_key" autocomplete="new-password" placeholder="{{ $aiConfigured?'Saved securely — enter a new key to replace it':'Enter API key' }}"><small>{{ $aiConfigured?'Key is stored encrypted and cannot be read back.':'The chatbot uses built-in answers until a key is configured.' }}</small></div>
+                <div class="field"><label for="ai-provider">API provider</label><select id="ai-provider" name="ai_provider" required>@foreach($aiProviders as $id=>$provider)<option value="{{ $id }}" @selected($selectedProvider===$id)>{{ $provider['label'] }}</option>@endforeach</select></div>
+                <div class="field"><label for="ai-model-choice">Model</label><select id="ai-model-choice">@foreach($providerPreset['models'] as $model)<option value="{{ $model }}" @selected($selectedModel===$model)>{{ $model }}</option>@endforeach<option value="__custom" @selected(!in_array($selectedModel,$providerPreset['models'],true))>Custom model ID</option></select><label for="ai-model" class="custom-model-label">Model ID</label><input id="ai-model" name="ai_api_model" value="{{ $selectedModel }}" maxlength="120" placeholder="Enter model ID" required><small>Model availability depends on your provider account. Choose Custom model ID for other models.</small></div>
+                <div class="field"><label for="ai-base-url">API base URL</label><input id="ai-base-url" type="url" name="ai_api_base_url" list="ai-base-urls" value="{{ old('ai_api_base_url',$settings['ai_api_base_url']??$providerPreset['url']) }}" placeholder="https://api.openai.com/v1" maxlength="500" required><datalist id="ai-base-urls">@foreach($aiProviders as $provider)<option value="{{ $provider['url'] }}">{{ $provider['label'] }}</option>@endforeach</datalist><small>Filled automatically for the provider; editable for a trusted HTTPS endpoint.</small></div>
+                <div class="field"><label for="ai-api-key">API key {{ $aiConfigured?'(configured; leave blank to keep it)':' ' }}</label><input id="ai-api-key" type="password" name="ai_api_key" data-secret-label="API key" autocomplete="new-password" maxlength="4096" placeholder="{{ $aiConfigured?'Saved securely — enter a new key to replace it':'Enter API key' }}"><small>{{ $aiConfigured?'Leave blank to test or retain the saved key for the same provider and URL.':'The chatbot uses built-in answers until a key is configured.' }}</small></div>
             </div>
             @if($aiConfigured)<div class="field"><label><input type="checkbox" name="clear_api_key" value="1"> Remove saved API key and use built-in chat answers</label></div>@endif
-            <div class="settings-save"><button type="submit"><i class="fas fa-lock" aria-hidden="true"></i> Save AI settings</button></div>
+            <div class="settings-save ai-settings-actions"><button class="secondary" type="button" data-ai-test><i class="fas fa-plug" aria-hidden="true"></i> Test connection</button><button type="submit"><i class="fas fa-lock" aria-hidden="true"></i> Save AI settings</button></div>
+            <p class="ai-test-result" data-ai-test-result role="status" aria-live="polite"></p>
+            <small>Testing sends a short request to the selected model and may use a small amount of your provider quota. It does not save changes.</small>
         </form>
+        <script type="application/json" id="ai-provider-presets">{!! json_encode($aiProviders, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
     </section>
     @endif
     </div>

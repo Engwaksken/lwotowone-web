@@ -24,12 +24,23 @@ class CmsController extends Controller {
  }
  public function saveAiSettings(Request $r){
   abort_unless($r->user()->role==='admin',403);
-  $data=$r->validate(['ai_provider'=>'required|in:openai-compatible','ai_api_base_url'=>'required|url:https|max:500','ai_api_model'=>'required|string|max:120','ai_api_key'=>'nullable|string|max:4096','clear_api_key'=>'nullable|boolean']);
+   $data=$this->aiSettingsData($r);
+   $saved=DB::table('settings')->pluck('value','key');
+   if(empty($data['ai_api_key'])&&!$r->boolean('clear_api_key')&&$saved->get('ai_api_key')&&($saved->get('ai_provider','openai-compatible')!==$data['ai_provider']||rtrim($saved->get('ai_api_base_url',''),'/')!==rtrim($data['ai_api_base_url'],'/')))
+    throw \Illuminate\Validation\ValidationException::withMessages(['ai_api_key'=>'Enter a new API key when changing the provider or API URL, or remove the saved key.']);
   foreach(['ai_provider','ai_api_base_url','ai_api_model'] as $key){$exists=DB::table('settings')->where('key',$key)->exists();if($exists)DB::table('settings')->where('key',$key)->update(['value'=>$data[$key],'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>$key,'value'=>$data[$key],'created_at'=>now(),'updated_at'=>now()]);}
   if($r->boolean('clear_api_key'))DB::table('settings')->where('key','ai_api_key')->delete();
   elseif(!empty($data['ai_api_key'])){$encrypted='enc:'.\Illuminate\Support\Facades\Crypt::encryptString($data['ai_api_key']);$exists=DB::table('settings')->where('key','ai_api_key')->exists();if($exists)DB::table('settings')->where('key','ai_api_key')->update(['value'=>$encrypted,'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>'ai_api_key','value'=>$encrypted,'created_at'=>now(),'updated_at'=>now()]);}
   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-ai','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
   return redirect('/admin/site-settings#settings-panel-ai')->with('success','AI assistant and mentor matching settings saved.');
+ }
+ public function testAiConnection(Request $r){
+  abort_unless($r->user()->role==='admin',403);
+  $data=$this->aiSettingsData($r);
+  return response()->json(app(\App\Services\AiAssistant::class)->testConnection($data));
+ }
+ private function aiSettingsData(Request $r): array {
+  return $r->validate(['ai_provider'=>['required',\Illuminate\Validation\Rule::in(array_keys(config('ai.providers')))],'ai_api_base_url'=>'required|url:https|max:500','ai_api_model'=>'required|string|max:120','ai_api_key'=>'nullable|string|max:4096','clear_api_key'=>'nullable|boolean']);
  }
  private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
  public function index(Request $r,string $module){

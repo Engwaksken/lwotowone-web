@@ -37,9 +37,12 @@ document.querySelectorAll('select').forEach(select=>{
 });
 
 document.querySelectorAll('input[type="password"]').forEach(input=>{
-    const field=input.closest('.field')||input.parentElement;
-    if(!field||field.querySelector('.password-eye-toggle'))return;
-    field.classList.add('password-field');
+    const field=input.parentElement;
+    if(!field||input.closest('.password-input-wrap'))return;
+    const wrapper=document.createElement('span');
+    wrapper.className='password-input-wrap';
+    input.before(wrapper);
+    wrapper.append(input);
     const toggle=document.createElement('button');
     toggle.type='button';
     toggle.className='password-eye-toggle';
@@ -48,8 +51,10 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
     const eyeOff='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a15.7 15.7 0 0 1-3 3.8M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1.3 0 2.5-.3 3.5-.7"/></svg>';
     const updateToggle=()=>{
         const visible=input.type==='text';
-        toggle.setAttribute('aria-label',visible?'Hide password':'Show password');
-        toggle.title=visible?'Hide password':'Show password';
+        const label=input.dataset.secretLabel||'password';
+        toggle.setAttribute('aria-label',`${visible?'Hide':'Show'} ${label}`);
+        toggle.setAttribute('aria-pressed',String(visible));
+        toggle.title=`${visible?'Hide':'Show'} ${label}`;
         toggle.innerHTML=visible?eyeOff:eye;
     };
     toggle.addEventListener('click',()=>{
@@ -60,6 +65,51 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
     updateToggle();
     input.insertAdjacentElement('afterend',toggle);
 });
+
+const aiSettings=document.querySelector('[data-ai-settings]');
+if(aiSettings){
+    const presets=JSON.parse(document.getElementById('ai-provider-presets').textContent);
+    const provider=aiSettings.querySelector('#ai-provider');
+    const choice=aiSettings.querySelector('#ai-model-choice');
+    const model=aiSettings.querySelector('#ai-model');
+    const baseUrl=aiSettings.querySelector('#ai-base-url');
+    const testButton=aiSettings.querySelector('[data-ai-test]');
+    const result=aiSettings.querySelector('[data-ai-test-result]');
+    const syncModel=()=>{
+        const custom=choice.value==='__custom';
+        model.readOnly=!custom;
+        if(!custom)model.value=choice.value;
+        model.hidden=!custom;
+        aiSettings.querySelector('.custom-model-label').hidden=!custom;
+    };
+    syncModel();
+    choice.addEventListener('change',()=>{if(choice.value==='__custom')model.value='';syncModel();if(choice.value==='__custom')model.focus();});
+    provider.addEventListener('change',()=>{
+        const preset=presets[provider.value];
+        choice.replaceChildren(...preset.models.map(value=>new Option(value,value)),new Option('Custom model ID','__custom'));
+        choice.value=preset.models[0];baseUrl.value=preset.url;syncModel();
+        result.textContent='Provider changed. Enter its API key and test the connection.';
+        delete result.dataset.state;
+    });
+    let revision=0;
+    aiSettings.addEventListener('input',()=>{revision++;result.textContent='';delete result.dataset.state;});
+    testButton.addEventListener('click',async()=>{
+        if(!aiSettings.reportValidity())return;
+        if(aiSettings.querySelector('[name="clear_api_key"]')?.checked){result.textContent='Uncheck Remove saved API key before testing.';result.dataset.state='error';return;}
+        const currentRevision=revision;
+        testButton.disabled=true;result.textContent='Testing connection…';delete result.dataset.state;
+        const data=Object.fromEntries(new FormData(aiSettings));delete data._method;
+        try{
+            const response=await fetch('/admin/site-settings/ai/test',{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body:JSON.stringify(data)});
+            const payload=await response.json();
+            if(currentRevision!==revision)return;
+            result.textContent=payload.message||'Connection test failed. Try again shortly.';
+            if(payload.errors)result.textContent=Object.values(payload.errors).flat().join(' ');
+            result.dataset.state=response.ok&&payload.ok?'success':'error';
+        }catch{if(currentRevision===revision){result.textContent='Could not complete the connection test. Check connectivity and try again.';result.dataset.state='error';}}
+        finally{testButton.disabled=false;}
+    });
+}
 
 document.querySelectorAll('[data-tabs]').forEach(tabs=>{
     const tablist=tabs.querySelector('[role="tablist"]');

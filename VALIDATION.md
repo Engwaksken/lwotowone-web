@@ -5,7 +5,7 @@ Verified locally with PHP **8.3.33** and the installed extensions:
 | Check | Result |
 |---|---|
 | `composer lint` | Passed PHP syntax checks across application, migrations and tests |
-| `composer test` | **57 tests, 380 assertions passed** |
+| `composer test` | **64 tests, 436 assertions passed** |
 | `composer validate --strict --no-check-publish` | Passed |
 | `node --check public/assets/app.js` | Passed |
 | `git diff --check` | Passed (Git reports configured LF/CRLF conversion notices) |
@@ -16,6 +16,8 @@ Verified locally with PHP **8.3.33** and the installed extensions:
 Coverage includes onboarding/payment gating, cohort-based learner number generation, conditional employment/employer validation, profile tabs and participant navigation, global public search, MEL payment destinations and settlements, staff-owned learner outcome updates, document downloads, notifications, enterprise workflows, event registration and table filtering. The CI matrix uses PHP 8.3 and 8.4.
 
 The 9 October checks also cover appearance settings and branding uploads, public help/accessibility markup, encrypted AI settings, mocked AI chat and mentor recommendations, and inline course resource viewing. PHP lint, Composer metadata validation, JavaScript syntax and patch whitespace checks passed.
+
+AI provider settings verification covers native Anthropic/Gemini/Cohere formats, OpenAI reasoning-model token parameters, unsaved connection testing, reuse of encrypted saved keys, provider-change key protection, sanitized errors, administrator authorization, secret exclusion from validation old input, and Dashboard/Profile/Logout topbar order. Provider HTTP calls are mocked; live provider connections and browser interaction checks were not run in this session.
 
 ## Previous development verification — 7 October 2026
 

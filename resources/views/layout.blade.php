@@ -25,6 +25,8 @@
         <form class="header-search" method="get" action="/search" role="search"><input id="site-search" type="search" name="q" value="{{ request()->is('search')?request('q'):'' }}" placeholder="Search" aria-label="Search the site" required><button type="submit" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></button></form>
         @else
         <a class="button small" href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard</a>
+        <a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> Profile</a>
+        <form class="topbar-logout" method="post" action="/logout">@csrf<button class="secondary small" type="submit"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout</button></form>
         @endif
     </nav>
 </header>
