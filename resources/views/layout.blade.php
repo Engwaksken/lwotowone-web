@@ -79,7 +79,7 @@
         @if(session('success'))<div class="notice success" role="status">{{ session('success') }}</div>@endif
         @if($errors->any())<div class="notice error" role="alert"><ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
         @yield('content')
-        @unless(request()->is('dashboard','admin/*'))@include('partials.platform-stats')@endunless
+        @unless(request()->is('dashboard','admin/*','profile'))@include('partials.platform-stats')@endunless
     </main>
 </div>
 
