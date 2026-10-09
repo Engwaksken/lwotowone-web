@@ -11,7 +11,7 @@ class CmsController extends Controller {
   abort_unless($r->user()->role==='admin',403);
   $data=$r->validate([
    'primary_color'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],'accent_color'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],
-   'font_family'=>['required','in:Arial,system,Georgia,Atkinson Hyperlegible'],'font_size'=>['required','integer','min:14','max:20'],
+   'font_family'=>['required','string','max:120','regex:/^[\pL\pN _-]+$/u'],'font_url'=>['nullable','url:https','max:1000'],'font_size'=>['required','integer','min:14','max:20'],
     'logo'=>['nullable','file','mimetypes:image/png,image/jpeg,image/webp','extensions:png,jpg,jpeg,webp','max:4096'],'favicon'=>['nullable','file','mimetypes:image/png,image/x-icon,image/vnd.microsoft.icon','extensions:png,ico','max:1024'],
   ]);
   foreach(['logo'=>'site_logo','favicon'=>'site_favicon'] as $field=>$key){
@@ -44,14 +44,17 @@ class CmsController extends Controller {
  }
  private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
  public function index(Request $r,string $module){
-  $this->access($r,$module);
-  $filters=$r->validate([
+   $this->access($r,$module);
+   $statusOptions=config("modules.$module.fields.status",[]);if(!is_array($statusOptions))$statusOptions=[];
+   $filters=$r->validate([
+    'status'=>['nullable',\Illuminate\Validation\Rule::in(array_merge(['all'],$statusOptions))],
    'q'=>'nullable|string|max:255','period'=>'sometimes|required|in:all,week,month,year,custom',
    'start_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d',
    'end_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d|after_or_equal:start_date',
   ]);
-  $filters+=['q'=>'','period'=>'all','start_date'=>null,'end_date'=>null];$filters['q']=$filters['q']??'';
-  $q=Catalog::scope(Catalog::query($module),$r->user(),$module);
+   $filters+=['q'=>'','status'=>'all','period'=>'all','start_date'=>null,'end_date'=>null];$filters['q']=$filters['q']??'';$filters['status']=$filters['status']??'all';
+   $q=Catalog::scope(Catalog::query($module),$r->user(),$module);
+   if($filters['status']!=='all')$q->where('status',$filters['status']);
   $field=$module==='users'?'name':($module==='settings'?'key':'title');
   if($filters['q']!==''){$search=str_replace(['!','%','_'],['!!','!%','!_'],$filters['q']);$q->whereRaw("{$field} LIKE ? ESCAPE '!'",['%'.$search.'%']);}
   if($filters['period']!=='all'){
@@ -64,7 +67,7 @@ class CmsController extends Controller {
    };
    $q->whereBetween('created_at',[$start->startOfDay()->toDateTimeString(),$end->endOfDay()->toDateTimeString()]);
   }
-  return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters]);
+   return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
  }
  public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
  public function save(Request $r,string $module,?string $id=null){

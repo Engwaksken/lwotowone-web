@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="icon" href="{{ $siteSettings['site_favicon']??asset('favicon.ico') }}">
     <style>:root{--green:{{ $siteSettings['primary_color']??'#175742' }};--gold:{{ $siteSettings['accent_color']??'#dfb452' }};--site-font-size:{{ (int)($siteSettings['font_size']??16) }}px;--site-font-family:{{ match($siteSettings['font_family']??'Arial'){'system'=>'system-ui, sans-serif','Georgia'=>'Georgia, serif','Atkinson Hyperlegible'=>'Atkinson Hyperlegible, Arial, sans-serif',default=>'Arial, sans-serif'} }} }</style>
+@include('partials.site-font')
 </head>
 <body class="auth-page">
     <a class="skip" href="#auth-main">Skip to form</a>

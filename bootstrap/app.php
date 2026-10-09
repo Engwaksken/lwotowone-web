@@ -7,4 +7,4 @@ return Application::configure(basePath: dirname(__DIR__))
  ->withMiddleware(function(Middleware $middleware){
    $middleware->alias(['active'=>App\Http\Middleware\ActiveAccount::class]);
    $middleware->redirectGuestsTo('/login');
-  })->withExceptions(function(Exceptions $exceptions){$exceptions->dontFlash(['ai_api_key']);})->create();
+  })->withExceptions(function(Exceptions $exceptions){$exceptions->dontFlash(['ai_api_key','api_key','api_secret','client_secret','webhook_secret']);})->create();

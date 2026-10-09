@@ -24,7 +24,10 @@ Route::middleware(['auth','active'])->group(function(){
    Route::post('/admin/site-settings/ai/test',[CmsController::class,'testAiConnection'])->middleware('throttle:5,1');
   Route::post('/admin/site-settings/payment-gateways', [\App\Http\Controllers\MelController::class,'saveGateway']);
   Route::delete('/admin/site-settings/payment-gateways/{id}', [\App\Http\Controllers\MelController::class,'deleteGateway']);
-  Route::get('/admin/enrollment', [\App\Http\Controllers\MelController::class,'enrollment']);
+   Route::get('/admin/enrollment', [\App\Http\Controllers\MelController::class,'enrollment']);
+   Route::get('/admin/enrollment/template.csv', [\App\Http\Controllers\MelController::class,'enrollmentTemplate']);
+   Route::post('/admin/enrollment/import', [\App\Http\Controllers\MelController::class,'importEnrollment'])->middleware('throttle:5,1');
+   Route::post('/admin/enrollment/bulk', [\App\Http\Controllers\MelController::class,'bulkEnrollment']);
   Route::post('/admin/enrollment/cohorts', [\App\Http\Controllers\MelController::class,'saveCohort']);
   Route::put('/admin/enrollment/cohorts/{id}', [\App\Http\Controllers\MelController::class,'saveCohort']);
   Route::delete('/admin/enrollment/cohorts/{id}', [\App\Http\Controllers\MelController::class,'deleteCohort']);

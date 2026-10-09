@@ -22,7 +22,8 @@
         </section>
         <section class="settings-group"><h2>Typography</h2><p>Choose a clear typeface and comfortable base text size.</p>
             <div class="settings-fields">
-                <div class="field"><label for="font_family">Font family</label><select id="font_family" name="font_family" required>@foreach(['Arial'=>'Arial','system'=>'System sans-serif','Georgia'=>'Georgia (serif)','Atkinson Hyperlegible'=>'Atkinson Hyperlegible'] as $value=>$label)<option value="{{ $value }}" @selected(old('font_family',$settings['font_family']??'Arial')===$value)>{{ $label }}</option>@endforeach</select></div>
+                <div class="field"><label for="font_family">Font family</label><input id="font_family" name="font_family" list="font-families" value="{{ old('font_family',$settings['font_family']??'Arial') }}" maxlength="120" required><datalist id="font-families">@foreach(['Arial','system','Georgia','Atkinson Hyperlegible','Inter','Roboto','Open Sans','Lato','Montserrat'] as $family)<option value="{{ $family }}">@endforeach</datalist><small>Choose a suggestion or enter any font family name.</small></div>
+                <div class="field"><label for="font_url">Custom font file URL (optional)</label><input id="font_url" name="font_url" type="url" value="{{ old('font_url',$settings['font_url']??'') }}" placeholder="https://example.com/fonts/my-font.woff2"><small>Direct HTTPS WOFF/WOFF2 font URL, not a stylesheet URL. Leave blank for fonts installed on the visitor’s device.</small></div>
                 <div class="field"><label for="font_size">Base text size</label><select id="font_size" name="font_size" required>@foreach([14,15,16,17,18,19,20] as $size)<option value="{{ $size }}" @selected((int)old('font_size',$settings['font_size']??16)===$size)>{{ $size }} px</option>@endforeach</select></div>
             </div>
         </section>
@@ -37,21 +38,23 @@
     </section>
     @endif
     <section class="tab-panel" role="tabpanel" id="settings-panel-payments" aria-labelledby="settings-tab-payments" @if(auth()->user()->role==='admin')hidden @endif><section class="panel payment-settings" id="payment-methods"><span class="eyebrow">Learner payment options</span><h2>Payment gateways and methods</h2><p>Add verified payment destinations and clear learner instructions.</p>
-        <form method="post" action="/admin/site-settings/payment-gateways" class="grid">@csrf
+        <form method="post" action="/admin/site-settings/payment-gateways" class="grid" data-payment-gateway>@csrf
             <div class="field"><label for="gateway-name">Display name</label><input id="gateway-name" name="name" required></div>
-            <div class="field"><label for="gateway-type">Payment type</label><select id="gateway-type" name="provider_type" required>@foreach(['IOTEC','Bank','Mobile Money','Merchant Code','Other'] as $type)<option value="{{ $type }}">{{ $type }}</option>@endforeach</select></div>
-            <div class="field"><label for="gateway-provider">Provider or bank</label><input id="gateway-provider" name="provider"></div>
-            <div class="field"><label for="gateway-account-name">Account holder</label><input id="gateway-account-name" name="account_name"></div>
-            <div class="field"><label for="gateway-account-number">Account or phone number</label><input id="gateway-account-number" name="account_number"></div>
-            <div class="field"><label for="gateway-merchant-code">Merchant code</label><input id="gateway-merchant-code" name="merchant_code"></div>
+            <div class="field"><label for="gateway-type">Payment type</label><select id="gateway-type" name="provider_type" required>@foreach(array_keys(config('payments.types')) as $type)<option value="{{ $type }}" @selected(old('provider_type','IOTEC')===$type)>{{ $type }}</option>@endforeach</select></div>
+            @php $gatewayFields=collect(config('payments.types'))->flatMap(fn($fields)=>$fields)->all(); @endphp
+            <div class="field"><label><input type="checkbox" name="configure_api" value="1" @checked(old('configure_api'))> Configure provider API credentials</label><small>Credentials are encrypted. Saving them does not enable automatic payment processing; payments still require manager confirmation.</small></div>
+            <div class="field" data-gateway-api-environment><label for="gateway-environment">API environment</label><select id="gateway-environment" name="api_environment"><option value="sandbox">Sandbox / testing</option><option value="production" @selected(old('api_environment')==='production')>Production</option></select></div>
+            @foreach($gatewayFields as $key=>$field)<div class="field" data-gateway-field="{{ $key }}"><label for="gateway-{{ $key }}">{{ $field['label'] }}</label><input id="gateway-{{ $key }}" name="{{ $key }}" type="{{ ($field['secret']??false)?'password':($field['type']??'text') }}" value="{{ ($field['secret']??false)?'':old($key) }}" data-secret-label="{{ $field['label'] }}" autocomplete="{{ ($field['secret']??false)?'new-password':'off' }}" maxlength="4096"></div>@endforeach
             <div class="field"><label for="gateway-currency">Currency</label><select id="gateway-currency" name="currency" required>@foreach(['UGX','USD','EUR','GBP','KES'] as $currency)<option value="{{ $currency }}">{{ $currency }}</option>@endforeach</select></div>
             <div class="field"><label for="gateway-amount">Amount <span class="optional">(optional)</span></label><input id="gateway-amount" type="number" min="0" step="0.01" name="amount"></div>
             <div class="field"><label for="gateway-instructions">Payment instructions</label><textarea id="gateway-instructions" name="instructions"></textarea></div>
             <div class="field"><label><input type="checkbox" name="active" value="1" checked> Show to learners</label></div><div class="field"><button type="submit">Add payment option</button></div>
         </form>
+        <script type="application/json" id="payment-type-fields">{!! json_encode(config('payments.types'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
         <div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Provider</th><th>Account or merchant</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         @forelse($gateways as $gateway)<tr><td>{{ $gateway->name }}</td><td>{{ $gateway->provider_type }}</td><td>{{ $gateway->provider }}</td><td>{{ $gateway->account_number?:$gateway->merchant_code }}</td><td>{{ $gateway->amount?number_format($gateway->amount,2).' '.$gateway->currency:'—' }}</td><td>{{ $gateway->active?'Active':'Hidden' }}</td><td><form method="post" action="/admin/site-settings/payment-gateways/{{ $gateway->id }}" data-confirm="Delete this payment option?">@csrf @method('DELETE')<button class="danger small icon-action" type="submit" title="Delete payment option" aria-label="Delete payment option"><i class="fas fa-trash-alt" aria-hidden="true"></i></button></form></td></tr>@empty<tr><td colspan="7">No payment destinations configured.</td></tr>@endforelse
         </tbody></table></div>
+    @foreach($gateways as $gateway)<details class="panel"><summary>{{ $gateway->name }} — saved destination details</summary>@include('partials.payment-details')<p>API credentials: {{ ($gateway->credentials??null)?'Configured (encrypted)':'Not configured' }}</p></details>@endforeach
     </section></section>
     @if(auth()->user()->role==='admin')
     <section class="tab-panel" role="tabpanel" id="settings-panel-ai" aria-labelledby="settings-tab-ai" hidden>

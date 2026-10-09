@@ -4,8 +4,9 @@
 <h1>{{ $meta['title'] }}</h1>
 @include('partials.platform-stats')
 <div class="toolbar">
-    <form class="filter-form" method="get">
+    <form class="filter-form {{ $statusOptions?'with-status':'' }}" method="get">
         <div class="field search-field"><label for="cms-search">Search records</label><input id="cms-search" type="search" name="q" maxlength="255" placeholder="Search records" value="{{ $filters['q'] }}"></div>
+        @if($statusOptions)<div class="field"><label for="cms-status">Status</label><select id="cms-status" name="status"><option value="all">All statuses</option>@foreach($statusOptions as $status)<option value="{{ $status }}" @selected($filters['status']===$status)>{{ ucfirst($status) }}</option>@endforeach</select></div>@endif
         <div class="field"><label for="cms-period">Period</label><select id="cms-period" name="period">@foreach(['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom range'] as $value=>$label)<option value="{{ $value }}" @selected($filters['period']===$value)>{{ $label }}</option>@endforeach</select></div>
         <div class="field"><label for="cms-start">From</label><input id="cms-start" type="date" name="start_date" value="{{ $filters['start_date'] }}"></div>
         <div class="field"><label for="cms-end">To</label><input id="cms-end" type="date" name="end_date" value="{{ $filters['end_date'] }}"></div>

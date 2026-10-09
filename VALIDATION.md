@@ -5,7 +5,7 @@ Verified locally with PHP **8.3.33** and the installed extensions:
 | Check | Result |
 |---|---|
 | `composer lint` | Passed PHP syntax checks across application, migrations and tests |
-| `composer test` | **64 tests, 435 assertions passed** |
+| `composer test` | **75 tests, 543 assertions passed** |
 | `composer validate --strict --no-check-publish` | Passed |
 | `node --check public/assets/app.js` | Passed |
 | `git diff --check` | Passed (Git reports configured LF/CRLF conversion notices) |
@@ -18,6 +18,8 @@ Coverage includes onboarding/payment gating, cohort-based learner number generat
 The 9 October checks also cover appearance settings and branding uploads, public help/accessibility markup, encrypted AI settings, mocked AI chat and mentor recommendations, and inline course resource viewing. PHP lint, Composer metadata validation, JavaScript syntax and patch whitespace checks passed.
 
 AI provider settings verification covers native Anthropic/Gemini/Cohere formats, OpenAI reasoning-model token parameters, unsaved connection testing, reuse of encrypted saved keys, provider-change key protection, sanitized errors, administrator authorization, secret exclusion from validation old input, and Dashboard/Profile/Logout topbar order. Provider HTTP calls are mocked; live provider connections and browser interaction checks were not run in this session.
+
+Payment/font/enrollment verification covers type-specific payment validation, encrypted credentials and secret exclusion, learner-visible destination details, custom font rendering and CSS-injection rejection, CMS/enrollment status filtering, CSV template downloads, BOM/CRLF support, atomic import rollback, duplicate/malformed/inactive-cohort rejection, repeat imports without duplicate enrollment or sequence consumption, bulk-selection rollback, and manager-only bulk routes. The migration is exercised by the isolated SQLite feature suite. Live provider API processing and production MySQL deployment were not performed in this session.
 
 ## Previous development verification — 7 October 2026
 

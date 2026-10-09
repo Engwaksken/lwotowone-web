@@ -67,6 +67,29 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 });
 
 const aiSettings=document.querySelector('[data-ai-settings]');
+const gatewayForm=document.querySelector('[data-payment-gateway]');
+document.querySelector('[data-select-enrollment]')?.addEventListener('click',()=>{
+    const checks=[...document.querySelectorAll('input[form="bulk-enrollment"]:not(:disabled)')];
+    const select=checks.some(check=>!check.checked);checks.forEach(check=>check.checked=select);
+});
+if(gatewayForm){
+    const types=JSON.parse(document.getElementById('payment-type-fields').textContent);
+    const type=gatewayForm.querySelector('[name="provider_type"]');
+    const api=gatewayForm.querySelector('[name="configure_api"]');
+    const updateFields=()=>{
+        const fields=types[type.value]||{};
+        gatewayForm.querySelectorAll('[data-gateway-field]').forEach(container=>{
+            const field=fields[container.dataset.gatewayField];
+            const input=container.querySelector('input');
+            const visible=Boolean(field)&&(!field.private||api.checked);
+            container.hidden=!visible;input.disabled=!visible;input.required=visible&&Boolean(field.required||(api.checked&&field.api_required));
+            if(field){container.querySelector('label').textContent=field.label+(input.required?' *':' (optional)');input.placeholder=`Enter ${field.label.toLowerCase()}`;}
+        });
+        const environment=gatewayForm.querySelector('[data-gateway-api-environment]');environment.hidden=!api.checked;environment.querySelector('select').disabled=!api.checked;
+        gatewayForm.querySelector('[name="instructions"]').required=type.value==='Other';
+    };
+    type.addEventListener('change',updateFields);api.addEventListener('change',updateFields);updateFields();
+}
 if(aiSettings){
     const presets=JSON.parse(document.getElementById('ai-provider-presets').textContent);
     const provider=aiSettings.querySelector('#ai-provider');

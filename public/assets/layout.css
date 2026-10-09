@@ -234,6 +234,10 @@ body{font-family:var(--site-font-family,Arial,sans-serif);font-size:var(--site-f
 .ai-test-result[data-state=success]{color:#175742}
 .custom-model-label{display:block;margin-top:10px}
 .ai-settings-form [hidden]{display:none!important}
+[data-payment-gateway] [hidden]{display:none!important}
+.filter-form.with-status{grid-template-columns:minmax(170px,2fr) repeat(4,minmax(110px,1fr)) auto}
+@media(max-width:1100px){.filter-form.with-status{grid-template-columns:repeat(2,minmax(0,1fr))}.filter-form.with-status .search-field,.filter-form.with-status .filter-actions{grid-column:1/-1}}
+@media(max-width:680px){.filter-form.with-status{grid-template-columns:1fr}}
 .accessibility-menu{position:relative;z-index:6}
 .accessibility-menu>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;color:var(--green);font-size:13px;font-weight:700}
 .accessibility-menu>summary::-webkit-details-marker{display:none}
