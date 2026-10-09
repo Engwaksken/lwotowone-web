@@ -8,15 +8,17 @@ use Illuminate\Validation\ValidationException;
 
 class Enrollment
 {
-    public function confirm(int $learnerId, int $cohortId, int $actorId): bool
+    public function confirm(int $learnerId, int $cohortId, int $actorId, ?int $courseId=null): bool
     {
-        return DB::transaction(function () use ($learnerId, $cohortId, $actorId) {
+        return DB::transaction(function () use ($learnerId, $cohortId, $actorId, $courseId) {
             $learner = DB::table('users')->where('id', $learnerId)->where('role', 'participant')->lockForUpdate()->first();
-            if (!$learner || !$learner->profile_complete || !$learner->selected_course_id) {
+            $courseId=$courseId??$learner?->selected_course_id;
+            if (!$learner || !$learner->profile_complete || !$courseId) {
                 throw ValidationException::withMessages(['enrollment'=>'The learner must have a completed profile and selected course.']);
             }
-            if ($learner->learning_access_paid) return false;
-            if (!DB::table('courses')->where('id', $learner->selected_course_id)->where('status', 'published')->exists()) {
+            $existing=DB::table('enrolments')->where('user_id',$learnerId)->where('course_id',$courseId)->first();
+            if($existing?->payment_confirmed_at)return false;
+            if (!DB::table('courses')->where('id', $courseId)->where('status', 'published')->exists()) {
                 throw ValidationException::withMessages(['enrollment'=>'The learner selected course is no longer available.']);
             }
             $cohort = DB::table('mel_cohorts')->where('id', $cohortId)->where('active', true)->lockForUpdate()->first();
@@ -24,14 +26,17 @@ class Enrollment
                 throw ValidationException::withMessages(['enrollment'=>'Select an active cohort with a valid number format.']);
             }
             $sequence = (int) $cohort->next_sequence;
+            $number=$learner->learner_no;
+            if(!$number){
             do {
                 $number = strtr($cohort->learner_number_format, ['{prefix}'=>$cohort->learner_number_prefix, '{cohort}'=>Str::upper(Str::slug($cohort->name, '-')), '{year}'=>now()->format('Y'), '{sequence}'=>str_pad((string)$sequence, (int)$cohort->sequence_padding, '0', STR_PAD_LEFT)]);
                 if (!DB::table('users')->where('learner_no', $number)->exists()) break;
                 $sequence++;
             } while (true);
             DB::table('mel_cohorts')->where('id', $cohortId)->update(['next_sequence'=>$sequence+1, 'updated_at'=>now()]);
+            }
             DB::table('users')->where('id', $learnerId)->update(['cohort_id'=>$cohortId, 'learner_no'=>$number, 'enrollment_category'=>$cohort->enrollment_category, 'enrollment_date'=>today()->toDateString(), 'learner_status'=>'Active', 'learning_access_paid'=>true, 'updated_at'=>now()]);
-            DB::table('enrolments')->updateOrInsert(['user_id'=>$learnerId, 'course_id'=>$learner->selected_course_id], ['created_at'=>now(), 'updated_at'=>now()]);
+            DB::table('enrolments')->updateOrInsert(['user_id'=>$learnerId, 'course_id'=>$courseId], ['payment_confirmed_at'=>now(),'created_at'=>$existing?->created_at??now(), 'updated_at'=>now()]);
             DB::table('audit_logs')->insert(['user_id'=>$actorId, 'action'=>'confirm-payment', 'module'=>'learners', 'record_id'=>$learnerId, 'created_at'=>now(), 'updated_at'=>now()]);
             return true;
         });

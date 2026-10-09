@@ -2,6 +2,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{AuthController,PublicController,CmsController,PortalController,ReviewController};
 Route::get('/',[PublicController::class,'home']);
+Route::get('/calls',[\App\Http\Controllers\CallController::class,'listing']);
+Route::get('/calls/{token}',[\App\Http\Controllers\CallController::class,'show']);
 Route::get('/pages/{slug}',[PublicController::class,'page']);
 Route::get('/search',[PublicController::class,'search']);
 Route::post('/help/chat',[PublicController::class,'chat'])->middleware('throttle:30,1');
@@ -18,6 +20,20 @@ Route::middleware('guest')->group(function(){
  Route::get('/reset-password/{token}',[AuthController::class,'resetForm'])->name('password.reset');Route::post('/reset-password',[AuthController::class,'reset']);
 });
 Route::middleware(['auth','active'])->group(function(){
+ Route::get('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'show']);
+ Route::post('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'apply'])->middleware('throttle:5,1');
+ Route::get('/admin/calls',[\App\Http\Controllers\CallController::class,'index']);
+ Route::get('/admin/certificates',[\App\Http\Controllers\CertificateController::class,'index']);
+ Route::get('/admin/certificates/{id}/template',[\App\Http\Controllers\CertificateController::class,'editor']);
+ Route::put('/admin/certificates/{id}/template',[\App\Http\Controllers\CertificateController::class,'save']);
+ Route::get('/admin/certificates/{id}/background',[\App\Http\Controllers\CertificateController::class,'background']);
+ Route::get('/admin/certificates/{id}/preview.pdf',[\App\Http\Controllers\CertificateController::class,'preview']);
+ Route::post('/admin/certificates/{id}/recommend',[\App\Http\Controllers\CertificateController::class,'recommend']);
+ Route::get('/certificates/{id}/file',[\App\Http\Controllers\CertificateController::class,'download']);
+ Route::post('/admin/calls',[\App\Http\Controllers\CallController::class,'save']);
+ Route::put('/admin/calls/{id}',[\App\Http\Controllers\CallController::class,'save']);
+ Route::get('/admin/calls/{id}/qr.svg',[\App\Http\Controllers\CallController::class,'qr']);
+ Route::put('/admin/calls/applications/{id}',[\App\Http\Controllers\CallController::class,'review']);
   Route::post('/logout',[AuthController::class,'logout']);Route::get('/dashboard',[PortalController::class,'dashboard']);
    Route::get('/admin/site-settings',[CmsController::class,'siteSettings']);Route::put('/admin/site-settings',[CmsController::class,'saveSiteSettings']);
    Route::put('/admin/site-settings/ai',[CmsController::class,'saveAiSettings']);

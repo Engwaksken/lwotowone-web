@@ -21,7 +21,7 @@
     <nav aria-label="Main navigation">
         @guest
         <a href="/pages/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
-        <a href="/explore/opportunities">Opportunities</a><a href="/explore/events">Events</a><a href="/explore/posts">Stories</a><a href="/contact">Contact</a>
+        <a href="/explore/opportunities">Opportunities</a><a href="/calls">Apply</a><a href="/explore/events">Events</a><a href="/explore/posts">Stories</a><a href="/contact">Contact</a>
         <a href="/login">Sign in</a><a class="button small" href="/register">Join us</a>
         <form class="header-search" method="get" action="/search" role="search"><input id="site-search" type="search" name="q" value="{{ request()->is('search')?request('q'):'' }}" placeholder="Search" aria-label="Search the site" required><button type="submit" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></button></form>
         @else
@@ -40,11 +40,12 @@
             <section class="sidebar-group">
                 <span class="sidebar-heading">Workspace</span>
                 <a href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a>
+                @if(auth()->user()->role==='participant')<a href="/calls"><i class="fas fa-bullhorn" aria-hidden="true"></i> Course and opportunity calls</a>@endif
             </section>
             @if(auth()->user()->staff())
                 @php
                     $sidebarGroups=[
-                        'Learning and content'=>['pages','programs','courses','lessons','assignments','resources','skills'],
+                        'Learning and content'=>['pages','programs','courses','course_modules','lessons','assignments','resources','skills'],
                         'People and opportunities'=>['users','slots','opportunities','events','announcements','posts'],
                     ];
                 @endphp
@@ -53,7 +54,8 @@
                     @if($visibleModules->isNotEmpty())
                         <details class="sidebar-group sidebar-disclosure" data-sidebar-group="{{ \Illuminate\Support\Str::slug($groupTitle) }}" @if($visibleModules->contains(fn($key)=>request()->is('admin/'.$key.'*')||($key==='settings'&&request()->is('admin/site-settings')))) open @endif><summary class="sidebar-heading">{{ $groupTitle }}</summary>
                             @foreach($visibleModules as $key)<a href="/admin/{{ $key }}" @if(request()->is('admin/'.$key.'*')) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ config("modules.$key.title") }}</a>@endforeach
-                            @if($groupTitle==='Learning and content'&&auth()->user()->manager())<a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a>@endif
+                            @if($groupTitle==='Learning and content'&&auth()->user()->manager())<a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a><a href="/admin/calls"><i class="fas fa-bullhorn" aria-hidden="true"></i> M&E application calls</a>@endif
+                            @if($groupTitle==='Learning and content'&&(auth()->user()->manager()||auth()->user()->role==='instructor'))<a href="/admin/certificates"><i class="fas fa-certificate" aria-hidden="true"></i> Certificates</a>@endif
                         </details>
                     @endif
                 @endforeach

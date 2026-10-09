@@ -72,7 +72,10 @@ class CmsController extends Controller {
  public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
  public function save(Request $r,string $module,?string $id=null){
   $this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):Catalog::model($module);
-  $d=$r->validate(Catalog::rules($module,$id));
+   $d=$r->validate(Catalog::rules($module,$id));
+   if($module==='courses'&&!empty($d['prerequisite_course_id'])){$previous=(int)$d['prerequisite_course_id'];$seen=[];while($previous){abort_if(isset($seen[$previous])||($id&&(int)$id===$previous),422,'Course prerequisites cannot form a cycle.');$seen[$previous]=true;$previous=(int)DB::table('courses')->where('id',$previous)->value('prerequisite_course_id');}}
+   if($module==='lessons'&&!empty($d['module_id']))abort_unless(DB::table('course_modules')->where('id',$d['module_id'])->where('course_id',$d['course_id'])->exists(),422,'Select a module from this course.');
+   if($module==='resources'&&!empty($d['lesson_id']))abort_unless(DB::table('lessons')->where('id',$d['lesson_id'])->where('course_id',$d['course_id'])->exists(),422,'Select a lesson from this course.');
   if(!$r->user()->manager()){
    if($module==='courses')$d['instructor_id']=$r->user()->id;
    elseif($module==='slots')$d['mentor_id']=$r->user()->id;

@@ -46,6 +46,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .profile-actions{text-align:right}
 .filter-form{display:grid;grid-template-columns:minmax(180px,2fr) repeat(3,minmax(135px,1fr)) auto;gap:0 14px;align-items:end;margin-bottom:20px}
 .toolbar>.filter-form,.panel.filter-form{padding:18px;border:1px solid #dbe5dc;border-radius:16px;background:linear-gradient(135deg,#f0f5ef,#e9f0e8);box-shadow:0 5px 18px #182f2808}
+.toolbar{flex-wrap:wrap;width:100%;align-items:flex-start}
+.toolbar>.filter-form{display:flex;flex-wrap:wrap;flex:1 0 100%;width:100%;min-width:0;gap:0 14px}
+.toolbar>.filter-form .field{flex:1 1 150px}
+.toolbar>.filter-form .search-field{flex:2 1 230px}
+.toolbar>.filter-form .filter-actions{flex:0 0 auto}
+@media(max-width:680px){.toolbar>.filter-form .field,.toolbar>.filter-form .search-field{flex-basis:100%}}
+.filter-form .field input,.filter-form .field select{width:100%;min-width:0}
 .filter-form .field{padding:0}
 .filter-form .field input,.filter-form .field select{border:1px solid #cbd8ce;border-radius:9px;background:#fff}
 .filter-form .field input:focus,.filter-form .field select:focus{border-color:var(--green);box-shadow:0 0 0 3px #1757421a}
@@ -233,6 +240,10 @@ body{font-family:var(--site-font-family,Arial,sans-serif);font-size:var(--site-f
 .ai-test-result[data-state=error]{background:#fff0ed;color:#8c2720}
 .ai-test-result[data-state=success]{color:#175742}
 .custom-model-label{display:block;margin-top:10px}
+.certificate-canvas{position:relative;width:100%;max-width:1100px;margin:20px 0;border:1px solid var(--line);background:#fff;overflow:hidden;touch-action:none}
+.certificate-canvas>img,.certificate-canvas>canvas{display:block;width:100%;height:100%;object-fit:fill}
+.certificate-placement{position:absolute;border:1px dashed #175742;background:#ffffffaa;cursor:move;line-height:1.25;color:#14231e;overflow:hidden;user-select:none}
+[data-placement-controls] input[type=number]{width:85px}
 .ai-settings-form [hidden]{display:none!important}
 [data-payment-gateway] [hidden]{display:none!important}
 .filter-form.with-status{grid-template-columns:minmax(170px,2fr) repeat(4,minmax(110px,1fr)) auto}

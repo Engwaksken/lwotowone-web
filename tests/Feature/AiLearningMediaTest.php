@@ -76,7 +76,7 @@ class AiLearningMediaTest extends TestCase
     {
         Storage::fake('local');
         $learner=$this->account('participant');$course=$this->course($this->account('instructor'));
-        Workflow::run($learner,'enrol',['course_id'=>$course]);
+        Workflow::insert('enrolments',['user_id'=>$learner->id,'course_id'=>$course,'payment_confirmed_at'=>now()]);
         Workflow::insert('lessons',['course_id'=>$course,'title'=>'Poultry lesson','body'=>'Lesson text','video_url'=>'https://youtu.be/abcdefghijk','position'=>1,'status'=>'published']);
         $resource=Workflow::insert('resources',['course_id'=>$course,'title'=>'Farm walkthrough','description'=>'Watch the farm walkthrough','file_path'=>'resources/farm-walkthrough.mp4','status'=>'published']);
         Storage::disk('local')->put('resources/farm-walkthrough.mp4','sample video bytes');

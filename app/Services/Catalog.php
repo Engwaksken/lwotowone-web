@@ -8,7 +8,7 @@ class Catalog {
  public static function allowed(User $u,string $module): bool {
   if($u->role==='admin')return true;
   if($u->role==='manager')return !in_array($module,['users','settings']);
-  if($u->role==='instructor')return in_array($module,['courses','lessons','assignments','resources']);
+   if($u->role==='instructor')return in_array($module,['courses','course_modules','lessons','assignments','resources']);
   return $u->role==='mentor' && $module==='slots';
  }
  public static function scope($query,User $u,string $module){
@@ -45,9 +45,10 @@ class Catalog {
  }
  public static function options(string $module,User $u): array {
   $out=[];
-  foreach(config("modules.$module.fields") as $f=>$t){
+   foreach(config("modules.$module.fields") as $f=>$t){
+    if(is_string($t)&&str_starts_with($t,'optional:'))$t=substr($t,9);
    if(is_array($t))$out[$f]=array_combine($t,$t);
-   elseif(str_starts_with($t,'ref:')){ $table=substr($t,4);$q=self::query($table);if(!$u->manager()&&$table==='courses')$q=self::scope($q,$u,$table);$out[$f]=$q->pluck('title','id')->all(); }
+    elseif(str_starts_with($t,'ref:')){ $table=substr($t,4);$q=self::query($table);if(!$u->manager()&&in_array($table,['courses','lessons','course_modules']))$q=self::scope($q,$u,$table);$out[$f]=$q->pluck('title','id')->all(); }
    elseif(str_starts_with($t,'user:'))$out[$f]=User::where('role',substr($t,5))->where('status','active')->pluck('name','id')->all();
   }return $out;
  }

@@ -28,7 +28,7 @@ class LearningEventsTest extends TestCase {
    $this->get('/portal/events')->assertOk()->assertSee('Cancelled')->assertSee('Register again');
   }
   public function test_course_content_is_grouped_into_tabs():void {
-   $u=$this->learner();$c=$this->course();Workflow::run($u,'enrol',['course_id'=>$c]);
+   $u=$this->learner();$c=$this->course();Workflow::insert('enrolments',['user_id'=>$u->id,'course_id'=>$c,'payment_confirmed_at'=>now()]);
    Workflow::insert('lessons',['course_id'=>$c,'title'=>'First lesson','body'=>'Lesson details','position'=>1,'status'=>'published']);
    Workflow::insert('resources',['course_id'=>$c,'title'=>'Course guide','description'=>'Read before practice','status'=>'published']);
    Workflow::insert('assignments',['course_id'=>$c,'title'=>'Field assignment','instructions'=>'Describe your work','pass_mark'=>60,'status'=>'published']);
@@ -59,7 +59,7 @@ class LearningEventsTest extends TestCase {
  }
  public function test_progress_uses_only_published_enrolled_content_and_requires_assessments():void {
   $u=$this->learner();$c=$this->course();$unrelated=$this->course();
-  Workflow::run($u,'enrol',['course_id'=>$c]);
+  Workflow::insert('enrolments',['user_id'=>$u->id,'course_id'=>$c,'payment_confirmed_at'=>now()]);
   $first=Workflow::insert('lessons',['course_id'=>$c,'title'=>'First lesson','body'=>'Read','position'=>1,'status'=>'published']);
   $next=Workflow::insert('lessons',['course_id'=>$c,'title'=>'Next lesson','body'=>'Read','position'=>2,'status'=>'published']);
   Workflow::insert('lessons',['course_id'=>$c,'title'=>'Draft','body'=>'Draft','position'=>3,'status'=>'draft']);
@@ -70,7 +70,9 @@ class LearningEventsTest extends TestCase {
   $this->assertSame(50,$p['lesson_percent']);$this->assertSame($next,$p['next_lesson_id']);$this->assertSame(1,$p['assignments_total']);$this->assertFalse($p['certificate_ready']);
   Workflow::run($u,'complete',['lesson_id'=>$next]);
   $this->assertFalse(Snapshot::get($u)['course_progress'][0]['certificate_ready']);
-  Workflow::insert('submissions',['user_id'=>$u->id,'assignment_id'=>$a,'body'=>'Evidence','status'=>'passed','score'=>70]);
+   Workflow::insert('submissions',['user_id'=>$u->id,'assignment_id'=>$a,'body'=>'Evidence','status'=>'passed','score'=>70]);
+   $this->assertTrue(Snapshot::get($u)['course_progress'][0]['completion_ready']);$this->assertFalse(Snapshot::get($u)['course_progress'][0]['certificate_ready']);
+   $teacher=User::find(DB::table('courses')->where('id',$c)->value('instructor_id'));$this->actingAs($teacher)->post('/admin/certificates/'.$c.'/recommend',['user_id'=>$u->id])->assertRedirect();
   $p=Snapshot::get($u)['course_progress'][0];$this->assertSame(100,$p['lesson_percent']);$this->assertTrue($p['certificate_ready']);$this->assertNull($p['next_lesson_id']);
   $this->actingAs($u)->get('/learning/'.$c)->assertOk()->assertSee('Learning progress')->assertSee('certificate is ready');
   $this->get('/certificates/'.$c)->assertOk();$this->get('/dashboard')->assertOk()->assertSee('My learning progress');
@@ -78,7 +80,7 @@ class LearningEventsTest extends TestCase {
   $this->withToken($token)->getJson('/api/snapshot')->assertOk()->assertJsonPath('course_progress.0.certificate_ready',true);
  }
  public function test_empty_course_never_claims_a_certificate():void {
-  $u=$this->learner();$c=$this->course();Workflow::run($u,'enrol',['course_id'=>$c]);
+  $u=$this->learner();$c=$this->course();Workflow::insert('enrolments',['user_id'=>$u->id,'course_id'=>$c,'payment_confirmed_at'=>now()]);
   $p=Snapshot::get($u)['course_progress'][0];$this->assertSame(0,$p['lesson_percent']);$this->assertFalse($p['certificate_ready']);$this->assertNull($p['next_lesson_id']);
  }
 }

@@ -30,7 +30,7 @@ class PortalController extends Controller {
      if($section==='profile')return view('portal.profile',['user'=>$r->user(),'courses'=>DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title']),'settlements'=>DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name'])]);
     if($section==='payment')return view('portal.payment',['user'=>$r->user(),'gateways'=>DB::table('payment_gateways')->where('active',true)->orderBy('name')->get()]);
     abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');
-    if(in_array($section,['learn'])&&!$r->user()->learning_access_paid)return redirect('/portal/payment');
+     if($section==='learn'&&!$r->user()->learning_access_paid&&!DB::table('enrolments')->where('user_id',$r->user()->id)->exists())return redirect('/portal/payment');
    $earnings=$section==='enterprise'?\App\Services\Earnings::get($r->user(),$r->query()):null;
     $practiceLogs=null;
     $practiceFilters=null;
@@ -71,9 +71,9 @@ class PortalController extends Controller {
     return view('portal.section',['section'=>$section,'data'=>$snapshot,'earnings'=>$earnings,
       'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters]);
   }
-  public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');abort_unless($r->user()->learning_access_paid,403,'Payment is required to access learning materials.');Workflow::enrolled($r->user(),$id);$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);return view('portal.course',compact('data','course'));}
+  public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);return view('portal.course',compact('data','course'));}
  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}
-  public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);abort_unless($r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment to access learning data.');return Snapshot::get($r->user());}
+  public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);abort_unless($r->user()->profile_complete&&($r->user()->learning_access_paid||DB::table('enrolments')->where('user_id',$r->user()->id)->where('trial_expires_at','>',now())->exists()),403,'Complete your profile and confirm payment or obtain an approved trial to access learning data.');return Snapshot::get($r->user());}
   public function registerDeviceToken(Request $r){
     abort_unless($r->user()->role==='participant',403);
     $data=$r->validate(['token'=>'required|string|max:4096']);
@@ -138,7 +138,7 @@ class PortalController extends Controller {
    }
   public function resource(Request $r,string $id){
     $item=DB::table('resources')->find($id);abort_unless($item&&$item->file_path,404);
-    if($r->user()->role==='participant'){abort_unless($r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment before accessing learning resources.');abort_unless($item->status==='published',404);Workflow::enrolled($r->user(),$item->course_id);}
+    if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
     else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
     return $this->inlineResource($item);
   }
@@ -151,7 +151,7 @@ class PortalController extends Controller {
   public function download(Request $r,string $type,string $id){
    abort_unless(in_array($type,['resources','submissions']),404);$item=DB::table($type)->find($id);abort_unless($item,404);
    if($type==='resources'){
-     if($r->user()->role==='participant') {abort_unless($r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment before accessing learning resources.');abort_unless($item->status==='published',404);Workflow::enrolled($r->user(),$item->course_id);}
+     if($r->user()->role==='participant') {abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
      else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
    }else{
     $a=DB::table('assignments')->find($item->assignment_id);
@@ -160,12 +160,13 @@ class PortalController extends Controller {
     abort_unless($item->file_path,404);return $type==='resources'?$this->inlineResource($item):\Illuminate\Support\Facades\Storage::disk('local')->download($item->file_path);
  }
   public function certificate(Request $r,string $id){
-   abort_unless($r->user()->role==='participant'&&$r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment before accessing certificates.');
+    abort_unless($r->user()->role==='participant',403);\App\Services\LearningAccess::requireCourse($r->user(),(int)$id);
    Workflow::enrolled($r->user(),$id);$c=DB::table('courses')->find($id);
-   $lessons=DB::table('lessons')->where('course_id',$id)->where('status','published')->pluck('id');
+    $lessons=\App\Services\LearningAccess::lessons((int)$id)->pluck('id');
    abort_unless($lessons->count()>0&&DB::table('lesson_progress')->where('user_id',$r->user()->id)->whereIn('lesson_id',$lessons)->count()===$lessons->count(),422,'Complete all published lessons first.');
    $assignments=DB::table('assignments')->where('course_id',$id)->where('status','published')->pluck('id');
    abort_unless(DB::table('submissions')->where('user_id',$r->user()->id)->whereIn('assignment_id',$assignments)->where('status','passed')->count()===$assignments->count(),422,'Pass all published practical assignments first.');
-   return view('portal.certificate',['course'=>$c,'user'=>$r->user()]);
+    $certificate=DB::table('course_certificates')->where('course_id',$id)->where('user_id',$r->user()->id)->first();abort_unless($certificate,403,'Awaiting your assigned instructor completion recommendation.');
+    return view('portal.certificate',['course'=>$c,'user'=>$r->user(),'certificate'=>$certificate]);
  }
 }

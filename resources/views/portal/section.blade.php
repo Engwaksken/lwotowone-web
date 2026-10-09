@@ -10,7 +10,7 @@
         <div class="grid">@forelse($enrolledCourses as $c)<article class="card"><span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p>@include('portal.progress',['progressCourseId'=>$c->id])<a class="button" href="/learning/{{ $c->id }}">Continue learning</a></article>@empty<div class="empty">You have not enrolled in a course yet. Browse the available courses to get started.</div>@endforelse</div>
     </section>
     <section class="tab-panel" role="tabpanel" id="panel-course-catalog" aria-labelledby="tab-course-catalog">
-        <div class="grid">@forelse($availableCourses as $c)<article class="card"><span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p><form method="post" action="/actions/enrol">@csrf<input type="hidden" name="course_id" value="{{ $c->id }}"><button>Enrol now</button></form></article>@empty<div class="empty">You are enrolled in all available courses.</div>@endforelse</div>
+        <div class="grid">@forelse($availableCourses as $c)<article class="card"><span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p><a class="button" href="/calls">Find an available application call</a></article>@empty<div class="empty">You are enrolled in all available courses.</div>@endforelse</div>
     </section>
 </div>
 @elseif($section==='practice')

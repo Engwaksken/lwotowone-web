@@ -67,6 +67,35 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 });
 
 const aiSettings=document.querySelector('[data-ai-settings]');
+const certificateEditor=document.querySelector('[data-certificate-editor]');
+if(certificateEditor){
+    const canvas=certificateEditor.querySelector('[data-certificate-canvas]');
+    const sync=()=>{
+        certificateEditor.querySelectorAll('[data-placement-controls]').forEach(row=>{
+            const key=row.dataset.placementControls;
+            const overlay=canvas?.querySelector(`[data-placement="${key}"]`);if(!overlay)return;
+            const value=property=>row.querySelector(`[name="placements[${key}][${property}]"]`).value;
+            overlay.hidden=!row.querySelector('[type=checkbox]').checked;
+            overlay.style.left=value('x')+'%';overlay.style.top=value('y')+'%';overlay.style.width=value('width')+'%';overlay.style.textAlign={L:'left',C:'center',R:'right'}[value('align')];overlay.style.fontSize=(Number(value('font_size'))*25.4/72*canvas.clientWidth/Number(canvas.dataset.widthMm))+'px';
+        });
+    };
+    certificateEditor.addEventListener('input',sync);sync();
+    if(canvas&&window.ResizeObserver)new ResizeObserver(sync).observe(canvas);
+    canvas?.querySelectorAll('[data-placement]').forEach(overlay=>overlay.addEventListener('pointerdown',event=>{
+        event.preventDefault();overlay.setPointerCapture(event.pointerId);
+        const rect=canvas.getBoundingClientRect(),key=overlay.dataset.placement;
+        const row=certificateEditor.querySelector(`[data-placement-controls="${key}"]`);
+        const x=row.querySelector(`[name="placements[${key}][x]"]`),y=row.querySelector(`[name="placements[${key}][y]"]`),width=row.querySelector(`[name="placements[${key}][width]"]`);
+        const initialX=Number(x.value),initialY=Number(y.value),startX=event.clientX,startY=event.clientY;
+        const move=e=>{x.value=Math.max(0,Math.min(100-Number(width.value),initialX+(e.clientX-startX)*100/rect.width)).toFixed(1);y.value=Math.max(0,Math.min(95,initialY+(e.clientY-startY)*100/rect.height)).toFixed(1);sync();};
+        const end=()=>{overlay.removeEventListener('pointermove',move);overlay.removeEventListener('pointerup',end);overlay.removeEventListener('pointercancel',end);};
+        overlay.addEventListener('pointermove',move);overlay.addEventListener('pointerup',end);overlay.addEventListener('pointercancel',end);
+    }));
+    if(canvas?.dataset.format==='pdf'){
+        const status=certificateEditor.querySelector('[data-certificate-preview-status]');
+        (async()=>{try{const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument(canvas.dataset.background).promise;const page=await pdf.getPage(1);const viewport=page.getViewport({scale:1.5});const target=canvas.querySelector('canvas');target.width=viewport.width;target.height=viewport.height;await page.render({canvasContext:target.getContext('2d'),viewport}).promise;}catch{status.textContent='PDF visual preview could not load. Use the coordinate fields and generated sample PDF to check placement.';}})();
+    }
+}
 const gatewayForm=document.querySelector('[data-payment-gateway]');
 document.querySelector('[data-select-enrollment]')?.addEventListener('click',()=>{
     const checks=[...document.querySelectorAll('input[form="bulk-enrollment"]:not(:disabled)')];

@@ -5,9 +5,11 @@
 <span class="eyebrow">Course workspace</span>
 <h1>{{ $course->title }}</h1>
 <p class="course-summary">{{ $course->summary }}</p>
+@php $courseAccess=collect($data['course_access'])->firstWhere('course_id',$course->id); @endphp
+@if(!$courseAccess['allowed'])<div class="notice error">Lessons and resources are locked. Complete the prerequisite course if one is configured, and confirm payment when your 12-hour trial ends. <a href="/portal/payment">View payment instructions</a>.</div>@elseif(!$courseAccess['paid']&&$courseAccess['trial_expires_at'])<div class="notice">Trial access expires {{ $courseAccess['trial_expires_at'] }}. Lessons unlock in order as you finish each one.</div>@endif
 @include('portal.progress',['progressCourseId'=>$course->id])
 @php
-    $courseLessons=collect($data['lessons'])->where('course_id',$course->id)->sortBy('position');
+    $courseLessons=collect($data['lessons'])->where('course_id',$course->id)->sortBy('sort_order');
     $courseResources=collect($data['resources'])->where('course_id',$course->id);
     $courseAssignments=collect($data['assignments'])->where('course_id',$course->id);
 @endphp
@@ -19,9 +21,12 @@
     </div>
     <section class="tab-panel" role="tabpanel" id="panel-course-lessons" aria-labelledby="tab-course-lessons">
         @forelse($courseLessons as $lesson)
+            @if($lesson->module_title&&($loop->first||$lesson->module_title!==($previousModule??null)))<h2>{{ $lesson->module_title }}</h2>@endif
+            @php $previousModule=$lesson->module_title; @endphp
             @php $completed=collect($data['lesson_progress'])->contains('lesson_id',$lesson->id); @endphp
             <details class="course-item" id="lesson-{{ $lesson->id }}">
                 <summary><span class="course-item-number">{{ str_pad($lesson->position,2,'0',STR_PAD_LEFT) }}</span><span>{{ $lesson->title }}</span><span class="tag">{{ $completed?'Completed':'Lesson' }}</span></summary>
+                @if($lesson->locked)<p><i class="fas fa-lock" aria-hidden="true"></i> Locked — complete preceding lessons and confirm payment if your trial has ended.</p>@else
                 <div class="prose course-item-content">{{ $lesson->body }}</div>
                 @if($lesson->video_url)
                     @php
@@ -39,6 +44,7 @@
                     @else<p class="muted">This video source cannot be played in the course viewer. Please contact your instructor.</p>@endif
                 @endif
                 @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">Mark lesson complete</button></form>@endif
+                @endif
             </details>
         @empty<p class="muted">Lessons will appear here when they are published.</p>
         @endforelse
@@ -52,7 +58,7 @@
                         @elseif($resource->media_type==='pdf')<div class="resource-document-viewer"><iframe src="{{ $resource->viewer_url }}#toolbar=0&navpanes=0" title="{{ $resource->title }} document" loading="lazy"></iframe></div>
                         @elseif($resource->media_type==='image')<img class="resource-image-viewer" src="{{ $resource->viewer_url }}" alt="{{ $resource->title }}">
                         @elseif($resource->media_type==='text')<div class="resource-document-viewer"><iframe src="{{ $resource->viewer_url }}" title="{{ $resource->title }} text" loading="lazy"></iframe></div>@endif
-                    @else<p class="muted">This resource has no attached file yet.</p>@endif
+                    @else<p class="muted">{{ $resource->locked?'Locked — complete the preceding lessons or confirm payment.':'This resource has no attached file yet.' }}</p>@endif
                 </article>
             @empty<p class="muted">There are no course resources yet.</p>
             @endforelse
@@ -63,6 +69,7 @@
             @php $submission=collect($data['submissions'])->firstWhere('assignment_id',$assignment->id); @endphp
             <details class="course-item">
                 <summary><span>{{ $assignment->title }}</span><span class="tag">Pass mark {{ $assignment->pass_mark }}%</span></summary>
+                @if($assignment->locked)<p>Locked until payment is confirmed.</p>@else
                 <p class="prose course-item-content">{{ $assignment->instructions }}</p>
                 @if($assignment->due_at)<p class="muted">Due {{ \Carbon\Carbon::parse($assignment->due_at)->format('d M Y, H:i') }}</p>@endif
                 @if($submission)
@@ -76,6 +83,7 @@
                         <div class="field"><label for="assignment-file-{{ $assignment->id }}">Evidence file (optional, up to 10 MB)</label><input id="assignment-file-{{ $assignment->id }}" type="file" name="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp"></div>
                         <button type="submit">Submit practical work</button>
                     </form>
+                @endif
                 @endif
             </details>
         @empty<p class="muted">There are no practical assignments for this course yet.</p>

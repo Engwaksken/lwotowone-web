@@ -14,7 +14,7 @@
     <div class="faq-list">
         @foreach([
             ['Who can join Lwotowone?','Young people and community members interested in practical learning, skills development, mentorship or enterprise support can explore our programmes. Each opportunity may have its own eligibility and application details.'],
-            ['How do I find a course or programme?','Visit Programmes or Learn from the main menu. Open an item to read its description and requirements. Create an account to access learner features and track your learning.'],
+            ['How do I find a course or programme?','Visit Programmes or Learn, then check Apply for open course and opportunity calls. Create an account, complete your profile and submit an application. M&E reviews applications before course enrollment.'],
             ['Do I need to pay to take part?','Fees and support vary by programme. Check the details on the programme or course page, or contact our team before making a payment. Never send money to an individual claiming to represent us without confirming through our official contact channels.'],
             ['Can I use the platform if I have a disability?','Yes. We aim to make learning welcoming and accessible. You can adjust text size, enable high contrast and reduce motion using Accessibility options. If you need a particular accommodation or an accessible format, contact us and tell us what would help.'],
             ['How do I get help with my account?','Use the User guide for sign-in and profile steps. If you cannot access your account, use the password reset link on the sign-in page or contact our team for support.'],
@@ -31,9 +31,11 @@
         ['01','Explore','Browse programmes, courses, events, stories and current opportunities. Use search to find topics that matter to you.'],
         ['02','Create your account','Choose Join us, provide your details and keep your sign-in information safe. You can return to your learning from any device.'],
         ['03','Set up your profile','Add the information requested so our team can understand your interests and connect you with relevant learning and support.'],
-        ['04','Learn and practise','Open My learning to continue a course. Work through lessons and practical activities at your own pace, and ask your instructor when you need help.'],
+        ['04','Apply and learn','Apply through an open course or opportunity call. M&E approval enrolls you into the course and starts a 12-hour trial. Complete lessons in order to unlock the next lesson and module.'],
         ['05','Find your next opportunity','Visit Grow and connect in your account for mentorship, events, enterprise resources and opportunities. Check requirements and dates carefully.'],
         ['06','Make the platform work for you','Open Accessibility options in the page header to increase text size, use high contrast or reduce motion. These preferences are saved on your device.'],
+        ['07','Confirm course payment','When the 12-hour trial ends, lessons and resources lock until staff confirm payment for that course. Follow the payment instructions and contact your programme coordinator.'],
+        ['08','Earn your certificate','Finish every published lesson and pass the practical assessments. Your assigned instructor recommends completion, then you can view and download your designed PDF certificate.'],
     ] as [$number,$title,$description])
         <article class="guide-card"><span class="guide-number">{{ $number }}</span><div><h2>{{ $title }}</h2><p>{{ $description }}</p></div></article>
     @endforeach

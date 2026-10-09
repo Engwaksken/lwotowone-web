@@ -1,0 +1,2 @@
+@extends('layout')
+@section('content')<h1>Open course and opportunity calls</h1><div class="grid">@forelse($calls as $call)<article class="card"><h2>{{ $call->title }}</h2><p>{{ \Illuminate\Support\Str::limit($call->description,250) }}</p><p>Apply by {{ $call->closes_at }}</p><a class="button" href="/calls/{{ $call->token }}">View call and apply</a></article>@empty<p>No calls are open right now.</p>@endforelse</div>@endsection

@@ -6,6 +6,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 class AppServiceProvider extends ServiceProvider {
  public function boot(): void {
+   foreach(config('journey.modules',[]) as $key=>$module)config(["modules.$key"=>$module]);
+   foreach(config('journey.fields',[]) as $module=>$fields)config(["modules.$module.fields"=>array_merge(config("modules.$module.fields"),$fields)]);
    \Illuminate\Support\Facades\View::composer('layout',function($view){$db=\Illuminate\Support\Facades\DB::table('pages');$view->with('contentPages',$db->where('status','published')->whereNotIn('slug',['privacy','terms'])->get(['title','slug']));});
    \Illuminate\Support\Facades\View::composer(['layout','auth.layout'],function($view){$view->with('siteSettings',\Illuminate\Support\Facades\DB::table('settings')->pluck('value','key')->all());});
    \Illuminate\Support\Facades\View::composer('partials.platform-stats',function($view){$stats=['programmes'=>\Illuminate\Support\Facades\DB::table('programs')->where('status','published')->count(),'courses'=>\Illuminate\Support\Facades\DB::table('courses')->where('status','published')->count(),'opportunities'=>\Illuminate\Support\Facades\DB::table('opportunities')->where('status','published')->whereDate('deadline','>=',today())->count(),'learners'=>\Illuminate\Support\Facades\DB::table('users')->where('role','participant')->count()];$view->with('publicStats',$stats);});

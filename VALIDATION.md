@@ -5,7 +5,7 @@ Verified locally with PHP **8.3.33** and the installed extensions:
 | Check | Result |
 |---|---|
 | `composer lint` | Passed PHP syntax checks across application, migrations and tests |
-| `composer test` | **75 tests, 543 assertions passed** |
+| `composer test` | **83 tests, 632 assertions passed** |
 | `composer validate --strict --no-check-publish` | Passed |
 | `node --check public/assets/app.js` | Passed |
 | `git diff --check` | Passed (Git reports configured LF/CRLF conversion notices) |
@@ -20,6 +20,8 @@ The 9 October checks also cover appearance settings and branding uploads, public
 AI provider settings verification covers native Anthropic/Gemini/Cohere formats, OpenAI reasoning-model token parameters, unsaved connection testing, reuse of encrypted saved keys, provider-change key protection, sanitized errors, administrator authorization, secret exclusion from validation old input, and Dashboard/Profile/Logout topbar order. Provider HTTP calls are mocked; live provider connections and browser interaction checks were not run in this session.
 
 Payment/font/enrollment verification covers type-specific payment validation, encrypted credentials and secret exclusion, learner-visible destination details, custom font rendering and CSS-injection rejection, CMS/enrollment status filtering, CSV template downloads, BOM/CRLF support, atomic import rollback, duplicate/malformed/inactive-cohort rejection, repeat imports without duplicate enrollment or sequence consumption, bulk-selection rollback, and manager-only bulk routes. The migration is exercised by the isolated SQLite feature suite. Live provider API processing and production MySQL deployment were not performed in this session.
+
+Learner journey verification covers M&E call creation and QR SVG generation, application approval before enrollment, idempotent 12-hour trials, module/lesson progression, exclusion of draft module content, locked-body/video/resource URL redaction, direct resource authorization, exact trial-expiry gating, course-specific payment confirmation, prerequisite courses, closed calls, disabled participant self-enrollment, API expiry and sync replay checks, opportunity-only calls, assigned-instructor completion recommendations, private certificate ownership, and actual PDF generation from both PDF and PNG designs. Composer audit reports no vulnerability advisories. An isolated sample certificate was generated, rendered with PyMuPDF and visually inspected: learner name, course, period, date and reference fit the single-page design. Browser drag/drop and production MySQL/hosting acceptance were not run in this session.
 
 ## Previous development verification — 7 October 2026
 

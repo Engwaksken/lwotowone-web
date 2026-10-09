@@ -7,9 +7,10 @@ use Illuminate\Validation\ValidationException;
 class Workflow {
   public static function run(User $u,string $action,array $input): array {
    abort_unless($u->role==='participant',403,'Participant access required.');
-   if($action==='enrol'||$action==='complete'||$action==='submit'){
-    abort_unless($u->profile_complete,403,'Complete your learner profile first.');
-    abort_unless($u->learning_access_paid,403,'Payment is required to access learning materials.');
+    if($action==='enrol'||$action==='complete'||$action==='submit'){
+     abort_unless($u->profile_complete,403,'Complete your learner profile first.');
+     if($action==='enrol')abort(403,'Apply through an available call. M&E approval creates the enrollment.');
+     if(in_array($action,['complete','submit'])){$field=$action==='complete'?'lesson_id':'assignment_id';$table=$action==='complete'?'lessons':'assignments';$checked=Validator::make($input,[$field=>'required|integer|exists:'.$table.',id'])->validate();$item=self::published($table,$checked[$field]);LearningAccess::requireCourse($u,(int)$item->course_id);if($action==='complete')abort_unless(LearningAccess::lessonAllowed($u,$item),403,'Complete the preceding lesson first.');}
    }
   return DB::transaction(function()use($u,$action,$input){
    // Serialise actions for one participant. Also protects uniqueness and sync replay.
@@ -41,14 +42,13 @@ class Workflow {
   if($action==='update-enterprise')$rules['enterprise_id']='required|integer|exists:enterprises,id';
   $d=Validator::make($in,$rules)->validate();$id=null;
   switch($action){
-   case 'enrol':
-    self::published('courses',$d['course_id']);
-    DB::table('enrolments')->updateOrInsert(['user_id'=>$u->id,'course_id'=>$d['course_id']],['updated_at'=>now(),'created_at'=>now()]);break;
+    case 'enrol':
+     abort(403,'Apply through an available call for M&E approval.');
    case 'complete':
-    $lesson=self::published('lessons',$d['lesson_id']);self::enrolled($u,$lesson->course_id);
+     $lesson=self::published('lessons',$d['lesson_id']);LearningAccess::requireCourse($u,(int)$lesson->course_id);abort_unless(LearningAccess::lessonAllowed($u,$lesson),403,'Complete the previous lesson first.');
     DB::table('lesson_progress')->updateOrInsert(['user_id'=>$u->id,'lesson_id'=>$lesson->id],['completed_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);break;
    case 'submit':
-    $a=self::published('assignments',$d['assignment_id']);self::enrolled($u,$a->course_id);
+     $a=self::published('assignments',$d['assignment_id']);LearningAccess::requireCourse($u,(int)$a->course_id);
     if($a->due_at && now()->gt($a->due_at))self::invalid('assignment_id','This assignment deadline has passed.');
     $previous=DB::table('submissions')->where('user_id',$u->id)->where('assignment_id',$a->id)->first();
     if($previous && $previous->status!=='returned')self::invalid('assignment_id','This work has already been submitted. A reviewer must return it before resubmission.');
