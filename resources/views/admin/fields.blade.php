@@ -22,10 +22,11 @@
                 if($type==='date'&&$value)$value=\Carbon\Carbon::parse($value)->format('Y-m-d');
             @endphp
             <input id="{{ $formId }}-{{ $field }}" name="{{ $field }}" type="{{ $htmlType }}"
+                @if($type==='file'&&$module==='resources')accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg"@endif
                 @if(!in_array($type,['password','file']))value="{{ $value }}"@endif
                 @if($type==='number')min="0"@endif
                 @if(!$optional && !($type==='file'&&$record))required @endif>
-            @if($type==='file')<small>PDF, text or image. Maximum 10 MB. Stored privately.</small>@endif
+            @if($type==='file')<small>{{ $module==='resources'?'PDF, text, images, MP4, WebM or OGG video. Maximum 100 MB. Stored privately.':'PDF, text or image. Maximum 10 MB. Stored privately.' }}</small>@endif
         @endif
     </div>
 @endforeach

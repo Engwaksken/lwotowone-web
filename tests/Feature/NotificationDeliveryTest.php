@@ -15,8 +15,13 @@ class NotificationDeliveryTest extends TestCase
 
     private function configureFcm(): void
     {
-        $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_RSA, 'private_key_bits' => 2048]);
-        openssl_pkey_export($key, $privateKey);
+        $key = openssl_pkey_new([
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+            'private_key_bits' => 2048,
+            'config' => base_path('tests/fixtures/openssl.cnf'),
+        ]);
+        $this->assertNotFalse($key, 'The test RSA key should be generated from the checked-in test OpenSSL configuration.');
+        $this->assertTrue(openssl_pkey_export($key, $privateKey, null, ['config' => base_path('tests/fixtures/openssl.cnf')]));
         config(['services.fcm' => [
             'project_id' => null,
             'service_account_json' => json_encode([

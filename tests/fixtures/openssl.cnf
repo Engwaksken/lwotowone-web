@@ -1,0 +1,6 @@
+[req]
+distinguished_name = test_distinguished_name
+prompt = no
+
+[test_distinguished_name]
+CN = Lwotowone Test Key

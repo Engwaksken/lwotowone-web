@@ -40,13 +40,13 @@ class LearnerAccessTest extends TestCase
     {
         $learner = $this->learner();
         $course = $this->course();
-        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Personal and course')->assertSee('Background')->assertSee('Employment and goals')->assertSee('Course selection')->assertSee('Are you employed?')->assertDontSee('Youth in Work before')->assertDontSee('Verified learner outcomes');
+        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Personal and course')->assertSee('Background')->assertSee('Employment and goals')->assertSee('Course selection')->assertSee('Select education level')->assertSee('Are you employed?')->assertDontSee('Youth in Work before')->assertDontSee('Verified learner outcomes');
         $this->get('/dashboard')->assertRedirect('/profile');
         $this->post('/profile', [
             'name' => 'Learner Name', 'phone' => '+256700000000', 'selected_course_id' => $course,
             'gender' => 'Female', 'location' => 'Kampala',
             'urban_rural' => 'Urban', 'learner_age' => 22, 'refugee' => 0, 'pwd' => 0,
-            'education_level' => 'Secondary', 'employed' => 0,
+            'education_level' => 'O-Level', 'employed' => 0,
         ])->assertRedirect();
         $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learning_access_paid' => false, 'learner_no' => null, 'enrollment_category' => null, 'enrollment_date' => null]);
         $this->get('/portal/learn')->assertRedirect('/portal/payment');
@@ -63,18 +63,18 @@ class LearnerAccessTest extends TestCase
         $this->post('/profile', [
             'name' => 'Learner Name', 'phone' => '+256700000000', 'selected_course_id' => $course,
             'gender' => 'Female', 'location' => 'Kampala', 'urban_rural' => 'Urban', 'learner_age' => 22,
-            'refugee' => 0, 'pwd' => 0, 'education_level' => 'Secondary',
+            'refugee' => 0, 'pwd' => 0, 'education_level' => 'O-Level',
             'employed' => 1, 'employer_name' => 'Lwotowone Farms',
         ])->assertRedirect();
         $this->assertDatabaseHas('users',['id'=>$learner->id,'employed'=>true,'employer_name'=>'Lwotowone Farms']);
 
         $manager = User::create(['name'=>'Manager','email'=>uniqid().'@example.test','password'=>'A-long-test-password','role'=>'manager','status'=>'active']);
-        $this->actingAs($manager)->post('/admin/mel/cohorts', [
+        $this->actingAs($manager)->post('/admin/enrollment/cohorts', [
             'name'=>'2026 Youth', 'enrollment_category'=>'Youth', 'learner_number_prefix'=>'LW',
             'learner_number_format'=>'{prefix}-{year}-{sequence}', 'next_sequence'=>1, 'sequence_padding'=>4, 'active'=>1,
         ])->assertRedirect();
         $cohort = DB::table('mel_cohorts')->value('id');
-        $this->post('/admin/mel/learners/'.$learner->id.'/confirm-payment',['cohort_id'=>$cohort])->assertRedirect();
+        $this->post('/admin/enrollment/learners/'.$learner->id.'/confirm-payment',['cohort_id'=>$cohort])->assertRedirect();
         $this->assertDatabaseHas('users',['id'=>$learner->id,'learning_access_paid'=>true,'learner_no'=>'LW-'.now()->format('Y').'-0001','enrollment_category'=>'Youth','learner_status'=>'Active']);
         $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$course]);
         $learner->refresh();

@@ -63,7 +63,7 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 
 document.querySelectorAll('[data-tabs]').forEach(tabs=>{
     const tablist=tabs.querySelector('[role="tablist"]');
-    const tabButtons=[...tabs.querySelectorAll('[role="tab"]')];
+    const tabButtons=[...(tablist?.querySelectorAll('[role="tab"]')||[])];
     const panels=tabButtons.map(tab=>document.getElementById(tab.getAttribute('aria-controls'))).filter(Boolean);
     const activate=(tab,focus=false)=>{
         tabButtons.forEach(button=>{
@@ -76,7 +76,9 @@ document.querySelectorAll('[data-tabs]').forEach(tabs=>{
         if(focus)tab.focus();
     };
     tabs.classList.add('tabs-enhanced');
-    activate(tabButtons.find(tab=>tab.getAttribute('aria-selected')==='true')||tabButtons[0]);
+    const hashTarget=document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const hashTab=hashTarget&&tabButtons.find(tab=>document.getElementById(tab.getAttribute('aria-controls'))?.contains(hashTarget));
+    activate(hashTab||tabButtons.find(tab=>tab.getAttribute('aria-selected')==='true')||tabButtons[0]);
     tablist?.addEventListener('click',event=>{
         const tab=event.target.closest('[role="tab"]');
         if(tab&&tabButtons.includes(tab))activate(tab);
@@ -149,3 +151,79 @@ document.querySelectorAll('select[data-toggle]').forEach(control=>{
 
 const reopen=document.querySelector('[data-reopen-dialog]');
 if(reopen){document.getElementById(reopen.dataset.reopenDialog)?.showModal();}
+
+const preferenceKey='lwotowone-accessibility';
+let preferences={scale:1,font:'site',spacing:'normal',colors:'normal',underline:false,motion:false};
+try{preferences={...preferences,...JSON.parse(localStorage.getItem(preferenceKey)||'{}')};}catch{}
+const applyPreferences=()=>{
+    document.documentElement.style.zoom=String(preferences.scale);
+    document.documentElement.classList.toggle('a11y-readable-font',preferences.font==='readable');
+    document.documentElement.classList.toggle('a11y-serif-font',preferences.font==='serif');
+    document.documentElement.classList.toggle('a11y-relaxed-spacing',preferences.spacing==='relaxed');
+    document.documentElement.classList.toggle('a11y-wide-spacing',preferences.spacing==='wide');
+    document.documentElement.classList.toggle('theme-high-contrast',preferences.colors==='contrast');
+    document.documentElement.classList.toggle('theme-dark',preferences.colors==='dark');
+    document.documentElement.classList.toggle('theme-grayscale',preferences.colors==='grayscale');
+    document.documentElement.classList.toggle('underline-links',Boolean(preferences.underline));
+    document.documentElement.classList.toggle('reduce-motion',Boolean(preferences.motion));
+    document.querySelector('#a11y-text-size')?.setAttribute('value',String(Math.round(preferences.scale*100)));
+    const output=document.querySelector('[data-a11y-output="text-size"]');if(output)output.value=`${Math.round(preferences.scale*100)}%`;
+    ['font','spacing','colors'].forEach(key=>{const control=document.querySelector(`[data-accessibility="${key}"]`);if(control)control.value=preferences[key];});
+    document.querySelector('[data-accessibility="underline"]')?.setAttribute('aria-pressed',String(Boolean(preferences.underline)));
+    document.querySelector('[data-accessibility="motion"]')?.setAttribute('aria-pressed',String(Boolean(preferences.motion)));
+};
+const savePreferences=()=>{try{localStorage.setItem(preferenceKey,JSON.stringify(preferences));}catch{}applyPreferences();};
+applyPreferences();
+document.querySelectorAll('[data-accessibility]').forEach(button=>{
+    if(button.matches('input[type="range"],select')){
+        button.addEventListener(button.matches('input')?'input':'change',()=>{
+            if(button.dataset.accessibility==='text-size')preferences.scale=Number(button.value)/100;
+            else preferences[button.dataset.accessibility]=button.value;
+            savePreferences();
+        });
+        return;
+    }
+    button.addEventListener('click',()=>{
+    switch(button.dataset.accessibility){
+        case'text-size':preferences.scale=Number(button.value)/100;break;
+        case'font':preferences.font=button.value;break;
+        case'spacing':preferences.spacing=button.value;break;
+        case'colors':preferences.colors=button.value;break;
+        case'underline':preferences.underline=!preferences.underline;break;
+        case'motion':preferences.motion=!preferences.motion;break;
+        case'read-aloud':{
+            const readButton=button;
+            if(window.speechSynthesis?.speaking){window.speechSynthesis.cancel();readButton.setAttribute('aria-pressed','false');readButton.innerHTML='<i class="fas fa-volume-up" aria-hidden="true"></i> Read page aloud';}
+            else if(window.speechSynthesis&&window.SpeechSynthesisUtterance){const content=document.querySelector('#main,#auth-main')?.innerText?.trim();if(content){const speech=new SpeechSynthesisUtterance(content);speech.onend=()=>{readButton.setAttribute('aria-pressed','false');readButton.innerHTML='<i class="fas fa-volume-up" aria-hidden="true"></i> Read page aloud';};window.speechSynthesis.speak(speech);readButton.setAttribute('aria-pressed','true');readButton.innerHTML='<i class="fas fa-stop" aria-hidden="true"></i> Stop reading';}}
+            break;
+        }
+        case'reset':preferences={scale:1,font:'site',spacing:'normal',colors:'normal',underline:false,motion:false};break;
+    }
+    savePreferences();
+    });
+});
+document.addEventListener('keydown',event=>{if(event.altKey&&event.key==='0'){event.preventDefault();preferences={scale:1,font:'site',spacing:'normal',colors:'normal',underline:false,motion:false};savePreferences();}});
+
+const helpChat=document.querySelector('[data-help-chat]');
+if(helpChat){
+    const toggle=helpChat.querySelector('.help-chat-toggle');
+    const panel=helpChat.querySelector('.help-chat-panel');
+    const close=helpChat.querySelector('[data-chat-close]');
+    const input=helpChat.querySelector('#help-chat-input');
+    const messages=helpChat.querySelector('[data-chat-messages]');
+    const openChat=()=>{panel.hidden=false;toggle.setAttribute('aria-expanded','true');input.focus();};
+    const closeChat=()=>{panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();};
+    toggle.addEventListener('click',()=>panel.hidden?openChat():closeChat());
+    close.addEventListener('click',closeChat);
+    helpChat.querySelector('[data-chat-form]').addEventListener('submit',async event=>{
+        event.preventDefault();const question=input.value.trim();if(!question)return;
+        const userBubble=document.createElement('p');userBubble.className='chat-question';userBubble.textContent=question;messages.append(userBubble);
+        input.value='';input.disabled=true;messages.scrollTop=messages.scrollHeight;
+        const reply=document.createElement('p');reply.className='chat-reply';reply.textContent='One moment while I look into that…';messages.append(reply);
+        try{
+            const response=await fetch('/help/chat',{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content||''},body:JSON.stringify({message:question})});
+            const result=await response.json();reply.textContent=response.ok&&result.reply?result.reply:'I could not reach the help service just now. Please visit /faq or contact our team at /contact.';
+        }catch{reply.textContent='I could not reach the help service just now. Please visit /faq or contact our team at /contact.';}
+        finally{input.disabled=false;input.focus();messages.scrollTop=messages.scrollHeight;}
+    });
+}

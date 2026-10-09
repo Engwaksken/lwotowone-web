@@ -11,13 +11,14 @@
     $moduleGroups=[
         'Learning and skills'=>['programs','courses','lessons','assignments','resources','skills'],
         'People and support'=>['users','mentors','slots'],
-        'Opportunities and updates'=>['opportunities','events','announcements','posts','pages','settings'],
+        'Opportunities and updates'=>['opportunities','events','announcements','posts','pages'],
     ];
     $availableGroups=[];
     foreach($moduleGroups as $label=>$keys){
         $availableGroups[$label]=array_filter($keys,fn($key)=>isset(config('modules')[$key])&&\App\Services\Catalog::allowed(auth()->user(),$key));
     }
     $availableGroups=array_filter($availableGroups);
+    if(auth()->user()->manager())$availableGroups['Settings']=['site_appearance','payment_gateways'];
 @endphp
 <div class="tabs" data-tabs>
     <div class="tab-list" role="tablist" aria-label="Management areas">
@@ -25,7 +26,16 @@
     </div>
     @foreach($availableGroups as $label=>$keys)
         <section class="tab-panel" role="tabpanel" id="panel-management-{{ $loop->index }}" aria-labelledby="tab-management-{{ $loop->index }}">
-            <div class="grid">@foreach($keys as $key)<a class="card" href="/admin/{{ $key }}"><h3>{{ config("modules.$key.title") }}</h3><p>View and update records</p></a>@endforeach</div>
+            <ul class="management-list">
+                @if($label==='Settings')
+                    @if(auth()->user()->role==='admin')<li><a class="management-row" href="/admin/site-settings#settings-panel-appearance"><i class="fas fa-palette" aria-hidden="true"></i><span><strong>Website appearance</strong><small>Set brand colors, typography, logo and favicon.</small></span><i class="fas fa-chevron-right management-arrow" aria-hidden="true"></i></a></li>@endif
+                    <li><a class="management-row" href="/admin/site-settings#payment-methods"><i class="fas fa-credit-card" aria-hidden="true"></i><span><strong>Payment gateway settings</strong><small>Manage payment destinations and learner instructions.</small></span><i class="fas fa-chevron-right management-arrow" aria-hidden="true"></i></a></li>
+                    @if(auth()->user()->role==='admin')<li><a class="management-row" href="/admin/site-settings#settings-panel-ai"><i class="fas fa-robot" aria-hidden="true"></i><span><strong>AI API settings</strong><small>Configure chatbot responses and mentor recommendations.</small></span><i class="fas fa-chevron-right management-arrow" aria-hidden="true"></i></a></li>@endif
+                @else
+                    @foreach($keys as $key)<li><a class="management-row" href="/admin/{{ $key }}"><i class="fas {{ match($key){'programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper','pages'=>'fa-file-alt',default=>'fa-folder'} }}" aria-hidden="true"></i><span><strong>{{ config("modules.$key.title") }}</strong><small>View and manage {{ \Illuminate\Support\Str::lower(config("modules.$key.title")) }} records.</small></span><i class="fas fa-chevron-right management-arrow" aria-hidden="true"></i></a></li>@endforeach
+                    @if($label==='Learning and skills'&&auth()->user()->manager())<li><a class="management-row" href="/admin/enrollment"><i class="fas fa-user-graduate" aria-hidden="true"></i><span><strong>Enrollment and cohorts</strong><small>Manage cohorts, settlements and course access.</small></span><i class="fas fa-chevron-right management-arrow" aria-hidden="true"></i></a></li>@endif
+                @endif
+            </ul>
         </section>
     @endforeach
 </div>

@@ -6,6 +6,31 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Carbon\CarbonImmutable;
 class CmsController extends Controller {
+ public function siteSettings(Request $r){abort_unless($r->user()->manager(),403);$settings=DB::table('settings')->pluck('value','key')->all();$gateways=DB::table('payment_gateways')->orderBy('name')->get();$aiConfigured=app(\App\Services\AiAssistant::class)->configured();return view('admin.site-settings',compact('settings','gateways','aiConfigured'));}
+ public function saveSiteSettings(Request $r){
+  abort_unless($r->user()->role==='admin',403);
+  $data=$r->validate([
+   'primary_color'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],'accent_color'=>['required','regex:/^#[0-9A-Fa-f]{6}$/'],
+   'font_family'=>['required','in:Arial,system,Georgia,Atkinson Hyperlegible'],'font_size'=>['required','integer','min:14','max:20'],
+    'logo'=>['nullable','file','mimetypes:image/png,image/jpeg,image/webp','extensions:png,jpg,jpeg,webp','max:4096'],'favicon'=>['nullable','file','mimetypes:image/png,image/x-icon,image/vnd.microsoft.icon','extensions:png,ico','max:1024'],
+  ]);
+  foreach(['logo'=>'site_logo','favicon'=>'site_favicon'] as $field=>$key){
+   if($r->hasFile($field)){$directory=public_path('site-branding');if(!is_dir($directory)&&!mkdir($directory,0755,true)&&!is_dir($directory))throw new \RuntimeException('The site branding upload directory could not be created.');$file=$r->file($field);$extension=strtolower($file->getClientOriginalExtension());$name=$key.'-'.bin2hex(random_bytes(8)).'.'.$extension;if(!$file->move($directory,$name))throw new \RuntimeException('The uploaded branding file could not be saved.');$data[$key]='/site-branding/'.$name;}
+   unset($data[$field]);
+  }
+  foreach($data as $key=>$value){$exists=DB::table('settings')->where('key',$key)->exists();if($exists)DB::table('settings')->where('key',$key)->update(['value'=>(string)$value,'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>$key,'value'=>(string)$value,'created_at'=>now(),'updated_at'=>now()]);}
+  DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+  return back()->with('success','Website appearance updated.');
+ }
+ public function saveAiSettings(Request $r){
+  abort_unless($r->user()->role==='admin',403);
+  $data=$r->validate(['ai_provider'=>'required|in:openai-compatible','ai_api_base_url'=>'required|url:https|max:500','ai_api_model'=>'required|string|max:120','ai_api_key'=>'nullable|string|max:4096','clear_api_key'=>'nullable|boolean']);
+  foreach(['ai_provider','ai_api_base_url','ai_api_model'] as $key){$exists=DB::table('settings')->where('key',$key)->exists();if($exists)DB::table('settings')->where('key',$key)->update(['value'=>$data[$key],'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>$key,'value'=>$data[$key],'created_at'=>now(),'updated_at'=>now()]);}
+  if($r->boolean('clear_api_key'))DB::table('settings')->where('key','ai_api_key')->delete();
+  elseif(!empty($data['ai_api_key'])){$encrypted='enc:'.\Illuminate\Support\Facades\Crypt::encryptString($data['ai_api_key']);$exists=DB::table('settings')->where('key','ai_api_key')->exists();if($exists)DB::table('settings')->where('key','ai_api_key')->update(['value'=>$encrypted,'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>'ai_api_key','value'=>$encrypted,'created_at'=>now(),'updated_at'=>now()]);}
+  DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-ai','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+  return redirect('/admin/site-settings#settings-panel-ai')->with('success','AI assistant and mentor matching settings saved.');
+ }
  private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
  public function index(Request $r,string $module){
   $this->access($r,$module);

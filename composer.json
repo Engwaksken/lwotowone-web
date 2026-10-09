@@ -7,9 +7,10 @@
     "laravel/sanctum": "^4.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "^12.0",
     "fakerphp/faker": "^1.23",
-    "mockery/mockery": "^1.6"
+    "laravel/tinker": "^3.0",
+    "mockery/mockery": "^1.6",
+    "phpunit/phpunit": "^12.0"
   },
   "autoload": {
     "psr-4": {

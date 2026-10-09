@@ -1,1 +1,11 @@
-<nav class="pagination" aria-label="Pagination">@if($rows->previousPageUrl())<a href="{{ $rows->previousPageUrl() }}">Previous</a>@endif<span>Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }}</span>@if($rows->nextPageUrl())<a href="{{ $rows->nextPageUrl() }}">Next</a>@endif</nav>
+<nav class="pagination" aria-label="Pagination">
+    @if($rows->previousPageUrl())
+        <a href="{{ $rows->previousPageUrl() }}" aria-label="Go to previous page">Previous</a>
+    @endif
+    @if(!($hidePageCount ?? false))
+        <span>Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }}</span>
+    @endif
+    @if($rows->nextPageUrl())
+        <a href="{{ $rows->nextPageUrl() }}" aria-label="Go to next page">Next</a>
+    @endif
+</nav>

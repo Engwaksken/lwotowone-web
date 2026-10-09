@@ -23,7 +23,21 @@
             <details class="course-item" id="lesson-{{ $lesson->id }}">
                 <summary><span class="course-item-number">{{ str_pad($lesson->position,2,'0',STR_PAD_LEFT) }}</span><span>{{ $lesson->title }}</span><span class="tag">{{ $completed?'Completed':'Lesson' }}</span></summary>
                 <div class="prose course-item-content">{{ $lesson->body }}</div>
-                @if($lesson->video_url)<p><a target="_blank" rel="noopener noreferrer" href="{{ $lesson->video_url }}">Watch lesson video (uses data)</a></p>@endif
+                @if($lesson->video_url)
+                    @php
+                        $videoHost=strtolower((string)parse_url($lesson->video_url,PHP_URL_HOST));
+                        $videoPath=(string)parse_url($lesson->video_url,PHP_URL_PATH);
+                        $videoId=null;$embedUrl=null;
+                        if(str_contains($videoHost,'youtu.be'))$videoId=trim($videoPath,'/');
+                        elseif(str_contains($videoHost,'youtube.com')){parse_str((string)parse_url($lesson->video_url,PHP_URL_QUERY),$videoQuery);$videoId=$videoQuery['v']??(preg_match('~/(?:embed|shorts)/([A-Za-z0-9_-]{6,})~',$videoPath,$videoMatch)?$videoMatch[1]:null);}
+                        if($videoId&&preg_match('/^[A-Za-z0-9_-]{6,20}$/',$videoId))$embedUrl='https://www.youtube-nocookie.com/embed/'.$videoId.'?rel=0&modestbranding=1';
+                        elseif(str_contains($videoHost,'vimeo.com')&&preg_match('~/(?:video/)?([0-9]{5,})~',$videoPath,$videoMatch))$embedUrl='https://player.vimeo.com/video/'.$videoMatch[1];
+                        $directVideo=preg_match('/\.(mp4|webm|ogg)(?:$|[?#])/i',$lesson->video_url)===1;
+                    @endphp
+                    @if($embedUrl)<div class="lesson-video"><iframe src="{{ $embedUrl }}" title="{{ $lesson->title }} video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+                    @elseif($directVideo)<div class="lesson-video"><video controls controlslist="nodownload noplaybackrate" disablepictureinpicture playsinline preload="metadata"><source src="{{ $lesson->video_url }}">Your browser cannot play this video.</video></div>
+                    @else<p class="muted">This video source cannot be played in the course viewer. Please contact your instructor.</p>@endif
+                @endif
                 @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">Mark lesson complete</button></form>@endif
             </details>
         @empty<p class="muted">Lessons will appear here when they are published.</p>
@@ -32,7 +46,14 @@
     <section class="tab-panel" role="tabpanel" id="panel-course-resources" aria-labelledby="tab-course-resources" hidden>
         <div class="course-resource-list">
             @forelse($courseResources as $resource)
-                <article class="panel course-resource"><div><h3>{{ $resource->title }}</h3><p>{{ $resource->description }}</p></div><a class="button secondary" href="/files/resources/{{ $resource->id }}">Download resource</a></article>
+                <article class="panel course-resource"><div class="course-resource-heading"><div><h3>{{ $resource->title }}</h3><p>{{ $resource->description }}</p></div><span class="tag"><i class="fas {{ ($resource->media_type??'')==='video'?'fa-play-circle':(($resource->media_type??'')==='pdf'?'fa-file-pdf':'fa-book-open') }}" aria-hidden="true"></i> {{ ucfirst($resource->media_type??'resource') }}</span></div>
+                    @if(!empty($resource->viewer_url))
+                        @if($resource->media_type==='video')<video class="resource-video" controls controlslist="nodownload noplaybackrate" disablepictureinpicture playsinline preload="metadata"><source src="{{ $resource->viewer_url }}">Your browser cannot play this video.</video>
+                        @elseif($resource->media_type==='pdf')<div class="resource-document-viewer"><iframe src="{{ $resource->viewer_url }}#toolbar=0&navpanes=0" title="{{ $resource->title }} document" loading="lazy"></iframe></div>
+                        @elseif($resource->media_type==='image')<img class="resource-image-viewer" src="{{ $resource->viewer_url }}" alt="{{ $resource->title }}">
+                        @elseif($resource->media_type==='text')<div class="resource-document-viewer"><iframe src="{{ $resource->viewer_url }}" title="{{ $resource->title }} text" loading="lazy"></iframe></div>@endif
+                    @else<p class="muted">This resource has no attached file yet.</p>@endif
+                </article>
             @empty<p class="muted">There are no course resources yet.</p>
             @endforelse
         </div>

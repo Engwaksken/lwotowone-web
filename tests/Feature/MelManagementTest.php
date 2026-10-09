@@ -24,8 +24,10 @@ class MelManagementTest extends TestCase
     {
         $manager = $this->account('manager');
         $this->actingAs($this->account('participant'))->get('/admin/mel')->assertForbidden();
-        $this->actingAs($manager)->get('/admin/mel')->assertOk()->assertSee('Payment gateways and methods');
-        $this->post('/admin/mel/payment-gateways', [
+        $this->actingAs($manager)->get('/admin/mel')->assertOk()->assertSee('Overview')->assertSee('Learner gender distribution')->assertSee('Participation and inclusion')->assertDontSee('Enrollment cohorts');
+        $this->get('/admin/site-settings')->assertOk()->assertSee('Payment gateways and methods');
+        $this->get('/admin/enrollment')->assertOk()->assertSee('Enrollment cohorts')->assertSee('Refugee settlements');
+        $this->post('/admin/site-settings/payment-gateways', [
             'name' => 'IOTEC Tuition', 'provider_type' => 'IOTEC', 'provider' => 'IOTEC',
             'merchant_code' => 'MERCHANT-42', 'currency' => 'UGX', 'amount' => 50000,
             'instructions' => 'Use your learner number as reference.', 'active' => 1,
@@ -56,10 +58,10 @@ class MelManagementTest extends TestCase
     {
         $manager = $this->account('manager');
         $participant = $this->account('participant');
-        $this->actingAs($manager)->post('/admin/mel/settlements', ['name' => 'Nakivale'])->assertRedirect();
+        $this->actingAs($manager)->post('/admin/enrollment/settlements', ['name' => 'Nakivale'])->assertRedirect();
         $this->actingAs($participant)->get('/profile')->assertOk()->assertSee('Settlement')->assertSee('Nakivale');
 
-        $this->actingAs($manager)->put('/admin/mel/learners/'.$participant->id, [
+        $this->actingAs($manager)->put('/admin/enrollment/learners/'.$participant->id.'/outcomes', [
             'verified_outcomes' => 'Completed vocational training',
             'other_verified_outcome' => 'Started a cooperative',
             'after_work_status' => 'Self-employed',
@@ -70,6 +72,6 @@ class MelManagementTest extends TestCase
             'other_verified_outcome' => 'Started a cooperative', 'after_work_status' => 'Self-employed',
             'after_work_pathway' => 'Enterprise',
         ]);
-        $this->actingAs($participant)->put('/admin/mel/learners/'.$participant->id, [])->assertForbidden();
+        $this->actingAs($participant)->put('/admin/enrollment/learners/'.$participant->id.'/outcomes', [])->assertForbidden();
     }
 }

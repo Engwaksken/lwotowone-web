@@ -33,7 +33,7 @@ class Catalog {
     'number'=>['integer','min:0','max:100000'],
     'date','datetime'=>['date'],
     'url'=>['url:http,https','max:1000'],
-    'file'=>['file','mimes:pdf,txt,jpg,jpeg,png','max:10240'],
+     'file'=>$module==='resources'?['file','mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg','max:102400']:['file','mimes:pdf,txt,jpg,jpeg,png','max:10240'],
     'textarea'=>['string','max:50000'], default=>['string','max:255']});
    $rules[$field]=$r;
   }

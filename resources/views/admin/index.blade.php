@@ -2,6 +2,7 @@
 @section('content')
 <span class="eyebrow"><i class="fas fa-folder-open" aria-hidden="true"></i> Content management</span>
 <h1>{{ $meta['title'] }}</h1>
+@include('partials.platform-stats')
 <div class="toolbar">
     <form class="filter-form" method="get">
         <div class="field search-field"><label for="cms-search">Search records</label><input id="cms-search" type="search" name="q" maxlength="255" placeholder="Search records" value="{{ $filters['q'] }}"></div>
@@ -21,8 +22,9 @@
             <td>{{ $row->title??$row->name??$row->key }}</td>
             <td>{{ $row->status??'' }} {{ $row->role??'' }}</td>
             <td><div class="actions">
-                <button type="button" class="secondary small" data-dialog-open="edit-record-{{ $row->id }}"><i class="fas fa-pen" aria-hidden="true"></i> Edit</button>
-                <form method="post" action="/admin/{{ $module }}/{{ $row->id }}" data-confirm="Delete this record?">@csrf @method('DELETE')<button class="danger small" type="submit"><i class="fas fa-trash-alt" aria-hidden="true"></i> Delete</button></form>
+                @if(($row->status??null)==='published'&&in_array($module,['pages','programs','courses','opportunities','events','posts']))<a class="secondary small icon-action" href="{{ $module==='pages'?'/pages/'.$row->slug:'/explore/'.$module.'/'.$row->id }}" title="View published item" aria-label="View {{ $row->title??'published item' }}"><i class="fas fa-eye" aria-hidden="true"></i></a>@endif
+                <button type="button" class="secondary small icon-action" data-dialog-open="edit-record-{{ $row->id }}" title="Edit record" aria-label="Edit record"><i class="fas fa-pen" aria-hidden="true"></i></button>
+                <form method="post" action="/admin/{{ $module }}/{{ $row->id }}" data-confirm="Delete this record?">@csrf @method('DELETE')<button class="danger small icon-action" type="submit" title="Delete record" aria-label="Delete record"><i class="fas fa-trash-alt" aria-hidden="true"></i></button></form>
             </div></td>
         </tr>
     @empty

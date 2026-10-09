@@ -2,6 +2,7 @@
 @section('content')
 <span class="eyebrow"><i class="fas fa-clipboard-check" aria-hidden="true"></i> Programme operations</span>
 <h1>{{ ucwords(str_replace('_',' ',$type)) }}</h1>
+@include('partials.platform-stats')
 <form class="panel filter-form" method="get">
     <div class="field search-field"><label for="review-search">Search records</label><input id="review-search" type="search" name="q" maxlength="255" value="{{ $filters['q'] }}" placeholder="Search this queue"></div>
     @if($type!=='audit_logs')

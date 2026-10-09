@@ -66,7 +66,9 @@ class PortalController extends Controller {
       }
       $practiceLogs=$query->orderByDesc('practice_logs.practised_on')->orderByDesc('practice_logs.id')->paginate(10)->withQueryString();
     }
-    return view('portal.section',['section'=>$section,'data'=>Snapshot::get($r->user()),'earnings'=>$earnings,
+    $snapshot=Snapshot::get($r->user());
+    if($section==='mentorship')$snapshot['mentors']=app(\App\Services\MentorMatcher::class)->rank($r->user(),collect($snapshot['mentors']));
+    return view('portal.section',['section'=>$section,'data'=>$snapshot,'earnings'=>$earnings,
       'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters]);
   }
   public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');abort_unless($r->user()->learning_access_paid,403,'Payment is required to access learning materials.');Workflow::enrolled($r->user(),$id);$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);return view('portal.course',compact('data','course'));}
@@ -123,7 +125,7 @@ class PortalController extends Controller {
      $d=$r->validate(['name'=>'required|string|max:100','phone'=>'nullable|string|max:40','district'=>'nullable|string|max:100','expertise'=>'nullable|string|max:255','bio'=>'nullable|string|max:5000']);
      $r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Profile updated.');
     }
-     $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>'required|string|max:100','employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
+     $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>"required|in:No formal education,Primary,O-Level,A-Level,Certificate,Diploma,Bachelor's degree,Postgraduate,Other",'employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
      $samePaidCourse=$r->user()->learning_access_paid&&(int)$r->user()->selected_course_id===(int)$d['selected_course_id'];
      abort_unless($samePaidCourse||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
      abort_unless(!$r->user()->learning_access_paid||$samePaidCourse,422,'Contact your programme administrator to change your paid course selection.');
@@ -134,16 +136,28 @@ class PortalController extends Controller {
      $d['employed']=(bool)$d['employed'];if(!$d['employed'])$d['employer_name']=null;
      $d['learner_status']=$r->user()->learning_access_paid?'Active':'Pending Payment';$d['profile_complete']=true;$r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Learner profile saved.');
    }
- public function download(Request $r,string $type,string $id){
+  public function resource(Request $r,string $id){
+    $item=DB::table('resources')->find($id);abort_unless($item&&$item->file_path,404);
+    if($r->user()->role==='participant'){abort_unless($r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment before accessing learning resources.');abort_unless($item->status==='published',404);Workflow::enrolled($r->user(),$item->course_id);}
+    else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
+    return $this->inlineResource($item);
+  }
+  private function inlineResource(object $item){
+    abort_unless($item->file_path&&\Illuminate\Support\Facades\Storage::disk('local')->exists($item->file_path),404);
+    $path=\Illuminate\Support\Facades\Storage::disk('local')->path($item->file_path);
+    $mime=function_exists('mime_content_type')?mime_content_type($path):false;
+    return response()->file($path,['Content-Type'=>$mime?:'application/octet-stream','Content-Disposition'=>'inline; filename="'.basename($path).'"','Cache-Control'=>'private, no-store, no-cache, must-revalidate','X-Content-Type-Options'=>'nosniff','X-Frame-Options'=>'SAMEORIGIN']);
+  }
+  public function download(Request $r,string $type,string $id){
    abort_unless(in_array($type,['resources','submissions']),404);$item=DB::table($type)->find($id);abort_unless($item,404);
    if($type==='resources'){
      if($r->user()->role==='participant') {abort_unless($r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment before accessing learning resources.');abort_unless($item->status==='published',404);Workflow::enrolled($r->user(),$item->course_id);}
-    else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
+     else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
    }else{
     $a=DB::table('assignments')->find($item->assignment_id);
     abort_unless($r->user()->id===$item->user_id||$r->user()->manager()||DB::table('courses')->where('id',$a->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
    }
-   abort_unless($item->file_path,404);return \Illuminate\Support\Facades\Storage::disk('local')->download($item->file_path);
+    abort_unless($item->file_path,404);return $type==='resources'?$this->inlineResource($item):\Illuminate\Support\Facades\Storage::disk('local')->download($item->file_path);
  }
   public function certificate(Request $r,string $id){
    abort_unless($r->user()->role==='participant'&&$r->user()->profile_complete&&$r->user()->learning_access_paid,403,'Complete your profile and confirm payment before accessing certificates.');
