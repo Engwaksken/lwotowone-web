@@ -5,7 +5,7 @@ Verified locally with PHP **8.3.33** and the installed extensions:
 | Check | Result |
 |---|---|
 | `composer lint` | Passed PHP syntax checks across application, migrations and tests |
-| `composer test` | **64 tests, 436 assertions passed** |
+| `composer test` | **64 tests, 435 assertions passed** |
 | `composer validate --strict --no-check-publish` | Passed |
 | `node --check public/assets/app.js` | Passed |
 | `git diff --check` | Passed (Git reports configured LF/CRLF conversion notices) |

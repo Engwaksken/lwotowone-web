@@ -79,10 +79,10 @@
         @if(session('success'))<div class="notice success" role="status">{{ session('success') }}</div>@endif
         @if($errors->any())<div class="notice error" role="alert"><ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
         @yield('content')
-        @unless(request()->is('dashboard','admin/*','profile'))@include('partials.platform-stats')@endunless
     </main>
 </div>
 
+@unless(request()->is('dashboard','admin/*','portal/*','learning/*','profile','certificates/*'))
 <footer class="site-footer">
     <div class="footer-main">
         <div class="footer-column footer-brand"><a href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'footer-logo','siteSettings'=>$siteSettings])</a><p>Practical learning, useful skills and support for young people building their livelihoods.</p></div>
@@ -92,6 +92,7 @@
     </div>
     <div class="footer-bottom"><p>© 2026 Lwotowone Enterprises Ltd · Uganda</p></div>
 </footer>
+@endunless
 <script src="{{ asset('assets/app.js') }}" defer></script>
 @include('partials.help-tools')
 </body>

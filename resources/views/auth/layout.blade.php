@@ -17,7 +17,6 @@
     <a class="skip" href="#auth-main">Skip to form</a>
     <main class="auth-shell" id="auth-main">
         @yield('content')
-        <div class="auth-stat-strip">@include('partials.platform-stats')</div>
         <footer class="auth-footer"><a class="button secondary auth-home-link" href="/">Back to website</a><p class="auth-copyright">© 2026 Lwotowone Enterprises Ltd · Uganda</p></footer>
     </main>
     @include('partials.help-tools')

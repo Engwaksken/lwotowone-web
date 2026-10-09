@@ -16,8 +16,8 @@ class HelpAndBrandingTest extends TestCase
     {
         $this->get('/faq')->assertOk()->assertSee('Frequently asked questions')->assertSee('Can I use the platform if I have a disability?');
         $this->get('/user-guide')->assertOk()->assertSee('Your guide to getting started')->assertSee('Set up your profile');
-        $this->get('/')->assertOk()->assertSee('Accessibility options')->assertSee('Need help?')->assertSee('/faq')->assertSee('Active programmes')->assertSee('Learners reached')->assertSee('fa-graduation-cap')->assertSee('name="a11y_text_size"',false)->assertSee('name="a11y_colors"',false);
-        $this->get('/login')->assertOk()->assertSee('Accessibility tools')->assertSee('Need help?')->assertSee('auth-stat-strip');
+        $this->get('/')->assertOk()->assertSee('Accessibility options')->assertSee('Need help?')->assertSee('/faq')->assertDontSee('class="public-stat-strip"',false)->assertSee('class="site-footer"',false)->assertSee('name="a11y_text_size"',false)->assertSee('name="a11y_colors"',false);
+        $this->get('/login')->assertOk()->assertSee('Accessibility tools')->assertSee('Need help?')->assertDontSee('auth-stat-strip');
     }
 
     public function test_admin_can_update_site_appearance_and_non_admin_cannot(): void
@@ -27,7 +27,7 @@ class HelpAndBrandingTest extends TestCase
 
         $this->actingAs($manager)->get('/admin/site-settings')->assertOk()->assertSee('Payment gateways and methods')->assertDontSee('Choose an accessible brand colour');
         $this->actingAs($admin)->get('/admin/site-settings')->assertOk()->assertSee('Website appearance')->assertSee('role="tab"',false)->assertSee('Payment gateway settings');
-        $this->get('/dashboard')->assertOk()->assertSee('Dashboard')->assertDontSee('href="/explore/programs"')->assertSee('management-list')->assertSee('Settings')->assertSee('Payment gateway settings');
+        $this->get('/dashboard')->assertOk()->assertSee('Dashboard')->assertDontSee('class="site-footer"',false)->assertSee('management-list')->assertSee('Settings')->assertSee('Payment gateway settings');
         $listing=$this->get('/admin/programs')->assertOk();$html=$listing->getContent();
         $this->assertLessThan(strpos($html,'class="public-stat-strip"'),strpos($html,'<h1>Programmes</h1>'));
         $this->assertLessThan(strpos($html,'class="filter-form"'),strpos($html,'class="public-stat-strip"'));
