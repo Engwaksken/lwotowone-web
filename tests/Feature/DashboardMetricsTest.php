@@ -116,7 +116,9 @@ class DashboardMetricsTest extends TestCase
 
         $this->actingAs($admin)->get('/dashboard')
             ->assertOk()
-            ->assertSee('Needs attention today')
+            ->assertSee('Today at a glance')
+            ->assertSee('Awaiting payment')
+            ->assertSee('Key numbers')
             ->assertSee('Learner funnel')
             ->assertSee('Upcoming events')
             ->assertSee('Recent activity');

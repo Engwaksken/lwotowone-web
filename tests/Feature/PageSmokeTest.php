@@ -91,6 +91,23 @@ class PageSmokeTest extends TestCase
         ]);
     }
 
+    public function test_mel_dashboard_shows_gaps_add_actions_and_evidence(): void
+    {
+        $admin = $this->user('admin');
+        $this->user('participant', ['profile_complete' => false]);
+        $this->user('participant', ['profile_complete' => true, 'learning_access_paid' => true]);
+
+        $this->actingAs($admin)->get('/admin/mel')
+            ->assertOk()
+            ->assertSee('Fix data gaps')
+            ->assertSee('Profile not completed')
+            ->assertSee('Enrolled without a learner number')
+            ->assertSee('Add a record')
+            ->assertSee('data-dialog-open="mel-add-teachers"', false)
+            ->assertSee('Evidence documents')
+            ->assertSee('Upload evidence');
+    }
+
     public function test_certificate_design_page_renders_for_a_course(): void
     {
         $admin = $this->user('admin');
