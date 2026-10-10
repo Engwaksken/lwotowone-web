@@ -8,6 +8,7 @@
         @forelse($data['events'] as $event)
             @php $registration=collect($data['event_registrations'])->firstWhere('event_id',$event->id); @endphp
             <article class="panel"><h3>{{ $event->title }}</h3><p>{{ $event->description }}</p><small>{{ $event->starts_at }} · {{ $event->location }}</small>
+                @if($event->registration_token)<p><a href="/events/{{ $event->registration_token }}">Open event registration page</a></p>@endif
                 @if($registration)<p class="tag">{{ ucfirst($registration->status) }}</p>@endif
                 @if(!$registration||$registration->status==='cancelled')
                     @if(now()->lt($event->starts_at))<form method="post" action="/actions/register-event">@csrf<input type="hidden" name="event_id" value="{{ $event->id }}"><button>{{ $registration?'Register again':'Register for event' }}</button></form>@else<p class="muted">Registration is closed.</p>@endif

@@ -21,6 +21,7 @@ class RecordPresentation
     /** Normalize generated detail labels as well as their values. */
     public static function field(array $field): array
     {
+        if (!empty($field['literal'])) return $field;
         $key = Str::snake(str_replace(' ', '', Str::studly($field['label'] ?? '')));
         $reference = match ($key) {
             'course_id', 'selected_course_id', 'prerequisite_course_id' => ['courses', 'title'],

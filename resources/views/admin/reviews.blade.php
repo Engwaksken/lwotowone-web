@@ -5,7 +5,7 @@
 <h1 class="page-title">{{ ucwords(str_replace('_',' ',$type)) }}</h1>
 @include('partials.platform-stats')
 @php
-    $reviewStatusList = match($type){'submissions'=>['submitted','passed','returned','failed'],'practice_logs'=>['pending','verified','returned'],'bookings'=>['requested','confirmed','completed','cancelled'],'applications'=>['submitted','reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','cancelled'],'contacts'=>['new','in_progress','resolved'],default=>[]};
+    $reviewStatusList = match($type){'submissions'=>['submitted','passed','returned','failed'],'practice_logs'=>['pending','verified','returned'],'bookings'=>['requested','confirmed','completed','cancelled'],'applications'=>['submitted','reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','absent','cancelled'],'contacts'=>['new','in_progress','resolved'],default=>[]};
     $reviewStatusOptions = $reviewStatusList
         ? collect($reviewStatusList)->mapWithKeys(fn($status)=>[$status=>ucfirst($status)])->prepend('All statuses','')->all()
         : [];
@@ -38,7 +38,7 @@
         @if($type==='submissions'&&$row->file_path)<a href="/files/submissions/{{ $row->id }}"><i class="fas fa-paperclip" aria-hidden="true"></i> Download submitted evidence</a>@endif
         @if($type!=='audit_logs')
             <form method="post" action="/admin/reviews/{{ $type }}/{{ $row->id }}">@csrf
-                <div class="field"><label>Status</label><select name="status">@foreach(match($type){'submissions'=>['passed','returned','failed'],'practice_logs'=>['verified','returned'],'bookings'=>['confirmed','completed','cancelled'],'applications'=>['reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','cancelled'],default=>['new','in_progress','resolved']} as $status)<option value="{{ $status }}">{{ ucfirst($status) }}</option>@endforeach</select></div>
+                <div class="field"><label>Status</label><select name="status">@foreach(match($type){'submissions'=>['passed','returned','failed'],'practice_logs'=>['verified','returned'],'bookings'=>['confirmed','completed','cancelled'],'applications'=>['reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','absent','cancelled'],default=>['new','in_progress','resolved']} as $status)<option value="{{ $status }}">{{ ucfirst($status) }}</option>@endforeach</select></div>
                 @if($type==='submissions')<div class="field"><label>Score (%)</label><input type="number" name="score" min="0" max="100" required></div>@endif
                 @if(in_array($type,['submissions','practice_logs','applications','bookings']))<div class="field"><label>Feedback / session notes</label><textarea name="{{ $type==='bookings'?'notes':'feedback' }}" @required(in_array($type,['submissions','practice_logs']))></textarea></div>@endif
                 <button><i class="fas fa-save" aria-hidden="true"></i> Save review</button>

@@ -4,6 +4,10 @@ use App\Http\Controllers\{AuthController,PublicController,CmsController,PortalCo
 Route::get('/',[PublicController::class,'home']);
 Route::get('/calls',[\App\Http\Controllers\CallController::class,'listing']);
 Route::get('/calls/{token}',[\App\Http\Controllers\CallController::class,'show']);
+Route::get('/events/{token}',[\App\Http\Controllers\EventController::class,'show']);
+Route::post('/events/{token}/register',[\App\Http\Controllers\EventController::class,'register'])->middleware('throttle:10,1');
+Route::get('/surveys/{token}',[\App\Http\Controllers\SurveyController::class,'show']);
+Route::post('/surveys/{token}',[\App\Http\Controllers\SurveyController::class,'submit'])->middleware('throttle:20,1');
 Route::get('/pages/{slug}',[PublicController::class,'page']);
 Route::get('/search',[PublicController::class,'search']);
 Route::post('/help/chat',[PublicController::class,'chat'])->middleware('throttle:30,1');
@@ -74,6 +78,19 @@ Route::middleware(['auth','active'])->group(function(){
   Route::post('/profile',[PortalController::class,'profile']);
 
   Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
+  Route::get('/admin/events',[\App\Http\Controllers\EventController::class,'index']);
+  Route::get('/admin/events/{id}/qr.svg',[\App\Http\Controllers\EventController::class,'qr'])->whereNumber('id');
+  Route::get('/admin/events/{id}/attendance',[\App\Http\Controllers\EventController::class,'attendance'])->whereNumber('id');
+  Route::post('/admin/events/{id}/attendance/{registration}',[\App\Http\Controllers\EventController::class,'mark'])->whereNumber(['id','registration']);
+  Route::get('/admin/events/{id}/attendance.csv',[\App\Http\Controllers\EventController::class,'export'])->whereNumber('id');
+  Route::get('/admin/mel/surveys',[\App\Http\Controllers\SurveyController::class,'index']);
+  Route::post('/admin/mel/surveys',[\App\Http\Controllers\SurveyController::class,'create']);
+  Route::get('/admin/mel/surveys/{id}/edit',[\App\Http\Controllers\SurveyController::class,'edit'])->whereNumber('id');
+  Route::put('/admin/mel/surveys/{id}',[\App\Http\Controllers\SurveyController::class,'update'])->whereNumber('id');
+  Route::post('/admin/mel/surveys/{id}/duplicate',[\App\Http\Controllers\SurveyController::class,'duplicate'])->whereNumber('id');
+  Route::get('/admin/mel/surveys/{id}/qr.svg',[\App\Http\Controllers\SurveyController::class,'qr'])->whereNumber('id');
+  Route::get('/admin/mel/surveys/{id}/responses',[\App\Http\Controllers\SurveyController::class,'responses'])->whereNumber('id');
+  Route::get('/admin/mel/surveys/{id}/responses.csv',[\App\Http\Controllers\SurveyController::class,'export'])->whereNumber('id');
    Route::get('/admin/mel',[\App\Http\Controllers\MelController::class,'index']);
     Route::post('/admin/mel/documents', [\App\Http\Controllers\MelController::class,'upload']);
     Route::post('/admin/mel/{category}',[\App\Http\Controllers\MelController::class,'save']);

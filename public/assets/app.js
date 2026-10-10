@@ -67,6 +67,49 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 });
 
 const aiSettings=document.querySelector('[data-ai-settings]');
+document.querySelectorAll('[data-required-choice]').forEach(group=>{
+    const checks=[...group.querySelectorAll('input[type=checkbox]')];
+    const update=()=>checks[0]?.setCustomValidity(checks.some(check=>check.checked)?'':'Choose at least one option.');
+    group.addEventListener('change',update);update();
+});
+document.querySelectorAll('[data-copy-link]').forEach(button=>button.addEventListener('click',async()=>{
+    const input=document.getElementById(button.dataset.copyLink),status=button.closest('.share-dialog-body').querySelector('[data-copy-status]');
+    try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(input.value);else{input.select();if(!document.execCommand('copy'))throw new Error('copy');}status.textContent='Link copied.';}
+    catch{input.focus();input.select();status.textContent='Select and copy the link above.';}
+}));
+document.querySelectorAll('[data-survey-builder]').forEach(form=>{
+    const list=form.querySelector('[data-survey-questions]'),template=document.querySelector('[data-survey-question-template]');
+    const locked=form.dataset.locked==='1';
+    const update=()=>{
+        const cards=[...list.querySelectorAll('[data-survey-question]')];
+        cards.forEach((card,index)=>{
+            card.querySelector('[data-question-number]').textContent=`Question ${index+1}`;
+            card.querySelectorAll('[name]').forEach(input=>input.name=input.name.replace(/^questions\[[^\]]+\]/,`questions[${index}]`));
+            card.querySelectorAll('[id]').forEach(input=>input.id=input.id.replace(/question-(?:__INDEX__|\d+)-/,`question-${index}-`));
+            card.querySelectorAll('[for]').forEach(label=>label.htmlFor=label.htmlFor.replace(/question-(?:__INDEX__|\d+)-/,`question-${index}-`));
+            card.querySelector('[data-question-up]').disabled=locked||index===0;
+            card.querySelector('[data-question-down]').disabled=locked||index===cards.length-1;
+            card.querySelector('[data-question-remove]').disabled=locked||cards.length===1;
+            const choices=['single_choice','multiple_choice'].includes(card.querySelector('[data-question-type]').value),panel=card.querySelector('[data-question-options]');
+            panel.hidden=!choices;panel.querySelector('textarea').disabled=locked||!choices;panel.querySelector('textarea').required=choices&&!locked;
+        });
+        const add=form.querySelector('[data-question-add]');if(add)add.disabled=cards.length>=50;
+    };
+    form.querySelector('[data-question-add]')?.addEventListener('click',()=>{
+        const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+        const hex=[...bytes].map(byte=>byte.toString(16).padStart(2,'0')).join('');const id=`${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+        const wrapper=document.createElement('div');wrapper.innerHTML=template.innerHTML.replaceAll('__ID__',id).replaceAll('__INDEX__',String(list.children.length));
+        const card=wrapper.firstElementChild;list.append(card);update();card.querySelector('input:not([type=hidden])').focus();
+    });
+    list.addEventListener('click',event=>{
+        if(locked)return;const button=event.target.closest('button'),card=button?.closest('[data-survey-question]');if(!card)return;
+        if(button.hasAttribute('data-question-remove')&&list.children.length>1)card.remove();
+        if(button.hasAttribute('data-question-up')&&card.previousElementSibling)list.insertBefore(card,card.previousElementSibling);
+        if(button.hasAttribute('data-question-down')&&card.nextElementSibling)list.insertBefore(card.nextElementSibling,card);
+        update();
+    });
+    list.addEventListener('change',update);update();
+});
 document.querySelectorAll('[data-certificate-create]').forEach(form=>{
     const type=form.querySelector('[data-certificate-subject]');
     const update=()=>form.querySelectorAll('[data-certificate-target]').forEach(panel=>{

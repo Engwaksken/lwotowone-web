@@ -98,6 +98,7 @@
         <button type="button" role="tab" id="mel-tab-learners" aria-controls="mel-panel-learners" aria-selected="false" tabindex="-1">Learners</button>
         <button type="button" role="tab" id="mel-tab-data" aria-controls="mel-panel-data" aria-selected="false" tabindex="-1">Programme records</button>
         <button type="button" role="tab" id="mel-tab-documents" aria-controls="mel-panel-documents" aria-selected="false" tabindex="-1">Evidence documents</button>
+        <button type="button" role="tab" id="mel-tab-surveys" aria-controls="mel-panel-surveys" aria-selected="false" tabindex="-1">Surveys</button>
     </div>
 
     <section class="tab-panel" role="tabpanel" id="mel-panel-overview" aria-labelledby="mel-tab-overview">
@@ -168,8 +169,10 @@
             </table></div>
         </section>
     </section>
+    <section class="tab-panel" role="tabpanel" id="mel-panel-surveys" aria-labelledby="mel-tab-surveys" hidden><div class="mel-panel-heading"><div><h2>MEL surveys</h2><p>Collect field feedback with named or anonymous forms, participant links and QR codes.</p></div><div class="actions"><button type="button" class="small" data-dialog-open="create-survey">Create survey</button><a class="button secondary small" href="/admin/mel/surveys">Manage all surveys</a></div></div>@include('admin.surveys-table',['surveys'=>$surveyOverview])</section>
 </div>
 </div>
+@include('admin.survey-create')
 
 @foreach($categories as $key=>$meta)
     <dialog class="form-dialog" id="mel-add-{{ $key }}" aria-labelledby="mel-add-{{ $key }}-title">

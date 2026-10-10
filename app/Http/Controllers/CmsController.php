@@ -81,6 +81,7 @@ class CmsController extends Controller {
    $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
    if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
    $d=$r->validate($rules);
+   if($module==='events'&&!$id)$d['registration_token']=(string)\Illuminate\Support\Str::uuid();
    if($formattedContent)$d=array_merge($d,\App\Services\LearningContent::validate($r,$module,$id?$record:null));
    $assignmentIds=[];$leadId=null;
    if($assignmentChange){

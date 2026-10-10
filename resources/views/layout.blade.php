@@ -98,10 +98,11 @@
                     </details>
                 @endif
                 @if(auth()->user()->manager())
-                    <details class="sidebar-group sidebar-disclosure" data-sidebar-group="reports" @if(request()->is('admin/mel')||request()->is('admin/reports/*')) open @endif>
+                    <details class="sidebar-group sidebar-disclosure" data-sidebar-group="reports" @if(request()->is('admin/mel*')||request()->is('admin/reports/*')) open @endif>
                         <summary><h2 class="sidebar-heading">Reports</h2></summary>
                         <ul class="sidebar-links">
                             <li><a href="/admin/mel"><i class="fas fa-chart-line" aria-hidden="true"></i> MEL reports</a></li>
+                            <li><a href="/admin/mel/surveys" @if(request()->is('admin/mel/surveys*'))aria-current="page"@endif><i class="fas fa-poll" aria-hidden="true"></i> MEL surveys</a></li>
                             <li><a href="/admin/reports/impact.csv"><i class="fas fa-file-export" aria-hidden="true"></i> Export impact report</a></li>
                         </ul>
                     </details>

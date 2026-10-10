@@ -80,14 +80,8 @@ class Workflow {
    case 'income':
     abort_unless(DB::table('enterprises')->where('user_id',$u->id)->where('id',$d['enterprise_id'])->exists(),403);
     $id=self::insert('transactions',$d+['user_id'=>$u->id]);break;
-   case 'register-event':
-    $e=DB::table('events')->where('id',$d['event_id'])->lockForUpdate()->first();
-    if($e->status!=='published'||now()->gte($e->starts_at))self::invalid('event_id','Event registration is closed.');
-    $existing=DB::table('event_registrations')->where('user_id',$u->id)->where('event_id',$e->id)->first();
-    if($existing&&$existing->status!=='cancelled')self::invalid('event_id','You are already registered.');
-    if($e->capacity>0&&DB::table('event_registrations')->where('event_id',$e->id)->where('status','!=','cancelled')->count()>=$e->capacity)self::invalid('event_id','This event is full.');
-    if($existing){$id=$existing->id;DB::table('event_registrations')->where('id',$id)->update(['status'=>'registered','updated_at'=>now()]);}
-    else $id=self::insert('event_registrations',$d+['user_id'=>$u->id]);break;
+    case 'register-event':
+    $id=EventParticipation::register((int)$d['event_id'],$u);break;
    case 'cancel-event':
     $registration=DB::table('event_registrations')->where('id',$d['registration_id'])->where('user_id',$u->id)->first();abort_unless($registration,403);
     $event=DB::table('events')->where('id',$registration->event_id)->lockForUpdate()->first();

@@ -63,9 +63,10 @@ class ReviewController extends Controller {
    'practice_logs'=>['status'=>'required|in:verified,returned','feedback'=>'required|string|max:5000'],
    'bookings'=>['status'=>'required|in:confirmed,completed,cancelled','notes'=>'nullable|string|max:5000'],
    'applications'=>['status'=>'required|in:reviewing,shortlisted,accepted,rejected','feedback'=>'nullable|string|max:5000'],
-   'event_registrations'=>['status'=>'required|in:registered,attended,cancelled'],
+   'event_registrations'=>['status'=>'required|in:registered,attended,absent,cancelled'],
    'contacts'=>['status'=>'required|in:new,in_progress,resolved'],default=>abort(403)};
   $d=$r->validate($rules);
+  if($type==='event_registrations'){\App\Services\EventParticipation::mark((int)$item->event_id,(int)$item->id,$d['status'],$r->user());return back()->with('success','Event attendance updated.');}
   if($type==='submissions'){
    $a=DB::table('assignments')->find($item->assignment_id);
    if($d['status']==='passed'&&$d['score']<$a->pass_mark)return back()->withErrors(['score'=>'A passing result must meet the assignment pass mark.']);$d['reviewer_id']=$r->user()->id;
