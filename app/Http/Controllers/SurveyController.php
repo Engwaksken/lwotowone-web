@@ -16,7 +16,7 @@ class SurveyController extends Controller
     {
         $this->manager($request);
         $surveys = DB::table('surveys')->select('surveys.*')->selectSub(DB::table('survey_responses')->selectRaw('COUNT(*)')->whereColumn('survey_id', 'surveys.id'), 'response_count')->latest()->paginate(20)->withQueryString();
-        return view('admin.surveys', ['surveys' => $surveys]);
+        return view('admin.surveys', ['surveys' => $surveys, 'surveyStats' => \App\Services\SurveyStatistics::overview()]);
     }
 
     public function create(Request $request)
@@ -91,7 +91,7 @@ class SurveyController extends Controller
     {
         $this->manager($request); $survey = $this->survey($id); $questions = json_decode($survey->questions, true);
         $responses = DB::table('survey_responses')->where('survey_id', $id)->latest('submitted_at')->latest('id')->paginate(25)->withQueryString();
-        return view('admin.survey-responses', ['survey' => $survey, 'responses' => $responses, 'summary' => SurveyForms::summary($questions, DB::table('survey_responses')->where('survey_id', $id)->select('answers')->cursor())]);
+        return view('admin.survey-responses', ['survey' => $survey, 'responses' => $responses, 'responseStats' => \App\Services\SurveyStatistics::responses((int)$id), 'summary' => SurveyForms::summary($questions, DB::table('survey_responses')->where('survey_id', $id)->select('answers')->cursor())]);
     }
 
     public function export(Request $request, string $id)

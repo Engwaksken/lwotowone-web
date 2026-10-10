@@ -169,7 +169,7 @@
             </table></div>
         </section>
     </section>
-    <section class="tab-panel" role="tabpanel" id="mel-panel-surveys" aria-labelledby="mel-tab-surveys" hidden><div class="mel-panel-heading"><div><h2>MEL surveys</h2><p>Collect field feedback with named or anonymous forms, participant links and QR codes.</p></div><div class="actions"><button type="button" class="small" data-dialog-open="create-survey">Create survey</button><a class="button secondary small" href="/admin/mel/surveys">Manage all surveys</a></div></div>@include('admin.surveys-table',['surveys'=>$surveyOverview])</section>
+    <section class="tab-panel" role="tabpanel" id="mel-panel-surveys" aria-labelledby="mel-tab-surveys" hidden><div class="mel-panel-heading"><div><h2>MEL surveys</h2><p>Collect field feedback with named or anonymous forms, participant links and QR codes.</p></div><div class="actions"><button type="button" class="small" data-dialog-open="create-survey">Create survey</button><a class="button secondary small" href="/admin/mel/surveys">Manage all surveys</a></div></div><x-survey-statistics :statistics="$surveyStats" />@include('admin.surveys-table',['surveys'=>$surveyOverview])</section>
 </div>
 </div>
 @include('admin.survey-create')

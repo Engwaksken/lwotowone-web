@@ -23,7 +23,10 @@
         <a href="/pages/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
         <a href="/explore/opportunities">Opportunities</a><a href="/calls">Apply</a><a href="/explore/events">Events</a><a href="/explore/posts">Stories</a><a href="/contact">Contact</a>
         <a href="/login">Sign in</a><a class="button small" href="/register">Join us</a>
-        <form class="header-search" method="get" action="/search" role="search"><input id="site-search" type="search" name="q" value="{{ request()->is('search')?request('q'):'' }}" placeholder="Search" aria-label="Search the site" required><button type="submit" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></button></form>
+        <details class="header-search-disclosure" data-header-search>
+            <summary role="button" aria-label="Open site search" aria-controls="site-search-form" title="Search"><i class="fas fa-search" aria-hidden="true"></i></summary>
+            <form id="site-search-form" class="header-search" method="get" action="/search" role="search"><label class="sr-only" for="site-search">Search the site</label><input id="site-search" type="search" name="q" value="{{ request()->is('search')?request('q'):'' }}" placeholder="Search the site" aria-label="Search the site" required><button type="submit" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></button><button type="button" class="secondary" data-search-close aria-label="Close search"><i class="fas fa-times" aria-hidden="true"></i></button></form>
+        </details>
         @else
         <a class="button small" href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard</a>
         <a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> Profile</a>
@@ -142,8 +145,10 @@
     </aside>
     @endauth
     <main id="main">
-        @if(session('success'))<div class="notice success" role="status">{{ session('success') }}</div>@endif
-        @if($errors->any())<div class="notice error" role="alert"><ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
+        @hasSection('inline-form-feedback')
+        @else
+            @unless($errors->any()&&old('_modal_id')==='create-survey')<x-form-feedback />@endunless
+        @endif
         @yield('content')
     </main>
 </div>

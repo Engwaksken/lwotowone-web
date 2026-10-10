@@ -67,6 +67,17 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 });
 
 const aiSettings=document.querySelector('[data-ai-settings]');
+document.querySelectorAll('[data-header-search]').forEach(disclosure=>{
+    const toggle=disclosure.querySelector('summary'),input=disclosure.querySelector('input[type=search]'),popup=disclosure.querySelector('form');
+    const position=()=>{if(!disclosure.open)return;const rect=disclosure.getBoundingClientRect(),width=popup.getBoundingClientRect().width;popup.style.left=(Math.max(16,Math.min(rect.right-width,window.innerWidth-width-16))-rect.left)+'px';popup.style.right='auto';};
+    const close=restoreFocus=>{disclosure.open=false;if(restoreFocus)toggle.focus();};
+    disclosure.addEventListener('toggle',()=>{toggle.setAttribute('aria-expanded',String(disclosure.open));toggle.setAttribute('aria-label',disclosure.open?'Close site search':'Open site search');if(disclosure.open){position();input.focus();}});
+    toggle.setAttribute('aria-expanded',String(disclosure.open));
+    disclosure.querySelector('[data-search-close]').addEventListener('click',()=>close(true));
+    disclosure.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close(true);}});
+    document.addEventListener('click',event=>{if(disclosure.open&&!disclosure.contains(event.target))close(false);});
+    window.addEventListener('resize',position);
+});
 document.querySelectorAll('[data-required-choice]').forEach(group=>{
     const checks=[...group.querySelectorAll('input[type=checkbox]')];
     const update=()=>checks[0]?.setCustomValidity(checks.some(check=>check.checked)?'':'Choose at least one option.');
@@ -377,7 +388,11 @@ document.querySelectorAll('select[data-toggle]').forEach(control=>{
 });
 
 const reopen=document.querySelector('[data-reopen-dialog]');
-if(reopen){document.getElementById(reopen.dataset.reopenDialog)?.showModal();}
+if(reopen){
+    const dialog=document.getElementById(reopen.dataset.reopenDialog),form=dialog?.querySelector('form');
+    if(form)document.querySelectorAll('main > [data-form-feedback]').forEach(message=>form.prepend(message));
+    dialog?.showModal();dialog?.querySelector('[data-form-feedback][role=alert]')?.focus();
+}else document.querySelector('form [data-form-feedback][role=alert]')?.focus();
 
 const preferenceKey='lwotowone-accessibility';
 let preferences={scale:1,font:'site',spacing:'normal',colors:'normal',underline:false,motion:false};
