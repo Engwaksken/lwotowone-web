@@ -1,12 +1,13 @@
 @foreach($meta['fields'] as $field=>$raw)
     @continue($module==='courses' && $field==='instructor_id')
+    @continue(in_array($module,['lessons','resources']) && in_array($field,['body','video_url','file']))
     @php
         $optional=is_string($raw)&&str_starts_with($raw,'optional:');
         $type=$optional?substr($raw,9):$raw;
         $value=old($field,$record?->{$field});
     @endphp
     <div class="field">
-        <label for="{{ $formId }}-{{ $field }}">{{ ucwords(str_replace('_',' ',$field)) }} {{ $optional?'(optional)':'' }}</label>
+        <label for="{{ $formId }}-{{ $field }}">{{ \App\Services\RecordPresentation::label($field) }} {{ $optional?'(optional)':'' }}</label>
         @if(isset($options[$field]))
             <select id="{{ $formId }}-{{ $field }}" name="{{ $field }}" @required(!$optional)>
                 <option value="">Select</option>
@@ -31,6 +32,9 @@
         @endif
     </div>
 @endforeach
+@if(in_array($module,['lessons','resources']))
+    @include('admin.content-fields')
+@endif
 @if(in_array($module,['courses','programs']) && auth()->user()->role==='admin')
     @php
         $assigned=old('instructor_ids',$record?->assignedInstructorIds()??[]);

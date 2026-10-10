@@ -18,6 +18,7 @@
     $ungrouped = [];
     $groups = [];
     foreach ($fields as $field) {
+        $field = \App\Services\RecordPresentation::field($field);
         $group = $field['group'] ?? null;
         if ($group === null || $group === '') {
             $ungrouped[] = $field;

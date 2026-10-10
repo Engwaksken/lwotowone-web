@@ -32,7 +32,7 @@
         <summary><span>#{{ $row->id }}</span><span class="tag">{{ $row->status??$row->action??'' }}</span>@if(isset($row->user_id))<span>{{ \App\Models\User::find($row->user_id)?->name }}</span>@endif</summary>
         <div class="data">
             @foreach((array)$row as $key=>$value)
-                @if(!in_array($key,['file_path','updated_at']))<p><strong>{{ ucwords(str_replace('_',' ',$key)) }}:</strong> {{ $value }}</p>@endif
+                @if(!in_array($key,['file_path','updated_at']))@php $display=\App\Services\RecordPresentation::field(['label'=>\Illuminate\Support\Str::headline($key),'value'=>$value]); @endphp<p><strong>{{ $display['label'] }}:</strong> {{ $display['value']??'—' }}</p>@endif
             @endforeach
         </div>
         @if($type==='submissions'&&$row->file_path)<a href="/files/submissions/{{ $row->id }}"><i class="fas fa-paperclip" aria-hidden="true"></i> Download submitted evidence</a>@endif

@@ -137,12 +137,20 @@ class PortalController extends Controller {
      $d['learner_status']=$r->user()->learning_access_paid?'Active':'Pending Payment';$d['profile_complete']=true;$r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Learner profile saved.');
    }
   public function resource(Request $r,string $id){
-    $item=DB::table('resources')->find($id);abort_unless($item&&$item->file_path,404);
+    $item=DB::table('resources')->find($id);abort_unless($item,404);
     if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
     else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
     return $this->inlineResource($item);
   }
+  public function lessonMedia(Request $r,string $id){
+    $item=DB::table('lessons')->find($id);abort_unless($item,404);
+    if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::lessonAllowed($r->user(),$item),403);}
+    else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
+    return $this->inlineResource($item);
+  }
   private function inlineResource(object $item){
+    if(($item->content_source??null)==='url'&&!empty($item->content_url))return redirect()->away($item->content_url)->header('Cache-Control','private, no-store');
+    if(($item->content_source??null)==='write')return response($item->content_body??'',200,['Content-Type'=>'text/plain; charset=UTF-8','Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff']);
     abort_unless($item->file_path&&\Illuminate\Support\Facades\Storage::disk('local')->exists($item->file_path),404);
     $path=\Illuminate\Support\Facades\Storage::disk('local')->path($item->file_path);
     $mime=function_exists('mime_content_type')?mime_content_type($path):false;
@@ -157,7 +165,7 @@ class PortalController extends Controller {
     $a=DB::table('assignments')->find($item->assignment_id);
     abort_unless($r->user()->id===$item->user_id||$r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($a->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
    }
-    abort_unless($item->file_path,404);return $type==='resources'?$this->inlineResource($item):\Illuminate\Support\Facades\Storage::disk('local')->download($item->file_path);
+    if($type==='resources')return $this->inlineResource($item);abort_unless($item->file_path,404);return \Illuminate\Support\Facades\Storage::disk('local')->download($item->file_path);
  }
   public function certificate(Request $r,string $id){
     abort_unless($r->user()->role==='participant',403);\App\Services\LearningAccess::requireCourse($r->user(),(int)$id);

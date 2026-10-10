@@ -67,34 +67,108 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 });
 
 const aiSettings=document.querySelector('[data-ai-settings]');
+document.querySelectorAll('[data-content-fields]').forEach(fields=>{
+    const format=fields.querySelector('[data-content-format]'),source=fields.querySelector('[data-content-source]');
+    const extensions={text:'.txt',file:'.pdf,.txt,.jpg,.jpeg,.png,.webp',video:'.mp4,.webm,.ogg',audio:'.mp3,.wav,.ogg,.m4a,.aac,.flac'};
+    const update=()=>{
+        const write=source.querySelector('[value="write"]');write.disabled=format.value!=='text';
+        if(write.disabled&&source.value==='write')source.value='upload';
+        fields.querySelectorAll('[data-content-panel]').forEach(panel=>{
+            const active=panel.dataset.contentPanel===source.value;panel.hidden=!active;
+            panel.querySelectorAll('input,textarea').forEach(input=>{input.disabled=!active;input.required=active&&(input.type!=='file'||fields.dataset.hasFile!=='1'||fields.dataset.originalFormat!==format.value);});
+        });
+        const file=fields.querySelector('[type="file"]');file.accept=extensions[format.value];
+        fields.querySelector('[data-content-panel="upload"] label').textContent=`Upload ${format.options[format.selectedIndex].text.toLowerCase()}`;
+        fields.querySelector('[data-content-file-help]').textContent=`Accepted: ${extensions[format.value]}. Maximum 100 MB.`+(fields.dataset.hasFile==='1'&&fields.dataset.originalFormat===format.value?' Leave empty to keep the attached file.':'');
+    };
+    format.addEventListener('change',update);source.addEventListener('change',update);update();
+});
 const certificateEditor=document.querySelector('[data-certificate-editor]');
 if(certificateEditor){
     const canvas=certificateEditor.querySelector('[data-certificate-canvas]');
+    const status=certificateEditor.querySelector('[data-certificate-preview-status]');
+    const control=(key,property)=>certificateEditor.querySelector(`[name="placements[${key}][${property}]"]`);
+    const selectField=key=>{
+        certificateEditor.querySelectorAll('[data-placement-controls]').forEach(row=>row.open=row.dataset.placementControls===key);
+        canvas.querySelectorAll('[data-placement]').forEach(item=>item.classList.toggle('is-selected',item.dataset.placement===key));
+    };
     const sync=()=>{
         certificateEditor.querySelectorAll('[data-placement-controls]').forEach(row=>{
             const key=row.dataset.placementControls;
             const overlay=canvas?.querySelector(`[data-placement="${key}"]`);if(!overlay)return;
-            const value=property=>row.querySelector(`[name="placements[${key}][${property}]"]`).value;
+            const value=property=>control(key,property).value;
             overlay.hidden=!row.querySelector('[type=checkbox]').checked;
             overlay.style.left=value('x')+'%';overlay.style.top=value('y')+'%';overlay.style.width=value('width')+'%';overlay.style.textAlign={L:'left',C:'center',R:'right'}[value('align')];overlay.style.fontSize=(Number(value('font_size'))*25.4/72*canvas.clientWidth/Number(canvas.dataset.widthMm))+'px';
+            overlay.style.color=value('color');overlay.style.fontFamily={dejavusans:'"DejaVu Sans", Arial, sans-serif',dejavuserif:'"DejaVu Serif", Georgia, serif',dejavusansmono:'"DejaVu Sans Mono", monospace'}[value('font_family')];
+            overlay.style.fontWeight=value('font_style').includes('B')?'700':'400';overlay.style.fontStyle=value('font_style').includes('I')?'italic':'normal';
+            const button=certificateEditor.querySelector(`[data-add-placement="${key}"]`);button.setAttribute('aria-pressed',String(!overlay.hidden));
         });
     };
     certificateEditor.addEventListener('input',sync);sync();
     if(canvas&&window.ResizeObserver)new ResizeObserver(sync).observe(canvas);
-    canvas?.querySelectorAll('[data-placement]').forEach(overlay=>overlay.addEventListener('pointerdown',event=>{
-        event.preventDefault();overlay.setPointerCapture(event.pointerId);
+    const position=(key,x,y)=>{
+        const width=Number(control(key,'width').value);
+        control(key,'x').value=Math.max(0,Math.min(95,100-width,x)).toFixed(1);
+        control(key,'y').value=Math.max(0,Math.min(95,y)).toFixed(1);sync();
+    };
+    canvas.querySelectorAll('[data-placement]').forEach(overlay=>{
+        overlay.addEventListener('keydown',event=>{
+            const key=overlay.dataset.placement;selectField(key);
+            if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+            event.preventDefault();const step=event.shiftKey?1:0.1;
+            position(key,Number(control(key,'x').value)+(event.key==='ArrowLeft'?-step:event.key==='ArrowRight'?step:0),Number(control(key,'y').value)+(event.key==='ArrowUp'?-step:event.key==='ArrowDown'?step:0));
+        });
+        overlay.addEventListener('click',()=>selectField(overlay.dataset.placement));
+        overlay.addEventListener('pointerdown',event=>{
+        event.preventDefault();overlay.focus({preventScroll:true});overlay.setPointerCapture(event.pointerId);selectField(overlay.dataset.placement);
         const rect=canvas.getBoundingClientRect(),key=overlay.dataset.placement;
-        const row=certificateEditor.querySelector(`[data-placement-controls="${key}"]`);
-        const x=row.querySelector(`[name="placements[${key}][x]"]`),y=row.querySelector(`[name="placements[${key}][y]"]`),width=row.querySelector(`[name="placements[${key}][width]"]`);
+        const x=control(key,'x'),y=control(key,'y');
         const initialX=Number(x.value),initialY=Number(y.value),startX=event.clientX,startY=event.clientY;
-        const move=e=>{x.value=Math.max(0,Math.min(100-Number(width.value),initialX+(e.clientX-startX)*100/rect.width)).toFixed(1);y.value=Math.max(0,Math.min(95,initialY+(e.clientY-startY)*100/rect.height)).toFixed(1);sync();};
+        const move=e=>position(key,initialX+(e.clientX-startX)*100/rect.width,initialY+(e.clientY-startY)*100/rect.height);
         const end=()=>{overlay.removeEventListener('pointermove',move);overlay.removeEventListener('pointerup',end);overlay.removeEventListener('pointercancel',end);};
         overlay.addEventListener('pointermove',move);overlay.addEventListener('pointerup',end);overlay.addEventListener('pointercancel',end);
-    }));
-    if(canvas?.dataset.format==='pdf'){
-        const status=certificateEditor.querySelector('[data-certificate-preview-status]');
-        (async()=>{try{const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument(canvas.dataset.background).promise;const page=await pdf.getPage(1);const viewport=page.getViewport({scale:1.5});const target=canvas.querySelector('canvas');target.width=viewport.width;target.height=viewport.height;await page.render({canvasContext:target.getContext('2d'),viewport}).promise;}catch{status.textContent='PDF visual preview could not load. Use the coordinate fields and generated sample PDF to check placement.';}})();
-    }
+        });
+    });
+    certificateEditor.querySelectorAll('[data-add-placement]').forEach(button=>{
+        const key=button.dataset.addPlacement;
+        button.addEventListener('click',()=>{control(key,'enabled').checked=true;selectField(key);sync();if(!canvas.hidden)canvas.querySelector(`[data-placement="${key}"]`).focus({preventScroll:true});});
+        button.addEventListener('dragstart',event=>{event.dataTransfer.setData('text/plain',key);event.dataTransfer.effectAllowed='copy';});
+    });
+    canvas.addEventListener('dragover',event=>{event.preventDefault();event.dataTransfer.dropEffect='copy';});
+    canvas.addEventListener('drop',event=>{
+        event.preventDefault();const key=event.dataTransfer.getData('text/plain');if(![...certificateEditor.querySelectorAll('[data-add-placement]')].some(button=>button.dataset.addPlacement===key))return;
+        const rect=canvas.getBoundingClientRect();control(key,'enabled').checked=true;position(key,(event.clientX-rect.left)*100/rect.width,(event.clientY-rect.top)*100/rect.height);selectField(key);
+    });
+    let previewVersion=0,objectUrl=null;
+    const preview=async(url,format)=>{
+        const version=++previewVersion;status.textContent='Loading design preview…';
+        const image=canvas.querySelector('[data-certificate-image]'),target=canvas.querySelector('[data-certificate-pdf]');
+        try{
+            if(format==='pdf'){
+                const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+                const pdf=await pdfjs.getDocument(url).promise;
+                try{
+                    if(pdf.numPages!==1)throw new Error('Choose a single-page PDF.');
+                    const page=await pdf.getPage(1),size=page.getViewport({scale:1}),viewport=page.getViewport({scale:1.5});
+                    const buffer=document.createElement('canvas');buffer.width=viewport.width;buffer.height=viewport.height;
+                    await page.render({canvasContext:buffer.getContext('2d'),viewport}).promise;if(version!==previewVersion)return;
+                    target.width=buffer.width;target.height=buffer.height;target.getContext('2d').drawImage(buffer,0,0);target.hidden=false;image.hidden=true;
+                    canvas.style.aspectRatio=`${size.width} / ${size.height}`;canvas.dataset.widthMm=String(size.width*25.4/72);
+                }finally{await pdf.destroy();}
+            }else{
+                const loaded=new Image();loaded.src=url;await loaded.decode();if(version!==previewVersion)return;
+                image.src=url;image.hidden=false;target.hidden=true;canvas.style.aspectRatio=`${loaded.naturalWidth} / ${loaded.naturalHeight}`;canvas.dataset.widthMm='297';
+            }
+            canvas.hidden=false;sync();status.textContent='Drag fields onto the design. Save to apply your changes to the PDF.';
+        }catch(error){if(version===previewVersion)status.textContent=`Preview could not load. ${error.message||'Use the position controls and preview the saved PDF.'}`;}
+    };
+    certificateEditor.querySelector('[name="template"]').addEventListener('change',event=>{
+        const file=event.target.files[0];if(!file)return;
+        if(file.size>10*1024*1024){status.textContent='Choose a design no larger than 10 MB.';return;}
+        if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=URL.createObjectURL(file);
+        preview(objectUrl,file.name.toLowerCase().endsWith('.pdf')?'pdf':'image');
+    });
+    if(canvas.dataset.background)preview(canvas.dataset.background,canvas.dataset.format);
 }
 const gatewayForm=document.querySelector('[data-payment-gateway]');
 document.querySelector('[data-select-enrollment]')?.addEventListener('click',()=>{

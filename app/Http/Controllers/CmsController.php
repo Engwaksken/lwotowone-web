@@ -54,6 +54,7 @@ class CmsController extends Controller {
   ]);
    $filters+=['q'=>'','status'=>'all','period'=>'all','start_date'=>null,'end_date'=>null];$filters['q']=$filters['q']??'';$filters['status']=$filters['status']??'all';
    $q=Catalog::scope(Catalog::query($module),$r->user(),$module);
+   if(in_array($module,['courses','programs']))$q->with('instructors');
    if($filters['status']!=='all')$q->where('status',$filters['status']);
   $field=$module==='users'?'name':($module==='settings'?'key':'title');
   if($filters['q']!==''){$search=str_replace(['!','%','_'],['!!','!%','!_'],$filters['q']);$q->whereRaw("{$field} LIKE ? ESCAPE '!'",['%'.$search.'%']);}
@@ -77,7 +78,10 @@ class CmsController extends Controller {
    if($assignmentChange)abort_unless($r->user()->role==='admin',403);
    if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);
    $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
+   $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
+   if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
    $d=$r->validate($rules);
+   if($formattedContent)$d=array_merge($d,\App\Services\LearningContent::validate($r,$module,$id?$record:null));
    $assignmentIds=[];$leadId=null;
    if($assignmentChange){
     $assignment=$r->validate(['instructor_ids'=>'sometimes|array','instructor_ids.*'=>'required|integer|min:1|distinct','lead_instructor_id'=>'nullable|integer|min:1','instructor_id'=>'nullable|integer|min:1']);
@@ -100,12 +104,14 @@ class CmsController extends Controller {
    if($overlap)return back()->withInput()->withErrors(['starts_at'=>'This overlaps another mentorship slot.']);
    if($id&&DB::table('bookings')->where('slot_id',$id)->exists())return back()->withErrors(['starts_at'=>'A booked session cannot be edited. Review the booking instead.']);
   }
-  if(isset($d['file'])){$d['file_path']=$d['file']->store('resources','local');unset($d['file']);}
-  DB::transaction(function()use($record,$d,$assignmentChange,$assignmentIds,$leadId,$r,$module,$id){
+  $oldFile=$record->file_path;$newFile=null;
+  if(isset($d['file'])){$d['file_path']=$newFile=$d['file']->store($module==='lessons'?'lessons':'resources','local');unset($d['file']);}
+  try{DB::transaction(function()use($record,$d,$assignmentChange,$assignmentIds,$leadId,$r,$module,$id){
    $record->fill($d)->save();
    if($assignmentChange)\App\Models\InstructorAssignments::sync($record,$assignmentIds,$leadId);
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
-  });
+  });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);throw $e;}
+  if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
   if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
   return redirect('/admin/'.$module)->with('success','Saved successfully.');
  }

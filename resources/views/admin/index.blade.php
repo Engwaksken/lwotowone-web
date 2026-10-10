@@ -8,6 +8,19 @@
     $cmsStatusOptions = $statusOptions
         ? collect($statusOptions)->mapWithKeys(fn($status)=>[$status=>ucfirst($status)])->prepend('All statuses','all')->all()
         : [];
+    $tableColumns=match($module){
+        'courses'=>['program_id'=>'Program Name','instructors'=>'Instructor Name'],
+        'programs'=>['category'=>'Category'],
+        'lessons'=>['course_id'=>'Course Name','content_format'=>'Format','position'=>'Order'],
+        'course_modules'=>['course_id'=>'Course Name','position'=>'Order'],
+        'resources'=>['course_id'=>'Course Name','content_format'=>'Format'],
+        'assignments'=>['course_id'=>'Course Name','pass_mark'=>'Pass mark'],
+        'users'=>['email'=>'Email','role'=>'Role'],
+        'slots'=>['mentor_id'=>'Mentor Name','starts_at'=>'Starts'],
+        'opportunities'=>['organisation'=>'Organisation','deadline'=>'Deadline'],
+        'events'=>['location'=>'Location','starts_at'=>'Starts'],
+        'settings'=>[],default=>[],
+    };
 @endphp
 <x-filter-bar
     :action="'/admin/'.$module"
@@ -30,16 +43,29 @@
     <button type="button" data-dialog-open="create-record"><i class="fas fa-plus" aria-hidden="true"></i> Add new</button>
     @endif
 </div>
-<div class="panel table-wrap"><table>
-    <thead><tr><th><i class="fas fa-hashtag" aria-hidden="true"></i> ID</th><th><i class="fas {{ $module==='users'?'fa-user':($module==='settings'?'fa-key':'fa-heading') }}" aria-hidden="true"></i> {{ $module==='users'?'Name':($module==='settings'?'Key':'Title') }}</th><th><i class="fas fa-info-circle" aria-hidden="true"></i> Status / role</th><th><i class="fas fa-sliders-h" aria-hidden="true"></i> Actions</th></tr></thead>
+<div class="panel table-wrap cms-table-wrap"><table class="data-table cms-table">
+    <caption class="sr-only">{{ $meta['title'] }} records</caption>
+    <thead><tr><th scope="col" class="column-primary">{{ $module==='users'?'Name':($module==='settings'?'Setting':'Title') }}</th>@foreach($tableColumns as $column=>$label)<th scope="col" class="{{ $column==='position'||$column==='pass_mark'?'column-number':'column-context' }}">{{ $label }}</th>@endforeach<th scope="col" class="column-status">Status</th><th scope="col" class="column-date">Updated</th><th scope="col" class="column-actions">Actions</th></tr></thead>
     <tbody>
     @forelse($rows as $row)
         @php $rowName = $row->title??$row->name??$row->key; @endphp
         <tr>
-            <td>{{ $row->id }}</td>
-            <td>{{ $rowName }}</td>
-            <td>{{ $row->status??'' }} {{ $row->role??'' }}</td>
-            <td><div class="actions">
+            <td class="column-primary"><strong>{{ $rowName }}</strong><small>Record #{{ $row->id }}</small></td>
+            @foreach($tableColumns as $column=>$label)
+                @php
+                    $cell=match($column){
+                        'instructors'=>$row->instructors->pluck('name')->implode(', '),
+                        'content_format'=>ucfirst(\App\Services\LearningContent::format($row,$module)),
+                        'program_id','course_id','mentor_id'=>$options[$column][$row->{$column}]??'—',
+                        'starts_at','deadline'=>$row->{$column}?\Carbon\Carbon::parse($row->{$column})->format($column==='deadline'?'d M Y':'d M Y, H:i'):'—',
+                        'pass_mark'=>$row->pass_mark.'%', default=>$row->{$column}??'—',
+                    };
+                @endphp
+                <td class="{{ $column==='position'||$column==='pass_mark'?'column-number':'column-context' }}">{{ $cell?:'—' }}</td>
+            @endforeach
+            <td class="column-status">@if($row->status)<span class="status-badge" data-status="{{ $row->status }}">{{ ucfirst($row->status) }}</span>@else<span class="muted">—</span>@endif</td>
+            <td class="column-date">{{ $row->updated_at?\Carbon\Carbon::parse($row->updated_at)->format('d M Y'):'—' }}</td>
+            <td class="column-actions"><div class="actions">
                 <x-record-view-trigger :dialogId="'view-record-'.$row->id" :name="$rowName ?? 'Record '.$row->id" />
                 @if(($row->status??null)==='published'&&in_array($module,['pages','programs','courses','opportunities','events','posts']))<a class="secondary small icon-action" href="{{ $module==='pages'?'/pages/'.$row->slug:'/explore/'.$module.'/'.$row->id }}" title="View published item" aria-label="View {{ $row->title??'published item' }}"><i class="fas fa-eye" aria-hidden="true"></i></a>@endif
                 <button type="button" class="secondary small icon-action" data-dialog-open="edit-record-{{ $row->id }}" title="Edit record" aria-label="Edit record"><i class="fas fa-pen" aria-hidden="true"></i></button>
@@ -47,7 +73,7 @@
             </div></td>
         </tr>
     @empty
-        <tr><td colspan="4">Nothing here yet. Add your first record.</td></tr>
+        <tr><td colspan="{{ count($tableColumns)+4 }}" class="table-empty">Nothing here yet. Add your first record.</td></tr>
     @endforelse
     </tbody>
 </table>@include('partials.pagination',['rows'=>$rows])</div>

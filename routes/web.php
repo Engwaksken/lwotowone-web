@@ -58,6 +58,7 @@ Route::middleware(['auth','active'])->group(function(){
    Route::get('/portal/payment',[PortalController::class,'section'])->defaults('section','payment');
   Route::middleware(\App\Http\Middleware\EnsureLearningAccess::class)->group(function(){
     Route::get('/learning/content/resources/{id}',[PortalController::class,'resource']);
+    Route::get('/learning/content/lessons/{id}',[PortalController::class,'lessonMedia']);
     Route::get('/portal/{section}',[PortalController::class,'section']);
     Route::get('/learning/{id}',[PortalController::class,'course']);
     Route::post('/actions/{action}',[PortalController::class,'action']);

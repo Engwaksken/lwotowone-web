@@ -9,6 +9,7 @@ Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
   Route::middleware(\App\Http\Middleware\EnsureLearningAccess::class)->group(function(){
     Route::post('/actions/{action}',[PortalController::class,'action']);
     Route::get('/resources/{id}/download',fn(\Illuminate\Http\Request $r,string $id)=>(new PortalController)->download($r,'resources',$id));
+    Route::get('/lessons/{id}/download',[PortalController::class,'lessonMedia']);
   });
   Route::post('/profile',[PortalController::class,'profile']);
   Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);
