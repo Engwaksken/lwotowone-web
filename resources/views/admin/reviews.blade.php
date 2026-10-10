@@ -4,16 +4,28 @@
 <span class="eyebrow"><i class="fas fa-clipboard-check" aria-hidden="true"></i> Programme operations</span>
 <h1 class="page-title">{{ ucwords(str_replace('_',' ',$type)) }}</h1>
 @include('partials.platform-stats')
-<form class="panel filter-form" method="get">
-    <div class="field search-field"><label for="review-search">Search records</label><input id="review-search" type="search" name="q" maxlength="255" value="{{ $filters['q'] }}" placeholder="Search"></div>
-    @if($type!=='audit_logs')
-        <div class="field"><label for="review-status">Status</label><select id="review-status" name="status"><option value="">All statuses</option>@foreach(match($type){'submissions'=>['submitted','passed','returned','failed'],'practice_logs'=>['pending','verified','returned'],'bookings'=>['requested','confirmed','completed','cancelled'],'applications'=>['submitted','reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','cancelled'],'contacts'=>['new','in_progress','resolved'],default=>[]} as $status)<option value="{{ $status }}" @selected($filters['status']===$status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
-    @endif
-    <div class="field"><label for="review-period">Period</label><select id="review-period" name="period">@foreach(['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom range'] as $value=>$label)<option value="{{ $value }}" @selected($filters['period']===$value)>{{ $label }}</option>@endforeach</select></div>
+@php
+    $reviewStatusList = match($type){'submissions'=>['submitted','passed','returned','failed'],'practice_logs'=>['pending','verified','returned'],'bookings'=>['requested','confirmed','completed','cancelled'],'applications'=>['submitted','reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','cancelled'],'contacts'=>['new','in_progress','resolved'],default=>[]};
+    $reviewStatusOptions = $reviewStatusList
+        ? collect($reviewStatusList)->mapWithKeys(fn($status)=>[$status=>ucfirst($status)])->prepend('All statuses','')->all()
+        : [];
+@endphp
+<x-filter-bar
+    :action="'/admin/reviews/'.$type"
+    :search="$filters['q']"
+    searchLabel="Search records"
+    searchPlaceholder="Search"
+    :statusOptions="$reviewStatusOptions"
+    :status="$filters['status']"
+    statusLabel="Status"
+    :periodOptions="['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom range']"
+    :period="$filters['period']"
+    periodLabel="Period"
+    idPrefix="review"
+>
     <div class="field"><label for="review-start">From</label><input id="review-start" type="date" name="start_date" value="{{ $filters['start_date'] }}"></div>
     <div class="field"><label for="review-end">To</label><input id="review-end" type="date" name="end_date" value="{{ $filters['end_date'] }}"></div>
-    <div class="filter-actions"><button><i class="fas fa-search" aria-hidden="true"></i> Apply</button> <a href="/admin/reviews/{{ $type }}">Reset</a></div>
-</form>
+</x-filter-bar>
 <div class="review-list">
 @foreach($rows as $row)
     <details class="review-item">

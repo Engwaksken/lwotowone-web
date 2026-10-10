@@ -30,7 +30,7 @@ class HelpAndBrandingTest extends TestCase
         $this->get('/dashboard')->assertOk()->assertSee('Dashboard')->assertDontSee('class="site-footer"',false)->assertSee('management-list')->assertSee('Settings')->assertSee('Payment gateway settings');
         $listing=$this->get('/admin/programs')->assertOk();$html=$listing->getContent();
         $this->assertLessThan(strpos($html,'class="public-stat-strip"'),strpos($html,'<h1>Programmes</h1>'));
-        $this->assertLessThan(strpos($html,'class="filter-form'),strpos($html,'class="public-stat-strip"'));
+        $this->assertLessThan(strpos($html,'class="filter-bar"'),strpos($html,'class="public-stat-strip"'));
         $this->put('/admin/site-settings',[
             'primary_color'=>'#123456','accent_color'=>'#fedcba','font_family'=>'Georgia','font_size'=>18,
         ])->assertRedirect();

@@ -7,7 +7,19 @@ class User extends Authenticatable {
  use Notifiable, HasApiTokens;
  protected $fillable=['name','email','password','phone','district','role','status','bio','expertise','fcm_token','learner_no','enrollment_date','enrollment_category','gender','location','urban_rural','learner_age','refugee','settlement','pwd','impairment','education_level','learner_status','verified_outcomes','other_verified_outcome','employed','employer_name','transformation_objective','after_work_status','after_work_pathway','profile_complete','learning_access_paid','selected_course_id','cohort_id'];
  protected $hidden=['password','remember_token'];
- protected function casts(): array {return ['password'=>'hashed','email_verified_at'=>'datetime','refugee'=>'boolean','pwd'=>'boolean','employed'=>'boolean','profile_complete'=>'boolean','learning_access_paid'=>'boolean'];}
+ protected function casts(): array {return ['password'=>'hashed','email_verified_at'=>'datetime','refugee'=>'boolean','pwd'=>'boolean','employed'=>'boolean','profile_complete'=>'boolean','learning_access_paid'=>'boolean','full_access_until'=>'datetime'];}
+  protected static function booted(): void {
+    static::saving(function (User $user) {
+      if ($user->role === 'participant'
+        && (bool) $user->profile_complete
+        && $user->full_access_until === null
+        && $user->isDirty('profile_complete')) {
+        $user->full_access_until = now()->addHours(24);
+      }
+    });
+  }
+  public function fullAccessActive(): bool {return $this->full_access_until?->isFuture() ?? false;}
+  public function learningAccessOpen(): bool {return (bool) $this->learning_access_paid || $this->fullAccessActive();}
  public function staff(): bool {return in_array($this->role,['admin','manager','instructor','mentor']);}
  public function manager(): bool {return in_array($this->role,['admin','manager']);}
 }

@@ -21,7 +21,7 @@ class PortalController extends Controller {
 
   public function dashboard(Request $r){
    if($r->user()->role==='participant'&&!$r->user()->profile_complete)return redirect('/profile')->with('success','Complete your learner profile to continue.');
-   if($r->user()->staff())return view('admin.dashboard',['counts'=>collect(['users','courses','enrolments','submissions','bookings','applications','enterprises'])->mapWithKeys(fn($t)=>[$t=>DB::table($t)->count()])->all()]);
+    if($r->user()->staff())return view('admin.dashboard',['metrics'=>app(\App\Services\DashboardMetrics::class)->forUser($r->user())]);
    return view('portal.dashboard',['data'=>Snapshot::get($r->user())]);
  }
   public function section(Request $r,string $section){
@@ -30,7 +30,7 @@ class PortalController extends Controller {
      if($section==='profile')return view('portal.profile',['user'=>$r->user(),'courses'=>DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title']),'settlements'=>DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name'])]);
     if($section==='payment')return view('portal.payment',['user'=>$r->user(),'gateways'=>DB::table('payment_gateways')->where('active',true)->orderBy('name')->get()]);
     abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');
-     if($section==='learn'&&!$r->user()->learning_access_paid&&!DB::table('enrolments')->where('user_id',$r->user()->id)->exists())return redirect('/portal/payment');
+     if($section==='learn'&&!$r->user()->learningAccessOpen()&&!DB::table('enrolments')->where('user_id',$r->user()->id)->exists())return redirect('/portal/payment');
    $earnings=$section==='enterprise'?\App\Services\Earnings::get($r->user(),$r->query()):null;
     $practiceLogs=null;
     $practiceFilters=null;

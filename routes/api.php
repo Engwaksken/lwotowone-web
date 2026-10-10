@@ -6,9 +6,13 @@ Route::middleware('throttle:login')->group(function(){Route::post('/login',[Auth
 Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
  Route::post('/logout',[AuthController::class,'logout']);Route::get('/snapshot',[PortalController::class,'snapshot']);
  Route::post('/device-token',[PortalController::class,'registerDeviceToken']);Route::delete('/device-token',[PortalController::class,'removeDeviceToken']);
- Route::post('/actions/{action}',[PortalController::class,'action']);Route::post('/profile',[PortalController::class,'profile']);
- Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);
- Route::get('/resources/{id}/download',fn(\Illuminate\Http\Request $r,string $id)=>(new PortalController)->download($r,'resources',$id));
+  Route::middleware(\App\Http\Middleware\EnsureLearningAccess::class)->group(function(){
+    Route::post('/actions/{action}',[PortalController::class,'action']);
+    Route::get('/resources/{id}/download',fn(\Illuminate\Http\Request $r,string $id)=>(new PortalController)->download($r,'resources',$id));
+  });
+  Route::post('/profile',[PortalController::class,'profile']);
+  Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);
+
 Route::post('/notifications/push',[PortalController::class,'pushNotice']);
 Route::post('/sms',[PortalController::class,'sendSms']);
 

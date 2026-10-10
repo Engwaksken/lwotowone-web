@@ -1,3 +1,12 @@
+@php
+    $secretPattern = '/password|remember|token|secret|api_key|fcm|credentials/i';
+    $looksEncrypted = fn ($value) => is_string($value) && (str_starts_with($value, 'enc:') || (str_starts_with($value, 'eyJ') && str_contains((string) base64_decode($value, true), '"mac"')));
+    $attributesOf = fn ($row) => is_object($row) && method_exists($row, 'getAttributes') ? $row->getAttributes() : (array) $row;
+    $moreDetails = fn (array $attributes, array $skip = []) => collect($attributes)
+        ->reject(fn ($value, $key) => in_array($key, $skip, true) || preg_match($secretPattern, (string) $key) === 1 || $looksEncrypted($value))
+        ->map(fn ($value, $key) => ['label' => \Illuminate\Support\Str::headline((string) $key), 'value' => $value, 'group' => 'More details'])
+        ->values()->all();
+@endphp
 <p class="page-intro">Develop your idea and track income and expenses in UGX. You enter these records yourself.</p>
 
 <div class="toolbar"><span></span><button type="button" data-dialog-open="create-enterprise">Create an enterprise</button></div>
@@ -63,25 +72,27 @@
 
 <section class="tab-panel" role="tabpanel" id="panel-earnings" aria-labelledby="tab-earnings" hidden>
 <h2>Earnings summary</h2>
-<form class="panel filter-form" method="get" action="/portal/enterprise">
-    <div class="field"><label for="earnings-enterprise">Enterprise</label><select id="earnings-enterprise" name="enterprise_id">
-        <option value="">All my enterprises</option>
-        @foreach($data['enterprises'] as $enterprise)
-        <option value="{{ $enterprise->id }}" @selected((string)$earnings['filters']['enterprise_id']===(string)$enterprise->id)>{{ $enterprise->title }}</option>
-        @endforeach
-    </select></div>
-    <div class="field"><label for="earnings-period">Period</label><select id="earnings-period" name="period">
-        @foreach(['all'=>'All time','week'=>'Current week','month'=>'Current month','year'=>'Current year','custom'=>'Custom date range'] as $value=>$label)
-        <option value="{{ $value }}" @selected($earnings['filters']['period']===$value)>{{ $label }}</option>
-        @endforeach
-    </select></div>
-    <p class="muted filter-help">For a custom range, choose Custom date range and enter both dates. Both dates are included.</p>
+@php $enterpriseFilterOptions=collect($data['enterprises'])->pluck('title','id')->prepend('All my enterprises','')->all(); @endphp
+<x-filter-bar
+    :action="'/portal/enterprise'"
+    :search="$earnings['filters']['q']"
+    searchName="q"
+    searchLabel="Search descriptions"
+    searchPlaceholder="Search descriptions"
+    :statusOptions="$enterpriseFilterOptions"
+    :status="(string) $earnings['filters']['enterprise_id']"
+    statusName="enterprise_id"
+    statusLabel="Enterprise"
+    :periodOptions="['all'=>'All time','week'=>'Current week','month'=>'Current month','year'=>'Current year','custom'=>'Custom date range']"
+    :period="$earnings['filters']['period']"
+    periodLabel="Period"
+    idPrefix="earnings"
+>
     @foreach(['start_date'=>'From','end_date'=>'To'] as $field=>$label)
     <div class="field"><label for="earnings-{{ $field }}">{{ $label }}</label><input id="earnings-{{ $field }}" type="date" name="{{ $field }}" value="{{ $earnings['filters'][$field] }}"></div>
     @endforeach
-    <div class="field"><label for="earnings-search">Search descriptions</label><input id="earnings-search" name="q" maxlength="255" value="{{ $earnings['filters']['q'] }}"></div>
-    <div class="filter-actions"><button><i class="fas fa-search" aria-hidden="true"></i> Apply filters</button> <a href="/portal/enterprise">Reset</a></div>
-</form>
+</x-filter-bar>
+<p class="muted filter-help">For a custom range, choose Custom date range and enter both dates. Both dates are included.</p>
 <div class="stats">
     <div class="stat"><strong>{{ number_format($earnings['income'],2) }}</strong><span>Income · UGX</span></div>
     <div class="stat"><strong>{{ number_format($earnings['expenses'],2) }}</strong><span>Expenses · UGX</span></div>
@@ -91,12 +102,13 @@
 
 <h2>Transaction history</h2>
 <div class="panel table-wrap"><table>
-    <thead><tr><th scope="col"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Date</th><th scope="col"><i class="fas fa-store" aria-hidden="true"></i> Enterprise</th><th scope="col"><i class="fas fa-align-left" aria-hidden="true"></i> Description</th><th scope="col"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Type</th><th scope="col"><i class="fas fa-coins" aria-hidden="true"></i> Amount (UGX)</th></tr></thead>
+    <thead><tr><th scope="col"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Date</th><th scope="col"><i class="fas fa-store" aria-hidden="true"></i> Enterprise</th><th scope="col"><i class="fas fa-align-left" aria-hidden="true"></i> Description</th><th scope="col"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Type</th><th scope="col"><i class="fas fa-coins" aria-hidden="true"></i> Amount (UGX)</th><th scope="col">Actions</th></tr></thead>
     <tbody>
     @forelse($earnings['transactions'] as $transaction)
-    <tr><td>{{ $transaction->occurred_on }}</td><td>{{ collect($data['enterprises'])->firstWhere('id',$transaction->enterprise_id)?->title }}</td><td>{{ $transaction->description }}</td><td>{{ ucfirst($transaction->type) }}</td><td>{{ number_format($transaction->amount,2) }}</td></tr>
+    @php $transactionEnterprise=collect($data['enterprises'])->firstWhere('id',$transaction->enterprise_id)?->title; $transactionName=$transaction->description?:('Transaction '.$transaction->id); @endphp
+    <tr><td>{{ $transaction->occurred_on }}</td><td>{{ $transactionEnterprise }}</td><td>{{ $transaction->description }}</td><td>{{ ucfirst($transaction->type) }}</td><td>{{ number_format($transaction->amount,2) }}</td><td><x-record-view-trigger :dialogId="'view-transaction-'.$transaction->id" :name="$transactionName" /><x-record-view-dialog :id="'view-transaction-'.$transaction->id" :title="$transactionName" :fields="array_merge([['label'=>'Date','value'=>$transaction->occurred_on],['label'=>'Enterprise','value'=>$transactionEnterprise],['label'=>'Description','value'=>$transaction->description],['label'=>'Type','value'=>ucfirst((string) $transaction->type)],['label'=>'Amount (UGX)','value'=>number_format($transaction->amount,2)]], $moreDetails($attributesOf($transaction), ['occurred_on','enterprise_id','description','type','amount']))" /></td></tr>
     @empty
-    <tr><td colspan="5">No transactions match these filters.</td></tr>
+    <tr><td colspan="6">No transactions match these filters.</td></tr>
     @endforelse
     </tbody>
 </table>@include('partials.pagination',['rows'=>$earnings['transactions']])</div>

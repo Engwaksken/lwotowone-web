@@ -20,8 +20,11 @@ Route::middleware('guest')->group(function(){
  Route::get('/reset-password/{token}',[AuthController::class,'resetForm'])->name('password.reset');Route::post('/reset-password',[AuthController::class,'reset']);
 });
 Route::middleware(['auth','active'])->group(function(){
- Route::get('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'show']);
- Route::post('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'apply'])->middleware('throttle:5,1');
+  Route::middleware(\App\Http\Middleware\EnsureLearningAccess::class)->group(function(){
+    Route::get('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'show']);
+    Route::post('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'apply'])->middleware('throttle:5,1');
+  });
+
  Route::get('/admin/calls',[\App\Http\Controllers\CallController::class,'index']);
  Route::get('/admin/certificates',[\App\Http\Controllers\CertificateController::class,'index']);
  Route::get('/admin/certificates/{id}/template',[\App\Http\Controllers\CertificateController::class,'editor']);
@@ -52,10 +55,18 @@ Route::middleware(['auth','active'])->group(function(){
   Route::post('/admin/enrollment/learners/{id}/confirm-payment', [\App\Http\Controllers\MelController::class,'confirmPayment']);
   Route::put('/admin/enrollment/learners/{id}/outcomes', [\App\Http\Controllers\MelController::class,'updateLearner']);
   Route::get('/profile',[PortalController::class,'section'])->defaults('section','profile');
-  Route::get('/learning/content/resources/{id}',[PortalController::class,'resource']);
- Route::get('/portal/{section}',[PortalController::class,'section']);Route::get('/learning/{id}',[PortalController::class,'course']);
- Route::post('/actions/{action}',[PortalController::class,'action']);Route::post('/profile',[PortalController::class,'profile']);
- Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);Route::get('/files/{type}/{id}',[PortalController::class,'download']);Route::get('/certificates/{id}',[PortalController::class,'certificate']);
+   Route::get('/portal/payment',[PortalController::class,'section'])->defaults('section','payment');
+  Route::middleware(\App\Http\Middleware\EnsureLearningAccess::class)->group(function(){
+    Route::get('/learning/content/resources/{id}',[PortalController::class,'resource']);
+    Route::get('/portal/{section}',[PortalController::class,'section']);
+    Route::get('/learning/{id}',[PortalController::class,'course']);
+    Route::post('/actions/{action}',[PortalController::class,'action']);
+    Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);
+    Route::get('/files/{type}/{id}',[PortalController::class,'download']);
+    Route::get('/certificates/{id}',[PortalController::class,'certificate']);
+  });
+  Route::post('/profile',[PortalController::class,'profile']);
+
   Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
    Route::get('/admin/mel',[\App\Http\Controllers\MelController::class,'index']);
     Route::post('/admin/mel/documents', [\App\Http\Controllers\MelController::class,'upload']);

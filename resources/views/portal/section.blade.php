@@ -1,4 +1,15 @@
-@extends('layout') @section('content')<div class="page-wrap"><span class="eyebrow">Your learning journey</span><h1 class="page-title">{{ match($section){'learn'=>'My learning','practice'=>'Practical skills','mentorship'=>'Mentorship','enterprise'=>'Enterprise and earnings',default=>ucfirst($section)} }}</h1>
+@extends('layout') @section('content')@php
+    $secretPattern = '/password|remember|token|secret|api_key|fcm|credentials/i';
+    $looksEncrypted = fn ($value) => is_string($value) && (str_starts_with($value, 'enc:') || (str_starts_with($value, 'eyJ') && str_contains((string) base64_decode($value, true), '"mac"')));
+    $attributesOf = fn ($row) => is_object($row) && method_exists($row, 'getAttributes') ? $row->getAttributes() : (array) $row;
+    $moreDetails = fn (array $attributes, array $skip = []) => collect($attributes)
+        ->reject(fn ($value, $key) => in_array($key, $skip, true) || preg_match($secretPattern, (string) $key) === 1 || $looksEncrypted($value))
+        ->map(fn ($value, $key) => ['label' => \Illuminate\Support\Str::headline((string) $key), 'value' => $value, 'group' => 'More details'])
+        ->values()->all();
+@endphp<div class="page-wrap"><span class="eyebrow">Your learning journey</span><h1 class="page-title">{{ match($section){'learn'=>'My learning','practice'=>'Practical skills','mentorship'=>'Mentorship','enterprise'=>'Enterprise and earnings',default=>ucfirst($section)} }}</h1>
+@if(auth()->user()->full_access_until && auth()->user()->full_access_until->isFuture() && ! auth()->user()->learning_access_paid)
+    <div class="notice" role="status">You have full access until <strong>{{ auth()->user()->full_access_until->format('d M Y, H:i') }}</strong>. <a href="/portal/payment">Confirm payment</a> to keep access after that.</div>
+@endif
 @if($section==='learn')
 @php $enrolledCourses=collect($data['courses'])->filter(fn($c)=>collect($data['enrolments'])->contains('course_id',$c->id));$availableCourses=collect($data['courses'])->reject(fn($c)=>collect($data['enrolments'])->contains('course_id',$c->id)); @endphp
 <div class="tabs" data-tabs>
@@ -45,16 +56,22 @@
         <div class="grid">@forelse($data['skills'] as $skill)<article class="card skill-card"><span class="skill-icon"><i class="fas fa-award" aria-hidden="true"></i></span><div><h3>{{ $skill->title }}</h3><span class="tag">{{ $skill->category }}</span><p>{{ $skill->description }}</p></div></article>@empty<div class="empty">The skills catalogue is being prepared.</div>@endforelse</div>
     </section>
     <section class="tab-panel" role="tabpanel" id="panel-practice-history" aria-labelledby="tab-practice-history">
-        <form class="panel filter-form" method="get" action="/portal/practice">
-            <div class="field search-field"><label for="practice-search">Search activities</label><input id="practice-search" type="search" name="q" maxlength="255" placeholder="Skill, activity or description" value="{{ $practiceFilters['q'] }}"></div>
-            <div class="field"><label for="practice-period">Period</label><select id="practice-period" name="period">@foreach(['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom range'] as $value=>$label)<option value="{{ $value }}" @selected($practiceFilters['period']===$value)>{{ $label }}</option>@endforeach</select></div>
+        <x-filter-bar
+            :action="'/portal/practice'"
+            :search="$practiceFilters['q']"
+            searchLabel="Search activities"
+            searchPlaceholder="Skill, activity or description"
+            :periodOptions="['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom range']"
+            :period="$practiceFilters['period']"
+            periodLabel="Period"
+            idPrefix="practice"
+        >
             <div class="field"><label for="practice-start">From</label><input id="practice-start" type="date" name="start_date" value="{{ $practiceFilters['start_date'] }}"></div>
             <div class="field"><label for="practice-end">To</label><input id="practice-end" type="date" name="end_date" value="{{ $practiceFilters['end_date'] }}"></div>
-            <div class="filter-actions"><button><i class="fas fa-search" aria-hidden="true"></i> Apply</button> <a href="/portal/practice">Reset</a></div>
-        </form>
+        </x-filter-bar>
         <div class="panel table-wrap"><table>
-            <thead><tr><th scope="col"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Date</th><th scope="col"><i class="fas fa-award" aria-hidden="true"></i> Skill</th><th scope="col"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Activity</th><th scope="col"><i class="fas fa-clock" aria-hidden="true"></i> Minutes</th><th scope="col"><i class="fas fa-check-circle" aria-hidden="true"></i> Status</th><th scope="col"><i class="fas fa-comment-dots" aria-hidden="true"></i> Feedback</th></tr></thead>
-            <tbody>@forelse($practiceLogs as $log)<tr><td>{{ $log->practised_on }}</td><td>{{ $log->skill_title }}</td><td><strong>{{ $log->title }}</strong><div class="muted">{{ \Illuminate\Support\Str::limit($log->body,120) }}</div></td><td>{{ $log->minutes }}</td><td><span class="tag">{{ ucfirst($log->status) }}</span></td><td>{{ $log->feedback }}</td></tr>@empty<tr><td colspan="6">No activities match these filters.</td></tr>@endforelse</tbody>
+            <thead><tr><th scope="col"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Date</th><th scope="col"><i class="fas fa-award" aria-hidden="true"></i> Skill</th><th scope="col"><i class="fas fa-clipboard-list" aria-hidden="true"></i> Activity</th><th scope="col"><i class="fas fa-clock" aria-hidden="true"></i> Minutes</th><th scope="col"><i class="fas fa-check-circle" aria-hidden="true"></i> Status</th><th scope="col"><i class="fas fa-comment-dots" aria-hidden="true"></i> Feedback</th><th scope="col">Actions</th></tr></thead>
+            <tbody>@forelse($practiceLogs as $log)<tr><td>{{ $log->practised_on }}</td><td>{{ $log->skill_title }}</td><td><strong>{{ $log->title }}</strong><div class="muted">{{ \Illuminate\Support\Str::limit($log->body,120) }}</div></td><td>{{ $log->minutes }}</td><td><span class="tag">{{ ucfirst($log->status) }}</span></td><td>{{ $log->feedback }}</td><td><x-record-view-trigger :dialogId="'view-practice-'.$log->id" :name="$log->title" /><x-record-view-dialog :id="'view-practice-'.$log->id" :title="$log->title" :fields="array_merge([['label'=>'Date','value'=>$log->practised_on],['label'=>'Skill','value'=>$log->skill_title],['label'=>'Activity','value'=>$log->title],['label'=>'Description','value'=>$log->body],['label'=>'Minutes','value'=>$log->minutes],['label'=>'Status','value'=>ucfirst((string) $log->status)],['label'=>'Feedback','value'=>$log->feedback]], $moreDetails($attributesOf($log), ['practised_on','skill_title','title','body','minutes','status','feedback']))" /></td></tr>@empty<tr><td colspan="7">No activities match these filters.</td></tr>@endforelse</tbody>
         </table>@include('partials.pagination',['rows'=>$practiceLogs])</div>
     </section>
 </div>

@@ -22,7 +22,15 @@
         <div class="field"><label>Status</label><select name="status"><option>draft</option><option>published</option><option>closed</option></select></div>
         <div class="field"><button type="submit">Create call</button></div>
     </form>
-    <form class="filter-form panel" method="get"><div class="field"><label>Status</label><select name="status">@foreach(['all','draft','published','closed'] as $value)<option @selected($status===$value)>{{ $value }}</option>@endforeach</select></div><button type="submit">Apply</button></form>
+    <x-filter-bar
+        :action="'/admin/calls'"
+        :showSearch="false"
+        :statusOptions="['all'=>'All','draft'=>'Draft','published'=>'Published','closed'=>'Closed']"
+        :status="$status"
+        statusName="status"
+        statusLabel="Status"
+        idPrefix="calls"
+    />
     @foreach($calls as $call)
     <details class="panel">
         <summary>{{ $call->title }} · {{ $call->status }}</summary>

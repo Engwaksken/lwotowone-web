@@ -49,6 +49,8 @@ class LearnerAccessTest extends TestCase
             'education_level' => 'O-Level', 'employed' => 0,
         ])->assertRedirect();
         $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learning_access_paid' => false, 'learner_no' => null, 'enrollment_category' => null, 'enrollment_date' => null]);
+        $this->get('/portal/learn')->assertOk();
+        $this->travel(25)->hours();
         $this->get('/portal/learn')->assertRedirect('/portal/payment');
         $token = $learner->createToken('test')->plainTextToken;
         $this->withToken($token)->getJson('/api/snapshot')->assertForbidden();
