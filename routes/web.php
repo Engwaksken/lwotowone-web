@@ -27,6 +27,11 @@ Route::middleware(['auth','active'])->group(function(){
 
  Route::get('/admin/calls',[\App\Http\Controllers\CallController::class,'index']);
  Route::get('/admin/certificates',[\App\Http\Controllers\CertificateController::class,'index']);
+ Route::post('/admin/certificates',[\App\Http\Controllers\CertificateController::class,'create']);
+ Route::get('/admin/certificates/events/{id}/template',[\App\Http\Controllers\CertificateController::class,'eventEditor']);
+ Route::put('/admin/certificates/events/{id}/template',[\App\Http\Controllers\CertificateController::class,'saveEvent']);
+ Route::get('/admin/certificates/events/{id}/background',[\App\Http\Controllers\CertificateController::class,'eventBackground']);
+ Route::get('/admin/certificates/events/{id}/preview.pdf',[\App\Http\Controllers\CertificateController::class,'eventPreview']);
  Route::get('/admin/certificates/{id}/template',[\App\Http\Controllers\CertificateController::class,'editor']);
  Route::put('/admin/certificates/{id}/template',[\App\Http\Controllers\CertificateController::class,'save']);
  Route::get('/admin/certificates/{id}/background',[\App\Http\Controllers\CertificateController::class,'background']);

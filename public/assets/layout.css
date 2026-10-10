@@ -592,6 +592,9 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .cms-table .column-actions{width:150px;white-space:nowrap;text-align:right}
 .cms-table .column-actions .actions{justify-content:flex-end;flex-wrap:nowrap;gap:6px}
 .cms-table .column-actions form{margin:0}
+.certificate-type-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--green)}
+.certificate-type-badge[data-type=event]{color:#6d568a}
+[data-certificate-create] [hidden]{display:none!important}
 .table-empty{text-align:center;padding:36px!important;color:var(--muted)}
 .status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;font-size:11px;font-weight:700;background:#eef1f4;color:#536170}
 .status-badge:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}

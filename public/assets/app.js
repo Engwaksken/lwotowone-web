@@ -67,6 +67,14 @@ document.querySelectorAll('input[type="password"]').forEach(input=>{
 });
 
 const aiSettings=document.querySelector('[data-ai-settings]');
+document.querySelectorAll('[data-certificate-create]').forEach(form=>{
+    const type=form.querySelector('[data-certificate-subject]');
+    const update=()=>form.querySelectorAll('[data-certificate-target]').forEach(panel=>{
+        const active=panel.dataset.certificateTarget===type.value;panel.hidden=!active;
+        panel.querySelectorAll('select').forEach(select=>{select.disabled=!active;select.required=active;});
+    });
+    type.addEventListener('change',update);update();
+});
 document.querySelectorAll('[data-content-fields]').forEach(fields=>{
     const format=fields.querySelector('[data-content-format]'),source=fields.querySelector('[data-content-source]');
     const extensions={text:'.txt',file:'.pdf,.txt,.jpg,.jpeg,.png,.webp',video:'.mp4,.webm,.ogg',audio:'.mp3,.wav,.ogg,.m4a,.aac,.flac'};

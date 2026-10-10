@@ -10,6 +10,9 @@ class CertificatePdf
     public const FIELDS=['full_name'=>'Full name','course'=>'Course title','period'=>'Learning period','duration'=>'Course duration','issue_date'=>'Issue date','reference'=>'Certificate reference','learner_no'=>'Learner number','instructor'=>'Instructor'];
     public const FONTS=['dejavusans'=>'Sans serif','dejavuserif'=>'Serif','dejavusansmono'=>'Monospace'];
     public const STYLES=[''=>'Regular','B'=>'Bold','I'=>'Italic','BI'=>'Bold italic'];
+    public static function fields(string $type='course'): array {
+        return $type==='event'?array_replace(self::FIELDS,['course'=>'Event title','period'=>'Event dates','duration'=>'Event duration','instructor'=>'Issued by']):self::FIELDS;
+    }
     public static function defaults(): array {
         $out=[];foreach(array_keys(self::FIELDS) as $index=>$field)$out[$field]=['enabled'=>in_array($field,['full_name','course','period','issue_date','reference']),'x'=>10,'y'=>30+$index*7,'width'=>80,'font_size'=>$field==='full_name'?24:14,'align'=>'C','color'=>'#14231e','font_family'=>'dejavusans','font_style'=>''];return $out;
     }
@@ -22,10 +25,18 @@ class CertificatePdf
     public function render(object $certificate,?object $template=null): string {
         $user=DB::table('users')->find($certificate->user_id);$course=DB::table('courses')->find($certificate->course_id);$enrollment=DB::table('enrolments')->where('user_id',$user->id)->where('course_id',$course->id)->first();
         $data=['full_name'=>$user->name,'course'=>$course->title,'period'=>Carbon::parse($enrollment?->created_at??now())->format('d M Y').' – '.Carbon::parse($certificate->recommended_at)->format('d M Y'),'duration'=>$course->duration_hours.' hours','issue_date'=>Carbon::parse($certificate->recommended_at)->format('d F Y'),'reference'=>$certificate->reference,'learner_no'=>$user->learner_no??'','instructor'=>DB::table('users')->where('id',$certificate->recommended_by)->value('name')];
+        return $this->renderData($data,$template);
+    }
+    public function renderEvent(object $certificate,?object $template=null): string {
+        $user=DB::table('users')->find($certificate->user_id);$event=DB::table('events')->find($certificate->event_id);$start=Carbon::parse($event->starts_at);$end=Carbon::parse($event->ends_at);
+        $data=['full_name'=>$user->name,'course'=>$event->title,'period'=>$start->format('d M Y').' – '.$end->format('d M Y'),'duration'=>rtrim(rtrim(number_format($start->diffInHours($end,true),2,'.',''),'0'),'.').' hours','issue_date'=>Carbon::parse($certificate->recommended_at)->format('d F Y'),'reference'=>$certificate->reference,'learner_no'=>$user->learner_no??'','instructor'=>DB::table('users')->where('id',$certificate->recommended_by)->value('name')];
+        return $this->renderData($data,$template,'Certificate of Participation');
+    }
+    private function renderData(array $data,?object $template,string $heading='Certificate of Completion'): string {
         $pdf=$this->pdf();$width=$template?(float)$template->width_mm:297;$height=$template?(float)$template->height_mm:210;
         $pdf->AddPage($width>$height?'L':'P',[$width,$height]);
         if($template){$path=Storage::disk('local')->path($template->file_path);if($template->format==='pdf'){$pdf->setSourceFile($path);$pdf->useTemplate($pdf->importPage(1),0,0,$width,$height);}else $pdf->Image($path,0,0,$width,$height,strtoupper($template->format));$placements=json_decode($template->placements,true);}
-        else {$placements=self::defaults();$pdf->SetFont('dejavusans','B',28);$pdf->SetXY(10,20);$pdf->Cell(277,15,'Certificate of Completion',0,0,'C');}
+        else {$placements=self::defaults();$pdf->SetFont('dejavusans','B',28);$pdf->SetXY(10,20);$pdf->Cell(277,15,$heading,0,0,'C');}
         foreach($placements as $field=>$place){if(empty($place['enabled'])||!isset($data[$field]))continue;$font=$place['font_family']??'dejavusans';$style=$place['font_style']??'';$pdf->SetFont(array_key_exists($font,self::FONTS)?$font:'dejavusans',array_key_exists($style,self::STYLES)?$style:'',(float)$place['font_size']);$color=$place['color']??'#14231e';if(!preg_match('/^#[0-9a-f]{6}$/i',$color))$color='#14231e';$pdf->SetTextColor(hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2)));$pdf->SetXY($width*$place['x']/100,$height*$place['y']/100);$pdf->MultiCell($width*$place['width']/100,0,(string)$data[$field],0,$place['align'],false,1,'','',true,0,false,true,0,'T',true);}
         return $pdf->Output('certificate.pdf','S');
     }

@@ -2,23 +2,24 @@
 @section('content')
 <div class="page-wrap certificate-workspace">
     <a href="/admin/certificates">Back to certificates</a>
-    <span class="eyebrow">{{ $course->title }}</span>
+    <span class="eyebrow">{{ ucfirst($subjectType) }} · {{ $subject->title }}</span>
     <h1 class="page-title">Certificate design</h1>
     <p class="page-intro">Upload your design, then drag fields onto it. Click a field to change its colour, font and alignment. Arrow keys move a focused field; hold Shift for larger steps.</p>
-    <form method="post" action="/admin/certificates/{{ $course->id }}/template" enctype="multipart/form-data" data-certificate-editor>@csrf @method('PUT')
+    <form method="post" action="{{ $designUrl }}/template" enctype="multipart/form-data" data-certificate-editor>@csrf @method('PUT')
         <div class="panel certificate-upload-bar">
+            <div class="field"><label for="certificate-name">Certificate name</label><input id="certificate-name" type="text" name="name" maxlength="255" value="{{ old('name',$template?->name??\Illuminate\Support\Str::limit($subject->title.' certificate',255,'')) }}" required></div>
             <div class="field"><label for="certificate-file">Certificate background</label><input id="certificate-file" type="file" name="template" accept=".pdf,.png,.jpg,.jpeg" @required(!$template)><small>Single-page PDF, PNG or JPG. Maximum 10 MB. New uploads preview immediately.</small></div>
             <button type="submit">Save design</button>
-            @if($template)<a class="button secondary" href="/admin/certificates/{{ $course->id }}/preview.pdf" target="_blank" rel="noopener">Preview saved PDF</a>@endif
+            @if($template)<a class="button secondary" href="{{ $designUrl }}/preview.pdf" target="_blank" rel="noopener">Preview saved PDF</a>@endif
         </div>
         <div class="certificate-editor-grid">
             <section class="panel certificate-preview-panel" aria-label="Design preview">
                 <div class="certificate-field-palette"><strong>Add a field</strong><small>Drag a label onto the design, or click to enable it.</small>
                     <div class="certificate-field-buttons">@foreach($fields as $key=>$label)<button type="button" class="secondary small" draggable="true" data-add-placement="{{ $key }}">{{ $label }}</button>@endforeach</div>
                 </div>
-                <div class="certificate-canvas" data-certificate-canvas style="aspect-ratio:{{ $template?->width_mm??297 }}/{{ $template?->height_mm??210 }}" data-width-mm="{{ $template?->width_mm??297 }}" data-background="{{ $template?'/admin/certificates/'.$course->id.'/background':'' }}" data-format="{{ $template?->format??'' }}" @if(!$template)hidden @endif>
+                <div class="certificate-canvas" data-certificate-canvas style="aspect-ratio:{{ $template?->width_mm??297 }}/{{ $template?->height_mm??210 }}" data-width-mm="{{ $template?->width_mm??297 }}" data-background="{{ $template?$designUrl.'/background':'' }}" data-format="{{ $template?->format??'' }}" @if(!$template)hidden @endif>
                     <canvas data-certificate-pdf @if(!$template||$template->format!=='pdf')hidden @endif></canvas>
-                    <img data-certificate-image @if($template&&$template->format!=='pdf')src="/admin/certificates/{{ $course->id }}/background"@else hidden @endif alt="Certificate design">
+                    <img data-certificate-image @if($template&&$template->format!=='pdf')src="{{ $designUrl }}/background"@else hidden @endif alt="Certificate design">
                     @foreach($placements as $key=>$place)<span class="certificate-placement" data-placement="{{ $key }}" tabindex="0" role="button" aria-label="Position {{ $fields[$key] }}">{{ $fields[$key] }}</span>@endforeach
                 </div>
                 <p data-certificate-preview-status role="status">{{ $template?'Drag a field to position it on the design.':'Upload a design to start positioning fields.' }}</p>
