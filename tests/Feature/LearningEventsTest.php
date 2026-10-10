@@ -12,7 +12,7 @@ class LearningEventsTest extends TestCase {
  private function course(){
   $teacher=$this->learner();$teacher->update(['role'=>'instructor']);
   $program=Workflow::insert('programs',['title'=>'Skills','slug'=>uniqid(),'category'=>'TVET','summary'=>'Skills','body'=>'Skills','status'=>'published']);
-  return Workflow::insert('courses',['title'=>'Poultry skills','program_id'=>$program,'instructor_id'=>$teacher->id,'summary'=>'Practical training','duration_hours'=>4,'status'=>'published']);
+  $id=Workflow::insert('courses',['title'=>'Poultry skills','program_id'=>$program,'instructor_id'=>$teacher->id,'summary'=>'Practical training','duration_hours'=>4,'status'=>'published']);Workflow::insert('course_instructors',['course_id'=>$id,'user_id'=>$teacher->id]);return $id;
  }
   public function test_cancellation_retains_history_frees_capacity_and_enforces_ownership():void {
   $e=$this->event();$owner=$this->learner();$other=$this->learner();

@@ -69,17 +69,27 @@ class CmsController extends Controller {
   }
    return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
  }
- public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
+ public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
  public function save(Request $r,string $module,?string $id=null){
-  $this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):Catalog::model($module);
-   $d=$r->validate(Catalog::rules($module,$id));
+   $this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):Catalog::model($module);
+   $assignable=in_array($module,['courses','programs'],true);
+   $assignmentChange=$assignable&&($r->exists('instructor_ids')||$r->exists('assignments_present')||$r->exists('lead_instructor_id')||$r->exists('instructor_id'));
+   if($assignmentChange)abort_unless($r->user()->role==='admin',403);
+   if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);
+   $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
+   $d=$r->validate($rules);
+   $assignmentIds=[];$leadId=null;
+   if($assignmentChange){
+    $assignment=$r->validate(['instructor_ids'=>'sometimes|array','instructor_ids.*'=>'required|integer|min:1|distinct','lead_instructor_id'=>'nullable|integer|min:1','instructor_id'=>'nullable|integer|min:1']);
+    $assignmentIds=array_map('intval',$assignment['instructor_ids']??($r->exists('assignments_present')?[]:(!empty($assignment['instructor_id'])?[$assignment['instructor_id']]:$record->assignedInstructorIds())));
+    $leadId=isset($assignment['lead_instructor_id'])?(int)$assignment['lead_instructor_id']:null;
+   }
    if($module==='courses'&&!empty($d['prerequisite_course_id'])){$previous=(int)$d['prerequisite_course_id'];$seen=[];while($previous){abort_if(isset($seen[$previous])||($id&&(int)$id===$previous),422,'Course prerequisites cannot form a cycle.');$seen[$previous]=true;$previous=(int)DB::table('courses')->where('id',$previous)->value('prerequisite_course_id');}}
    if($module==='lessons'&&!empty($d['module_id']))abort_unless(DB::table('course_modules')->where('id',$d['module_id'])->where('course_id',$d['course_id'])->exists(),422,'Select a module from this course.');
    if($module==='resources'&&!empty($d['lesson_id']))abort_unless(DB::table('lessons')->where('id',$d['lesson_id'])->where('course_id',$d['course_id'])->exists(),422,'Select a lesson from this course.');
   if(!$r->user()->manager()){
-   if($module==='courses')$d['instructor_id']=$r->user()->id;
-   elseif($module==='slots')$d['mentor_id']=$r->user()->id;
-   else abort_unless(Catalog::query('courses')->where('instructor_id',$r->user()->id)->where('id',$d['course_id'])->exists(),403);
+   if($module==='slots')$d['mentor_id']=$r->user()->id;
+   elseif($module!=='courses')abort_unless(Catalog::query('courses')->assignedToInstructor((int)$r->user()->id)->whereKey($d['course_id'])->exists(),403);
   }
   if($module==='users'){
    if(empty($d['password']))unset($d['password']);else if($id)$record->tokens()->delete();
@@ -91,8 +101,11 @@ class CmsController extends Controller {
    if($id&&DB::table('bookings')->where('slot_id',$id)->exists())return back()->withErrors(['starts_at'=>'A booked session cannot be edited. Review the booking instead.']);
   }
   if(isset($d['file'])){$d['file_path']=$d['file']->store('resources','local');unset($d['file']);}
-  $record->fill($d)->save();
-  DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
+  DB::transaction(function()use($record,$d,$assignmentChange,$assignmentIds,$leadId,$r,$module,$id){
+   $record->fill($d)->save();
+   if($assignmentChange)\App\Models\InstructorAssignments::sync($record,$assignmentIds,$leadId);
+   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
+  });
   if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
   return redirect('/admin/'.$module)->with('success','Saved successfully.');
  }

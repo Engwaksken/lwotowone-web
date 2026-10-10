@@ -95,7 +95,7 @@ class InstructorRecord extends Record
     /** Safe projection only: no User serialization, emails, profile data, or pivots. */
     public function resolvedInstructorData(bool $allowLegacy = false): array
     {
-        $instructors = User::query()->whereIn('id', $this->assignedInstructorIds($allowLegacy))
+        $instructors = (new User)->setConnection($this->getConnectionName())->newQuery()->whereIn('id', $this->assignedInstructorIds($allowLegacy))
             ->orderBy('id')->get(['id', 'name'])->map(fn (User $user) => ['id' => (int) $user->id, 'name' => $user->name])->all();
         $leadId = $this->exists ? $this->instructorLeads()->value('users.id') : null;
         $lead = null;

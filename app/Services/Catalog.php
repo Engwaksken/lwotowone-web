@@ -14,8 +14,8 @@ class Catalog {
  public static function scope($query,User $u,string $module){
   if($u->manager())return $query;
   if($module==='slots')return $query->where('mentor_id',$u->id);
-  if($module==='courses')return $query->where('instructor_id',$u->id);
-  return $query->whereIn('course_id',self::query('courses')->where('instructor_id',$u->id)->select('id'));
+  if($module==='courses')return $query->assignedToInstructor((int)$u->id);
+  return $query->whereIn('course_id',self::query('courses')->assignedToInstructor((int)$u->id)->select('courses.id'));
  }
  public static function rules(string $module,$id=null): array {
   $rules=[];

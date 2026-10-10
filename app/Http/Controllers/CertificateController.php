@@ -9,9 +9,9 @@ use Illuminate\Validation\ValidationException;
 
 class CertificateController extends Controller
 {
-    private function course(Request $r,string $id): object {$course=DB::table('courses')->find($id);abort_unless($course,404);abort_unless($r->user()->manager()||($r->user()->role==='instructor'&&$course->instructor_id===$r->user()->id),403);return $course;}
+    private function course(Request $r,string $id): object {$course=\App\Services\Catalog::query('courses')->findOrFail($id);abort_unless((new \App\Policies\CoursePolicy)->view($r->user(),$course),403);return $course;}
     public function index(Request $r) {
-        abort_unless($r->user()->manager()||$r->user()->role==='instructor',403);$courses=DB::table('courses');if(!$r->user()->manager())$courses->where('instructor_id',$r->user()->id);
+        abort_unless($r->user()->manager()||$r->user()->role==='instructor',403);$courses=\App\Services\Catalog::query('courses');if(!$r->user()->manager())$courses->assignedToInstructor((int)$r->user()->id);
         $courses=$courses->get();$learners=DB::table('enrolments')->join('users','users.id','=','enrolments.user_id')->whereIn('enrolments.course_id',$courses->pluck('id'))->select('enrolments.course_id','users.id','users.name')->get();
         return view('admin.certificates',['courses'=>$courses,'learners'=>$learners,'certificates'=>DB::table('course_certificates')->whereIn('course_id',$courses->pluck('id'))->get()]);
     }
@@ -31,7 +31,7 @@ class CertificateController extends Controller
     public function background(Request $r,string $id) {abort_unless($r->user()->role==='admin',403);$this->course($r,$id);$template=DB::table('certificate_templates')->where('course_id',$id)->first();abort_unless($template&&Storage::disk('local')->exists($template->file_path),404);return response()->file(Storage::disk('local')->path($template->file_path),['Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff']);}
     public function preview(Request $r,string $id) {abort_unless($r->user()->role==='admin',403);$course=$this->course($r,$id);$template=DB::table('certificate_templates')->where('course_id',$id)->first();abort_unless($template,404);$sample=(object)['user_id'=>$r->user()->id,'course_id'=>$id,'recommended_by'=>$course->instructor_id,'recommended_at'=>now(),'reference'=>'PREVIEW-NOT-ISSUED'];return response(app(CertificatePdf::class)->render($sample,$template),200,['Content-Type'=>'application/pdf','Content-Disposition'=>'inline; filename="certificate-preview.pdf"','Cache-Control'=>'private, no-store']);}
     public function recommend(Request $r,string $id) {
-        $course=$this->course($r,$id);abort_unless($r->user()->role==='instructor'&&$course->instructor_id===$r->user()->id,403,'Only the assigned instructor can recommend completion.');$data=$r->validate(['user_id'=>'required|integer|exists:users,id']);$user=User::findOrFail($data['user_id']);
+        $course=$this->course($r,$id);abort_unless((new \App\Policies\CoursePolicy)->recommendCertificate($r->user(),$course),403,'Only an assigned instructor can recommend completion.');$data=$r->validate(['user_id'=>'required|integer|exists:users,id']);$user=User::findOrFail($data['user_id']);
         DB::transaction(function()use($user,$id,$r){DB::table('enrolments')->where('user_id',$user->id)->where('course_id',$id)->lockForUpdate()->first();LearningAccess::requireCourse($user,(int)$id);abort_unless(LearningAccess::completionReady($user,(int)$id),422,'All published lessons and practical assessments must be completed first.');
             DB::table('course_certificates')->insertOrIgnore(['user_id'=>$user->id,'course_id'=>$id,'recommended_by'=>$r->user()->id,'recommended_at'=>now(),'reference'=>'LW-'.$id.'-'.$user->id.'-'.strtoupper(bin2hex(random_bytes(4))),'created_at'=>now(),'updated_at'=>now()]);Workflow::insert('audit_logs',['user_id'=>$r->user()->id,'module'=>'certificates','action'=>'recommend','record_id'=>$user->id]);});
         return back()->with('success','Completion recommended. The learner can view and download the certificate.');

@@ -55,7 +55,7 @@ class Workflow {
     $file=$d['file']??null;unset($d['file']);
     if($file)$d['file_path']=$file->store('submissions','local');
     DB::table('submissions')->updateOrInsert(['user_id'=>$u->id,'assignment_id'=>$a->id],$d+['status'=>'submitted','score'=>null,'feedback'=>null,'reviewer_id'=>null,'created_at'=>$previous?->created_at??now(),'updated_at'=>now()]);
-    $course=DB::table('courses')->find($a->course_id);self::notify($course->instructor_id,'Practical work submitted',$u->name.' submitted '.$a->title);break;
+    $course=Catalog::query('courses')->findOrFail($a->course_id);foreach($course->instructors()->where('role','instructor')->where('status','active')->pluck('users.id') as $teacherId)self::notify($teacherId,'Practical work submitted',$u->name.' submitted '.$a->title);break;
    case 'practice':
     self::published('skills',$d['skill_id']);$id=self::insert('practice_logs',$d+['user_id'=>$u->id]);break;
    case 'book':

@@ -26,7 +26,9 @@
     <div class="field"><label for="cms-end">To</label><input id="cms-end" type="date" name="end_date" value="{{ $filters['end_date'] }}"></div>
 </x-filter-bar>
 <div class="toolbar">
+    @if($module!=='courses'||auth()->user()->manager())
     <button type="button" data-dialog-open="create-record"><i class="fas fa-plus" aria-hidden="true"></i> Add new</button>
+    @endif
 </div>
 <div class="panel table-wrap"><table>
     <thead><tr><th><i class="fas fa-hashtag" aria-hidden="true"></i> ID</th><th><i class="fas {{ $module==='users'?'fa-user':($module==='settings'?'fa-key':'fa-heading') }}" aria-hidden="true"></i> {{ $module==='users'?'Name':($module==='settings'?'Key':'Title') }}</th><th><i class="fas fa-info-circle" aria-hidden="true"></i> Status / role</th><th><i class="fas fa-sliders-h" aria-hidden="true"></i> Actions</th></tr></thead>
@@ -50,6 +52,7 @@
     </tbody>
 </table>@include('partials.pagination',['rows'=>$rows])</div>
 
+@if($module!=='courses'||auth()->user()->manager())
 <dialog class="form-dialog" id="create-record" aria-labelledby="create-record-title">
     <div class="dialog-heading"><h2 id="create-record-title">Create {{ \Illuminate\Support\Str::singular($meta['title']) }}</h2><button class="secondary small" type="button" data-dialog-close>Close</button></div>
     @php $record=null; @endphp
@@ -59,6 +62,7 @@
         <div class="dialog-actions"><button type="submit">Save record</button></div>
     </form>
 </dialog>
+@endif
 
 @foreach($rows as $row)
     <dialog class="form-dialog" id="edit-record-{{ $row->id }}" aria-labelledby="edit-record-title-{{ $row->id }}">

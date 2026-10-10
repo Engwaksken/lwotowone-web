@@ -10,7 +10,7 @@ class ReviewController extends Controller {
   abort_unless(in_array($type,['submissions','practice_logs','bookings','applications','event_registrations','contacts','audit_logs']),404);
   $q=DB::table($type);
   if(!$r->user()->manager()){
-   if($type==='submissions'&&$r->user()->role==='instructor')$q->whereIn('assignment_id',DB::table('assignments')->whereIn('course_id',DB::table('courses')->where('instructor_id',$r->user()->id)->select('id'))->select('id'));
+   if($type==='submissions'&&$r->user()->role==='instructor')$q->whereIn('assignment_id',DB::table('assignments')->whereIn('course_id',\App\Services\Catalog::query('courses')->assignedToInstructor((int)$r->user()->id)->select('courses.id'))->select('id'));
    elseif($type==='bookings'&&$r->user()->role==='mentor')$q->whereIn('slot_id',DB::table('slots')->where('mentor_id',$r->user()->id)->select('id'));
    else abort(403);
   }return $q;

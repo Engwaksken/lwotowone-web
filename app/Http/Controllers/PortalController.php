@@ -139,7 +139,7 @@ class PortalController extends Controller {
   public function resource(Request $r,string $id){
     $item=DB::table('resources')->find($id);abort_unless($item&&$item->file_path,404);
     if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
-    else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
+    else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
     return $this->inlineResource($item);
   }
   private function inlineResource(object $item){
@@ -152,10 +152,10 @@ class PortalController extends Controller {
    abort_unless(in_array($type,['resources','submissions']),404);$item=DB::table($type)->find($id);abort_unless($item,404);
    if($type==='resources'){
      if($r->user()->role==='participant') {abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
-     else abort_unless($r->user()->manager()||DB::table('courses')->where('id',$item->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
+     else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
    }else{
     $a=DB::table('assignments')->find($item->assignment_id);
-    abort_unless($r->user()->id===$item->user_id||$r->user()->manager()||DB::table('courses')->where('id',$a->course_id)->where('instructor_id',$r->user()->id)->exists(),403);
+    abort_unless($r->user()->id===$item->user_id||$r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($a->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
    }
     abort_unless($item->file_path,404);return $type==='resources'?$this->inlineResource($item):\Illuminate\Support\Facades\Storage::disk('local')->download($item->file_path);
  }
