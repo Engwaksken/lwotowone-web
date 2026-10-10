@@ -20,7 +20,7 @@
         @yield('content')
         <footer class="auth-footer"><a class="button secondary auth-home-link" href="/">Back to website</a><p class="auth-copyright">© 2026 Lwotowone Enterprises Ltd · Uganda</p></footer>
     </main>
-    @include('partials.help-tools')
+    <x-help-widget />
     <script src="{{ asset('assets/app.js') }}" defer></script>
 </body>
 </html>

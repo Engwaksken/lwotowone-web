@@ -1,8 +1,10 @@
 @extends('layout')
 @section('title','Learner profile | Lwotowone')
 @section('content')
-<span class="eyebrow">Learner onboarding</span><h1>Finalize your learner profile</h1>
-<p>Complete your details and select a course. Your enrollment cohort, category, date, and learner number are assigned by the programme administrator after payment is confirmed.</p>
+<div class="page-wrap">
+<span class="eyebrow">Learner onboarding</span>
+<h1 class="page-title">Your profile</h1>
+<p class="page-intro">Fill in your details and choose a course. Your cohort, enrollment category, date and learner number are assigned after payment is confirmed.</p>
 @if($user->role!=='participant')
 <form class="panel profile-form" method="post" action="/profile">@csrf
 <div class="field"><label for="profile-name">Full name</label><input id="profile-name" name="name" value="{{ old('name',$user->name) }}" required></div>
@@ -26,7 +28,7 @@
 <div class="field"><label for="profile-name">Full name</label><input id="profile-name" name="name" value="{{ old('name',$user->name) }}" required></div>
 <div class="field"><label>Email address</label><input value="{{ $user->email }}" disabled></div>
 <div class="field"><label for="profile-phone">Phone</label><input id="profile-phone" type="tel" name="phone" value="{{ old('phone',$user->phone) }}" required></div>
-<div class="field"><label for="profile-course">Course selection</label>@if($user->learning_access_paid)<input type="hidden" name="selected_course_id" value="{{ $user->selected_course_id }}"><input id="profile-course" value="{{ $courses->firstWhere('id',$user->selected_course_id)?->title??'Assigned course' }}" disabled><small>Contact your programme administrator if you need to change this course.</small>@else<select id="profile-course" name="selected_course_id" required><option value="">Choose a course</option>@foreach($courses as $course)<option value="{{ $course->id }}" @selected((string)old('selected_course_id',$user->selected_course_id)===(string)$course->id)>{{ $course->title }}</option>@endforeach</select>@endif</div>
+<div class="field"><label for="profile-course">Course selection</label>@if($user->learning_access_paid)<input type="hidden" name="selected_course_id" value="{{ $user->selected_course_id }}"><input id="profile-course" value="{{ $courses->firstWhere('id',$user->selected_course_id)?->title??'Assigned course' }}" disabled><small>Contact your administrator to change this course.</small>@else<select id="profile-course" name="selected_course_id" required><option value="">Choose a course</option>@foreach($courses as $course)<option value="{{ $course->id }}" @selected((string)old('selected_course_id',$user->selected_course_id)===(string)$course->id)>{{ $course->title }}</option>@endforeach</select>@endif</div>
 <div class="field"><label for="profile-gender">Gender</label><select id="profile-gender" name="gender" required><option value="">Select</option>@foreach(['Female','Male','Other','Prefer not to say'] as $gender)<option @selected(old('gender',$user->gender)===$gender)>{{ $gender }}</option>@endforeach</select></div>
 </div></section>
 <section class="tab-panel" role="tabpanel" id="profile-panel-background" aria-labelledby="profile-tab-background" hidden>
@@ -47,8 +49,9 @@
 <div class="field"><label for="profile-objective">Transformation objective</label><textarea id="profile-objective" name="transformation_objective">{{ old('transformation_objective',$user->transformation_objective) }}</textarea></div>
 </div></section>
 </div>
-@if($user->profile_complete)<div class="panel learner-enrollment-summary"><h2>Enrollment details</h2><p><strong>Learner number:</strong> {{ $user->learner_no??'Assigned after payment is confirmed' }}</p><p><strong>Enrollment category:</strong> {{ $user->enrollment_category??'Set by your programme cohort' }}</p><p><strong>Enrollment date:</strong> {{ $user->enrollment_date??'Set when payment is confirmed' }}</p></div>@endif
+@if($user->profile_complete)<div class="panel learner-enrollment-summary"><h2>Enrollment details</h2><p><strong>Learner number:</strong> {{ $user->learner_no??'Assigned after payment is confirmed' }}</p><p><strong>Enrollment category:</strong> {{ $user->enrollment_category??'Set by your cohort' }}</p><p><strong>Enrollment date:</strong> {{ $user->enrollment_date??'Set when payment is confirmed' }}</p></div>@endif
 <div class="profile-actions"><button type="submit">Save learner profile</button></div></form>
 @if($user->profile_complete)<p class="notice success">Profile complete. Learning access: {{ $user->learning_access_paid?'Payment confirmed':'Payment required' }}.</p>@endif
 @endif
+</div>
 @endsection

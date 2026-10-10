@@ -1,4 +1,4 @@
-<p>Develop your enterprise idea and track your income and expenses in UGX. These are self-recorded earnings.</p>
+<p class="page-intro">Develop your idea and track income and expenses in UGX. You enter these records yourself.</p>
 
 <div class="toolbar"><span></span><button type="button" data-dialog-open="create-enterprise">Create an enterprise</button></div>
 <div class="tabs" data-tabs>
@@ -19,7 +19,7 @@
     </form>
 </dialog>
 @empty
-<div class="empty">You have not created an enterprise yet. Start with an idea below.</div>
+<div class="empty">You have no enterprises yet. Create one to get started.</div>
 @endforelse
 
 <dialog class="form-dialog" id="create-enterprise" aria-labelledby="create-enterprise-title">
@@ -75,19 +75,19 @@
         <option value="{{ $value }}" @selected($earnings['filters']['period']===$value)>{{ $label }}</option>
         @endforeach
     </select></div>
-    <p class="muted filter-help">For a custom date range, select Custom date range and enter both dates. Both boundary dates are included.</p>
+    <p class="muted filter-help">For a custom range, choose Custom date range and enter both dates. Both dates are included.</p>
     @foreach(['start_date'=>'From','end_date'=>'To'] as $field=>$label)
     <div class="field"><label for="earnings-{{ $field }}">{{ $label }}</label><input id="earnings-{{ $field }}" type="date" name="{{ $field }}" value="{{ $earnings['filters'][$field] }}"></div>
     @endforeach
-    <div class="field"><label for="earnings-search">Search transaction descriptions</label><input id="earnings-search" name="q" maxlength="255" value="{{ $earnings['filters']['q'] }}"></div>
-    <div class="filter-actions"><button><i class="fas fa-search" aria-hidden="true"></i> Apply filters</button> <a href="/portal/enterprise">Reset filters</a></div>
+    <div class="field"><label for="earnings-search">Search descriptions</label><input id="earnings-search" name="q" maxlength="255" value="{{ $earnings['filters']['q'] }}"></div>
+    <div class="filter-actions"><button><i class="fas fa-search" aria-hidden="true"></i> Apply filters</button> <a href="/portal/enterprise">Reset</a></div>
 </form>
 <div class="stats">
     <div class="stat"><strong>{{ number_format($earnings['income'],2) }}</strong><span>Income · UGX</span></div>
     <div class="stat"><strong>{{ number_format($earnings['expenses'],2) }}</strong><span>Expenses · UGX</span></div>
     <div class="stat"><strong>{{ number_format($earnings['net'],2) }}</strong><span>Net income · UGX</span></div>
 </div>
-<p class="muted">Totals reflect the selected enterprise and period. Description search filters the history only.</p>
+<p class="muted">Totals follow the enterprise and period you pick. Search only filters the history.</p>
 
 <h2>Transaction history</h2>
 <div class="panel table-wrap"><table>
@@ -96,7 +96,7 @@
     @forelse($earnings['transactions'] as $transaction)
     <tr><td>{{ $transaction->occurred_on }}</td><td>{{ collect($data['enterprises'])->firstWhere('id',$transaction->enterprise_id)?->title }}</td><td>{{ $transaction->description }}</td><td>{{ ucfirst($transaction->type) }}</td><td>{{ number_format($transaction->amount,2) }}</td></tr>
     @empty
-    <tr><td colspan="5">No transactions match your filters.</td></tr>
+    <tr><td colspan="5">No transactions match these filters.</td></tr>
     @endforelse
     </tbody>
 </table>@include('partials.pagination',['rows'=>$earnings['transactions']])</div>

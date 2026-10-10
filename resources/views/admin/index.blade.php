@@ -1,11 +1,12 @@
 @extends('layout')
 @section('content')
+<div class="page-wrap">
 <span class="eyebrow"><i class="fas fa-folder-open" aria-hidden="true"></i> Content management</span>
-<h1>{{ $meta['title'] }}</h1>
+<h1 class="page-title">{{ $meta['title'] }}</h1>
 @include('partials.platform-stats')
 <div class="toolbar">
     <form class="filter-form {{ $statusOptions?'with-status':'' }}" method="get">
-        <div class="field search-field"><label for="cms-search">Search records</label><input id="cms-search" type="search" name="q" maxlength="255" placeholder="Search records" value="{{ $filters['q'] }}"></div>
+        <div class="field search-field"><label for="cms-search">Search records</label><input id="cms-search" type="search" name="q" maxlength="255" placeholder="Search" value="{{ $filters['q'] }}"></div>
         @if($statusOptions)<div class="field"><label for="cms-status">Status</label><select id="cms-status" name="status"><option value="all">All statuses</option>@foreach($statusOptions as $status)<option value="{{ $status }}" @selected($filters['status']===$status)>{{ ucfirst($status) }}</option>@endforeach</select></div>@endif
         <div class="field"><label for="cms-period">Period</label><select id="cms-period" name="period">@foreach(['all'=>'All time','week'=>'This week','month'=>'This month','year'=>'This year','custom'=>'Custom range'] as $value=>$label)<option value="{{ $value }}" @selected($filters['period']===$value)>{{ $label }}</option>@endforeach</select></div>
         <div class="field"><label for="cms-start">From</label><input id="cms-start" type="date" name="start_date" value="{{ $filters['start_date'] }}"></div>
@@ -29,7 +30,7 @@
             </div></td>
         </tr>
     @empty
-        <tr><td colspan="4">No records yet.</td></tr>
+        <tr><td colspan="4">Nothing here yet. Add your first record.</td></tr>
     @endforelse
     </tbody>
 </table>@include('partials.pagination',['rows'=>$rows])</div>
@@ -56,4 +57,5 @@
     </dialog>
 @endforeach
 @if($errors->any() && old('_modal_id'))<div data-reopen-dialog="{{ old('_modal_id') }}" hidden></div>@endif
+</div>
 @endsection

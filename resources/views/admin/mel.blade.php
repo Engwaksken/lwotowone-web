@@ -1,9 +1,10 @@
 @extends('layout')
 @section('title','MEL reports | Lwotowone')
 @section('content')
+<div class="page-wrap">
 <span class="eyebrow">Monitoring, evaluation and learning</span>
-<h1>MEL reports</h1>
-<p class="mel-intro">A snapshot of learner reach, inclusion, employment and programme indicators. Use the tabs to focus on the report you need.</p>
+<h1 class="page-title">MEL reports</h1>
+<p class="page-intro">A snapshot of reach, inclusion and employment. Use the tabs to open a report.</p>
 <div class="stats mel-stats">
     @foreach($counts as $label=>$value)
         <div class="stat" data-stat-index="{{ $loop->index }}"><span class="stat-icon"><i class="fas {{ str_contains(strtolower($label),'learner')?'fa-users':(str_contains(strtolower($label),'refugee')?'fa-globe-africa':(str_contains(strtolower($label),'pwd')?'fa-universal-access':(str_contains(strtolower($label),'school')?'fa-school':(str_contains(strtolower($label),'finance')||str_contains(strtolower($label),'revenue')?'fa-coins':(str_contains(strtolower($label),'partner')?'fa-handshake':(str_contains(strtolower($label),'work')||str_contains(strtolower($label),'employ')?'fa-briefcase':'fa-chart-line')))))) }}" aria-hidden="true"></i></span><strong>{{ $value }}</strong><span>{{ $label }}</span></div>
@@ -27,9 +28,9 @@
         @endphp
         <div class="mel-chart-grid">
             <section class="mel-chart"><h2>Learner gender distribution</h2><p>Profile data recorded for enrolled learners.</p><div class="mel-pie-layout"><div class="mel-pie" role="img" aria-label="Learner gender distribution chart" data-total="{{ $genderTotal }} learners" style="--pie-gradient:conic-gradient({{ $pieGradient }})"></div><ul class="mel-legend">@forelse($genderChart as $i=>$slice)<li><i style="--legend-color:{{ $pieColors[$i%count($pieColors)] }}"></i>{{ $slice['label'] }} <strong>{{ $slice['value'] }}</strong></li>@empty<li>No learner profile data yet.</li>@endforelse</ul></div></section>
-            <section class="mel-chart"><h2>Participation and inclusion</h2><p>Selected measures from learner profiles.</p><div class="mel-bar-list">@foreach($inclusionChart as $item)<div class="mel-bar-row"><span>{{ $item['label'] }}</span><div class="mel-bar-track" role="img" aria-label="{{ $item['label'] }}: {{ $item['value'] }}"><div class="mel-bar-fill" style="width:{{ min(100,round($item['value']*100/$maxInclusion)) }}%"></div></div><strong>{{ $item['value'] }}</strong></div>@endforeach</div></section>
+            <section class="mel-chart"><h2>Participation and inclusion</h2><p>Key measures from learner profiles.</p><div class="mel-bar-list">@foreach($inclusionChart as $item)<div class="mel-bar-row"><span>{{ $item['label'] }}</span><div class="mel-bar-track" role="img" aria-label="{{ $item['label'] }}: {{ $item['value'] }}"><div class="mel-bar-fill" style="width:{{ min(100,round($item['value']*100/$maxInclusion)) }}%"></div></div><strong>{{ $item['value'] }}</strong></div>@endforeach</div></section>
         </div>
-        <section class="panel mel-report-note"><h2>Programme reporting</h2><p>Use Learner indicators for profile and outcome records, or Programme records for disaggregated teacher, school, finance, partnership and revenue data.</p><a class="button small" href="/admin/enrollment">Open enrollment management</a></section>
+        <section class="panel mel-report-note"><h2>Programme reporting</h2><p>Use Learner indicators for profile and outcome data. Use Programme records for teacher, school, finance, partnership and revenue data.</p><a class="button small" href="/admin/enrollment">Go to enrollment</a></section>
     </section>
     <section class="tab-panel" role="tabpanel" id="mel-panel-learners" aria-labelledby="mel-tab-learners" hidden>
         <section class="panel"><div class="mel-panel-heading"><div><h2>Learner indicators</h2><p>Latest learner profile and outcomes data.</p></div><span class="tag">{{ count($learners) }} records shown</span></div><div class="table-wrap"><table><thead><tr><th>Learner number</th><th>Name</th><th>Gender</th><th>Age</th><th>Location</th><th>Refugee</th><th>PWD</th><th>Education</th><th>Enrolled</th><th>Employment</th><th>After-work status</th><th>Verified outcomes</th></tr></thead><tbody>
@@ -43,11 +44,12 @@
         @foreach($categories as $key=>$meta)
             <section class="tab-panel" role="tabpanel" id="data-panel-{{ $key }}" aria-labelledby="data-tab-{{ $key }}" @if(!$loop->first)hidden @endif>
                 <section class="panel"><div class="mel-panel-heading"><div><h2>{{ $meta[0] }}</h2><p>Recorded indicator data for reporting.</p></div><span class="tag">{{ $records->get($key,collect())->count() }} entries</span></div><div class="table-wrap"><table><thead><tr>@foreach(array_slice($meta,1) as [$field,$label])<th>{{ $label }}</th>@endforeach<th>Recorded</th></tr></thead><tbody>
-                @forelse($records->get($key,collect()) as $record)@php $values=(array)json_decode($record->data,true); @endphp<tr>@foreach(array_slice($meta,1) as [$field])<td>{{ $values[$field]??'—' }}</td>@endforeach<td>{{ \Illuminate\Support\Carbon::parse($record->created_at)->format('d M Y') }}</td></tr>@empty<tr><td colspan="{{ count($meta)+1 }}">No {{ strtolower($meta[0]) }} indicator records have been added yet.</td></tr>@endforelse
+                @forelse($records->get($key,collect()) as $record)@php $values=(array)json_decode($record->data,true); @endphp<tr>@foreach(array_slice($meta,1) as [$field])<td>{{ $values[$field]??'—' }}</td>@endforeach<td>{{ \Illuminate\Support\Carbon::parse($record->created_at)->format('d M Y') }}</td></tr>@empty<tr><td colspan="{{ count($meta)+1 }}">No {{ strtolower($meta[0]) }} records yet.</td></tr>@endforelse
                 </tbody></table></div></section>
             </section>
         @endforeach
         </div>
     </section>
+</div>
 </div>
 @endsection

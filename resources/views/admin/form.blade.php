@@ -1,2 +1,11 @@
-@extends('layout') @section('content')<a href="/admin/{{ $module }}">Back to {{ $meta['title'] }}</a><h1>{{ $record?'Edit':'Create' }} record</h1><form class="panel" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}{{ $record?'/'.$record->id:'' }}">@csrf @if($record)@method('PUT')@endif
-@include('admin.fields',['formId'=>'record'])<button type="submit">Save record</button></form>@endsection
+@extends('layout')
+@section('content')
+<div class="page-wrap">
+    <a href="/admin/{{ $module }}">Back to {{ $meta['title'] }}</a>
+    <h1 class="page-title">{{ $record?'Edit':'Create' }} record</h1>
+    <form class="panel" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}{{ $record?'/'.$record->id:'' }}">@csrf @if($record)@method('PUT')@endif
+        @include('admin.fields',['formId'=>'record'])
+        <button type="submit">Save record</button>
+    </form>
+</div>
+@endsection

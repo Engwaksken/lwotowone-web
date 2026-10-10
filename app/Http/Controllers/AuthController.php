@@ -9,7 +9,8 @@ class AuthController extends Controller {
  public function form(){return view('auth.login');}
  public function registerForm(){return view('auth.register');}
  public function register(Request $r){
-  $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>'nullable|string|max:40','district'=>'nullable|string|max:100','consent'=>'accepted']);unset($d['consent'],$d['password_confirmation']);
+     $phone=$r->is('api/*')?'nullable':'required';
+   $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>$phone.'|string|max:40','district'=>'nullable|string|max:100','consent'=>'accepted']);unset($d['consent'],$d['password_confirmation']);
   $u=User::create($d+['role'=>'participant','status'=>'active']);
   if($r->is('api/*'))return response()->json(['user'=>$u,'token'=>$u->createToken('mobile',['*'],now()->addDays(30))->plainTextToken],201);
   Auth::login($u);$r->session()->regenerate();return redirect('/dashboard');

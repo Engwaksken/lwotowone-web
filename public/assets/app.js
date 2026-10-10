@@ -317,6 +317,7 @@ if(helpChat){
     const closeChat=()=>{panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();};
     toggle.addEventListener('click',()=>panel.hidden?openChat():closeChat());
     close.addEventListener('click',closeChat);
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidden)closeChat();});
     helpChat.querySelector('[data-chat-form]').addEventListener('submit',async event=>{
         event.preventDefault();const question=input.value.trim();if(!question)return;
         const userBubble=document.createElement('p');userBubble.className='chat-question';userBubble.textContent=question;messages.append(userBubble);

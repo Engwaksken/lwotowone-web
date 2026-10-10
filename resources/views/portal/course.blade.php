@@ -1,12 +1,13 @@
 @extends('layout')
 @section('title',$course->title.' | My learning')
 @section('content')
+<div class="page-wrap">
 <a href="/portal/learn">Back to my learning</a>
 <span class="eyebrow">Course workspace</span>
-<h1>{{ $course->title }}</h1>
+<h1 class="page-title">{{ $course->title }}</h1>
 <p class="course-summary">{{ $course->summary }}</p>
 @php $courseAccess=collect($data['course_access'])->firstWhere('course_id',$course->id); @endphp
-@if(!$courseAccess['allowed'])<div class="notice error">Lessons and resources are locked. Complete the prerequisite course if one is configured, and confirm payment when your 12-hour trial ends. <a href="/portal/payment">View payment instructions</a>.</div>@elseif(!$courseAccess['paid']&&$courseAccess['trial_expires_at'])<div class="notice">Trial access expires {{ $courseAccess['trial_expires_at'] }}. Lessons unlock in order as you finish each one.</div>@endif
+@if(!$courseAccess['allowed'])<div class="notice error">Lessons and resources are locked. Finish the prerequisite course if there is one, and confirm payment when your 12-hour trial ends. <a href="/portal/payment">View payment instructions</a>.</div>@elseif(!$courseAccess['paid']&&$courseAccess['trial_expires_at'])<div class="notice">Trial access expires {{ $courseAccess['trial_expires_at'] }}. Lessons unlock in order as you finish each one.</div>@endif
 @include('portal.progress',['progressCourseId'=>$course->id])
 @php
     $courseLessons=collect($data['lessons'])->where('course_id',$course->id)->sortBy('sort_order');
@@ -17,7 +18,7 @@
     <div class="tab-list" role="tablist" aria-label="Course content">
         <button type="button" role="tab" id="tab-course-lessons" aria-controls="panel-course-lessons" aria-selected="true">Lessons <span class="tab-count">{{ $courseLessons->count() }}</span></button>
         <button type="button" role="tab" id="tab-course-resources" aria-controls="panel-course-resources" aria-selected="false" tabindex="-1">Resources <span class="tab-count">{{ $courseResources->count() }}</span></button>
-        <button type="button" role="tab" id="tab-course-assignments" aria-controls="panel-course-assignments" aria-selected="false" tabindex="-1">Practical assignments <span class="tab-count">{{ $courseAssignments->count() }}</span></button>
+        <button type="button" role="tab" id="tab-course-assignments" aria-controls="panel-course-assignments" aria-selected="false" tabindex="-1">Assignments <span class="tab-count">{{ $courseAssignments->count() }}</span></button>
     </div>
     <section class="tab-panel" role="tabpanel" id="panel-course-lessons" aria-labelledby="tab-course-lessons">
         @forelse($courseLessons as $lesson)
@@ -26,7 +27,7 @@
             @php $completed=collect($data['lesson_progress'])->contains('lesson_id',$lesson->id); @endphp
             <details class="course-item" id="lesson-{{ $lesson->id }}">
                 <summary><span class="course-item-number">{{ str_pad($lesson->position,2,'0',STR_PAD_LEFT) }}</span><span>{{ $lesson->title }}</span><span class="tag">{{ $completed?'Completed':'Lesson' }}</span></summary>
-                @if($lesson->locked)<p><i class="fas fa-lock" aria-hidden="true"></i> Locked — complete preceding lessons and confirm payment if your trial has ended.</p>@else
+                @if($lesson->locked)<p><i class="fas fa-lock" aria-hidden="true"></i> Locked. Finish the earlier lessons and confirm payment if your trial has ended.</p>@else
                 <div class="prose course-item-content">{{ $lesson->body }}</div>
                 @if($lesson->video_url)
                     @php
@@ -41,12 +42,12 @@
                     @endphp
                     @if($embedUrl)<div class="lesson-video"><iframe src="{{ $embedUrl }}" title="{{ $lesson->title }} video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
                     @elseif($directVideo)<div class="lesson-video"><video controls controlslist="nodownload noplaybackrate" disablepictureinpicture playsinline preload="metadata"><source src="{{ $lesson->video_url }}">Your browser cannot play this video.</video></div>
-                    @else<p class="muted">This video source cannot be played in the course viewer. Please contact your instructor.</p>@endif
+                    @else<p class="muted">This video can't play here. Contact your instructor.</p>@endif
                 @endif
-                @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">Mark lesson complete</button></form>@endif
+                @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">Mark complete</button></form>@endif
                 @endif
             </details>
-        @empty<p class="muted">Lessons will appear here when they are published.</p>
+        @empty<p class="muted">Lessons will appear here once they are published.</p>
         @endforelse
     </section>
     <section class="tab-panel" role="tabpanel" id="panel-course-resources" aria-labelledby="tab-course-resources" hidden>
@@ -58,9 +59,9 @@
                         @elseif($resource->media_type==='pdf')<div class="resource-document-viewer"><iframe src="{{ $resource->viewer_url }}#toolbar=0&navpanes=0" title="{{ $resource->title }} document" loading="lazy"></iframe></div>
                         @elseif($resource->media_type==='image')<img class="resource-image-viewer" src="{{ $resource->viewer_url }}" alt="{{ $resource->title }}">
                         @elseif($resource->media_type==='text')<div class="resource-document-viewer"><iframe src="{{ $resource->viewer_url }}" title="{{ $resource->title }} text" loading="lazy"></iframe></div>@endif
-                    @else<p class="muted">{{ $resource->locked?'Locked — complete the preceding lessons or confirm payment.':'This resource has no attached file yet.' }}</p>@endif
+                    @else<p class="muted">{{ $resource->locked?'Locked. Finish earlier lessons or confirm payment.':'No file attached yet.' }}</p>@endif
                 </article>
-            @empty<p class="muted">There are no course resources yet.</p>
+            @empty<p class="muted">No resources yet.</p>
             @endforelse
         </div>
     </section>
@@ -81,13 +82,14 @@
                         <input type="hidden" name="assignment_id" value="{{ $assignment->id }}">
                         <div class="field"><label for="assignment-body-{{ $assignment->id }}">Your practical work</label><textarea id="assignment-body-{{ $assignment->id }}" name="body" required></textarea></div>
                         <div class="field"><label for="assignment-file-{{ $assignment->id }}">Evidence file (optional, up to 10 MB)</label><input id="assignment-file-{{ $assignment->id }}" type="file" name="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp"></div>
-                        <button type="submit">Submit practical work</button>
+                        <button type="submit">Submit work</button>
                     </form>
                 @endif
                 @endif
             </details>
-        @empty<p class="muted">There are no practical assignments for this course yet.</p>
+        @empty<p class="muted">No assignments yet.</p>
         @endforelse
     </section>
+</div>
 </div>
 @endsection

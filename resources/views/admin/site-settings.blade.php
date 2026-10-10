@@ -1,10 +1,10 @@
 @extends('layout')
 @section('title',auth()->user()->role==='admin'?'Website appearance settings':'Payment settings')
 @section('content')
-<div class="settings-page">
+<div class="page-wrap">
     <span class="eyebrow">{{ auth()->user()->role==='admin'?'Your public identity':'Learner payment options' }}</span>
-    <h1>{{ auth()->user()->role==='admin'?'Website appearance':'Payment settings' }}</h1>
-    <p class="settings-intro">Manage the platform’s visual identity and payment options in one place.</p>
+    <h1 class="page-title">{{ auth()->user()->role==='admin'?'Website appearance':'Payment settings' }}</h1>
+    <p class="page-intro">Manage how the site looks and how learners pay.</p>
     <div class="tabs settings-tabs" data-tabs><div class="tab-list" role="tablist" aria-label="Site settings">
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-appearance" aria-controls="settings-panel-appearance" aria-selected="true">Website appearance</button>@endif
         <button type="button" role="tab" id="settings-tab-payments" aria-controls="settings-panel-payments" aria-selected="{{ auth()->user()->role==='admin'?'false':'true' }}" @if(auth()->user()->role==='admin')tabindex="-1"@endif>Payment gateway settings</button>
@@ -14,7 +14,7 @@
     <section class="tab-panel" role="tabpanel" id="settings-panel-appearance" aria-labelledby="settings-tab-appearance">
     <form class="panel settings-form" method="post" action="/admin/site-settings" enctype="multipart/form-data">
         @csrf @method('PUT')
-        <section class="settings-group"><h2>Colours</h2><p>Choose accessible brand colours for buttons, links and highlights.</p>
+        <section class="settings-group"><h2>Colours</h2><p>Pick accessible colours for buttons, links and highlights.</p>
             <div class="settings-fields">
                 <div class="field"><label for="primary_color">Primary brand colour</label><input id="primary_color" type="color" name="primary_color" value="{{ old('primary_color',$settings['primary_color']??'#175742') }}" required><small>Used for primary actions and links.</small></div>
                 <div class="field"><label for="accent_color">Accent colour</label><input id="accent_color" type="color" name="accent_color" value="{{ old('accent_color',$settings['accent_color']??'#dfb452') }}" required><small>Used for focus rings and supporting details.</small></div>
@@ -23,11 +23,11 @@
         <section class="settings-group"><h2>Typography</h2><p>Choose a clear typeface and comfortable base text size.</p>
             <div class="settings-fields">
                 <div class="field"><label for="font_family">Font family</label><input id="font_family" name="font_family" list="font-families" value="{{ old('font_family',$settings['font_family']??'Arial') }}" maxlength="120" required><datalist id="font-families">@foreach(['Arial','system','Georgia','Atkinson Hyperlegible','Inter','Roboto','Open Sans','Lato','Montserrat'] as $family)<option value="{{ $family }}">@endforeach</datalist><small>Choose a suggestion or enter any font family name.</small></div>
-                <div class="field"><label for="font_url">Custom font file URL (optional)</label><input id="font_url" name="font_url" type="url" value="{{ old('font_url',$settings['font_url']??'') }}" placeholder="https://example.com/fonts/my-font.woff2"><small>Direct HTTPS WOFF/WOFF2 font URL, not a stylesheet URL. Leave blank for fonts installed on the visitor’s device.</small></div>
+                <div class="field"><label for="font_url">Custom font file URL (optional)</label><input id="font_url" name="font_url" type="url" value="{{ old('font_url',$settings['font_url']??'') }}" placeholder="https://example.com/fonts/my-font.woff2"><small>Direct HTTPS link to a WOFF or WOFF2 file, not a stylesheet. Leave blank to use fonts on the visitor’s device.</small></div>
                 <div class="field"><label for="font_size">Base text size</label><select id="font_size" name="font_size" required>@foreach([14,15,16,17,18,19,20] as $size)<option value="{{ $size }}" @selected((int)old('font_size',$settings['font_size']??16)===$size)>{{ $size }} px</option>@endforeach</select></div>
             </div>
         </section>
-        <section class="settings-group"><h2>Logo and favicon</h2><p>Upload a clear logo and a square browser icon. Logos accept PNG, JPG or WebP (up to 4 MB); favicons accept PNG or ICO (up to 1 MB).</p>
+        <section class="settings-group"><h2>Logo and favicon</h2><p>Upload a clear logo and a square icon. Logos: PNG, JPG or WebP, up to 4 MB. Favicons: PNG or ICO, up to 1 MB.</p>
             <div class="settings-fields">
                 <div class="field"><label for="logo">Site logo <span class="optional">(optional)</span></label><input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp">@if(!empty($settings['site_logo']))<img class="settings-preview-logo" src="{{ $settings['site_logo'] }}" alt="Current site logo">@endif</div>
                 <div class="field"><label for="favicon">Favicon <span class="optional">(optional)</span></label><input id="favicon" type="file" name="favicon" accept="image/png,image/x-icon">@if(!empty($settings['site_favicon']))<img class="settings-preview-icon" src="{{ $settings['site_favicon'] }}" alt="Current site favicon">@endif</div>
@@ -37,12 +37,12 @@
     </form>
     </section>
     @endif
-    <section class="tab-panel" role="tabpanel" id="settings-panel-payments" aria-labelledby="settings-tab-payments" @if(auth()->user()->role==='admin')hidden @endif><section class="panel payment-settings" id="payment-methods"><span class="eyebrow">Learner payment options</span><h2>Payment gateways and methods</h2><p>Add verified payment destinations and clear learner instructions.</p>
+    <section class="tab-panel" role="tabpanel" id="settings-panel-payments" aria-labelledby="settings-tab-payments" @if(auth()->user()->role==='admin')hidden @endif><section class="panel payment-settings" id="payment-methods"><h2>Payment gateways and methods</h2><p>Add verified payment destinations and clear learner instructions.</p>
         <form method="post" action="/admin/site-settings/payment-gateways" class="grid" data-payment-gateway>@csrf
             <div class="field"><label for="gateway-name">Display name</label><input id="gateway-name" name="name" required></div>
             <div class="field"><label for="gateway-type">Payment type</label><select id="gateway-type" name="provider_type" required>@foreach(array_keys(config('payments.types')) as $type)<option value="{{ $type }}" @selected(old('provider_type','IOTEC')===$type)>{{ $type }}</option>@endforeach</select></div>
             @php $gatewayFields=collect(config('payments.types'))->flatMap(fn($fields)=>$fields)->all(); @endphp
-            <div class="field"><label><input type="checkbox" name="configure_api" value="1" @checked(old('configure_api'))> Configure provider API credentials</label><small>Credentials are encrypted. Saving them does not enable automatic payment processing; payments still require manager confirmation.</small></div>
+            <div class="field"><label><input type="checkbox" name="configure_api" value="1" @checked(old('configure_api'))> Configure provider API credentials</label><small>Saved credentials are encrypted. This does not turn on automatic payments. Payments still need manager confirmation.</small></div>
             <div class="field" data-gateway-api-environment><label for="gateway-environment">API environment</label><select id="gateway-environment" name="api_environment"><option value="sandbox">Sandbox / testing</option><option value="production" @selected(old('api_environment')==='production')>Production</option></select></div>
             @foreach($gatewayFields as $key=>$field)<div class="field" data-gateway-field="{{ $key }}"><label for="gateway-{{ $key }}">{{ $field['label'] }}</label><input id="gateway-{{ $key }}" name="{{ $key }}" type="{{ ($field['secret']??false)?'password':($field['type']??'text') }}" value="{{ ($field['secret']??false)?'':old($key) }}" data-secret-label="{{ $field['label'] }}" autocomplete="{{ ($field['secret']??false)?'new-password':'off' }}" maxlength="4096"></div>@endforeach
             <div class="field"><label for="gateway-currency">Currency</label><select id="gateway-currency" name="currency" required>@foreach(['UGX','USD','EUR','GBP','KES'] as $currency)<option value="{{ $currency }}">{{ $currency }}</option>@endforeach</select></div>
@@ -52,15 +52,15 @@
         </form>
         <script type="application/json" id="payment-type-fields">{!! json_encode(config('payments.types'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
         <div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Provider</th><th>Account or merchant</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-        @forelse($gateways as $gateway)<tr><td>{{ $gateway->name }}</td><td>{{ $gateway->provider_type }}</td><td>{{ $gateway->provider }}</td><td>{{ $gateway->account_number?:$gateway->merchant_code }}</td><td>{{ $gateway->amount?number_format($gateway->amount,2).' '.$gateway->currency:'—' }}</td><td>{{ $gateway->active?'Active':'Hidden' }}</td><td><form method="post" action="/admin/site-settings/payment-gateways/{{ $gateway->id }}" data-confirm="Delete this payment option?">@csrf @method('DELETE')<button class="danger small icon-action" type="submit" title="Delete payment option" aria-label="Delete payment option"><i class="fas fa-trash-alt" aria-hidden="true"></i></button></form></td></tr>@empty<tr><td colspan="7">No payment destinations configured.</td></tr>@endforelse
+        @forelse($gateways as $gateway)<tr><td>{{ $gateway->name }}</td><td>{{ $gateway->provider_type }}</td><td>{{ $gateway->provider }}</td><td>{{ $gateway->account_number?:$gateway->merchant_code }}</td><td>{{ $gateway->amount?number_format($gateway->amount,2).' '.$gateway->currency:'—' }}</td><td>{{ $gateway->active?'Active':'Hidden' }}</td><td><form method="post" action="/admin/site-settings/payment-gateways/{{ $gateway->id }}" data-confirm="Delete this payment option?">@csrf @method('DELETE')<button class="danger small icon-action" type="submit" title="Delete payment option" aria-label="Delete payment option"><i class="fas fa-trash-alt" aria-hidden="true"></i></button></form></td></tr>@empty<tr><td colspan="7">No payment options yet. Add one above.</td></tr>@endforelse
         </tbody></table></div>
-    @foreach($gateways as $gateway)<details class="panel"><summary>{{ $gateway->name }} — saved destination details</summary>@include('partials.payment-details')<p>API credentials: {{ ($gateway->credentials??null)?'Configured (encrypted)':'Not configured' }}</p></details>@endforeach
+    @foreach($gateways as $gateway)<details class="panel"><summary>{{ $gateway->name }} — details</summary>@include('partials.payment-details')<p>API credentials: {{ ($gateway->credentials??null)?'Configured (encrypted)':'Not configured' }}</p></details>@endforeach
     </section></section>
     @if(auth()->user()->role==='admin')
     <section class="tab-panel" role="tabpanel" id="settings-panel-ai" aria-labelledby="settings-tab-ai" hidden>
         <form class="panel settings-form ai-settings-form" data-ai-settings method="post" action="/admin/site-settings/ai">@csrf @method('PUT')
-            <span class="eyebrow">Chatbot and mentor matching</span><h2>AI API connection</h2>
-            <p>Select a provider to fill in its API URL and model choices, then add your API key. You can also enter a custom model or HTTPS endpoint. The key is encrypted at rest and never shown after saving. Chat messages and learning goals may be sent to this provider for responses and recommendations.</p>
+            <h2>AI API connection</h2>
+            <p>Pick a provider to fill in its URL and models, then add your API key. You can also enter a custom model or HTTPS endpoint. The key is encrypted and never shown again after saving. Chat messages and learning goals may be sent to this provider.</p>
             @php
                 $aiProviders=config('ai.providers');
                 $selectedProvider=old('ai_provider',$settings['ai_provider']??'openai');
@@ -76,7 +76,7 @@
             @if($aiConfigured)<div class="field"><label><input type="checkbox" name="clear_api_key" value="1"> Remove saved API key and use built-in chat answers</label></div>@endif
             <div class="settings-save ai-settings-actions"><button class="secondary" type="button" data-ai-test><i class="fas fa-plug" aria-hidden="true"></i> Test connection</button><button type="submit"><i class="fas fa-lock" aria-hidden="true"></i> Save AI settings</button></div>
             <p class="ai-test-result" data-ai-test-result role="status" aria-live="polite"></p>
-            <small>Testing sends a short request to the selected model and may use a small amount of your provider quota. It does not save changes.</small>
+            <small>Testing sends a short request to the selected model and may use a little of your provider quota. It does not save changes.</small>
         </form>
         <script type="application/json" id="ai-provider-presets">{!! json_encode($aiProviders, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>
     </section>

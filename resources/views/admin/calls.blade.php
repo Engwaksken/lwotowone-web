@@ -1,15 +1,48 @@
 @extends('layout')
 @section('content')
-<h1>M&E application calls</h1>
-<p>Create a course or opportunity call, share its link/QR code, review applications, and approve learners into a 12-hour course trial.</p>
-<ol class="panel"><li>Create/publish a course and its ordered modules, lessons and resources.</li><li>Publish a call and share its application link or QR code.</li><li>Learners sign up, complete their profile, and apply.</li><li>M&E reviews and approves; the 12-hour trial starts at enrollment.</li><li>Lessons unlock sequentially. At trial expiry, content locks until course payment is confirmed.</li><li>The learner completes every lesson and passes practical assessments.</li><li>The assigned instructor recommends completion; the learner views/downloads the designed PDF certificate.</li></ol>
-<form class="panel grid" method="post" action="/admin/calls">@csrf
-<div class="field"><label>Call title</label><input name="title" required></div><div class="field"><label>Course (optional for opportunity-only calls)</label><select name="course_id"><option value="">No course</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></div>
-<div class="field"><label>Opportunity (optional for course-only calls)</label><select name="opportunity_id"><option value="">No opportunity</option>@foreach($opportunities as $opportunity)<option value="{{ $opportunity->id }}">{{ $opportunity->title }}</option>@endforeach</select></div>
-<div class="field"><label>Description and eligibility</label><textarea name="description" required></textarea></div><div class="field"><label>Opens at</label><input type="datetime-local" name="opens_at" required></div><div class="field"><label>Closes at</label><input type="datetime-local" name="closes_at" required></div><div class="field"><label>Status</label><select name="status"><option>draft</option><option>published</option><option>closed</option></select></div><div class="field"><button type="submit">Create call</button></div></form>
-<form class="filter-form panel" method="get"><div class="field"><label>Status</label><select name="status">@foreach(['all','draft','published','closed'] as $value)<option @selected($status===$value)>{{ $value }}</option>@endforeach</select></div><button type="submit">Apply</button></form>
-@foreach($calls as $call)<details class="panel"><summary>{{ $call->title }} · {{ $call->status }}</summary><p>{{ $call->description }}</p><label>Application link<input readonly value="{{ url('/calls/'.$call->token) }}"></label><p><a href="/admin/calls/{{ $call->id }}/qr.svg" download="call-{{ $call->id }}-qr.svg">Download QR code</a></p><img src="/admin/calls/{{ $call->id }}/qr.svg" alt="QR code for {{ $call->title }}" width="180" height="180"><form method="post" action="/admin/calls/{{ $call->id }}">@csrf @method('PUT')<input type="hidden" name="title" value="{{ $call->title }}"><input type="hidden" name="description" value="{{ $call->description }}"><input type="hidden" name="course_id" value="{{ $call->course_id }}"><input type="hidden" name="opportunity_id" value="{{ $call->opportunity_id }}"><div class="grid"><div class="field"><label>Opens at</label><input name="opens_at" type="datetime-local" value="{{ \Carbon\Carbon::parse($call->opens_at)->format('Y-m-d\TH:i') }}" required></div><div class="field"><label>Closes at</label><input name="closes_at" type="datetime-local" value="{{ \Carbon\Carbon::parse($call->closes_at)->format('Y-m-d\TH:i') }}" required></div><div class="field"><label>Status</label><select name="status">@foreach(['draft','published','closed'] as $value)<option @selected($call->status===$value)>{{ $value }}</option>@endforeach</select></div></div><button type="submit">Update call</button></form></details>@endforeach
-@include('partials.pagination',['rows'=>$calls])
-<h2>Application review</h2>@foreach($applications as $application)<details class="panel"><summary>{{ $application->name }} · {{ $application->title }} · {{ $application->status }}</summary><p>{{ $application->email }}</p><p>{{ $application->motivation }}</p>@if($application->status!=='approved')<form method="post" action="/admin/calls/applications/{{ $application->id }}">@csrf @method('PUT')<div class="field"><label>Decision</label><select name="status"><option value="approved">Approve</option><option value="rejected">Reject</option></select></div><div class="field"><label>Feedback</label><textarea name="feedback">{{ $application->feedback }}</textarea></div><button type="submit">Save decision</button></form>@endif</details>@endforeach
-@include('partials.pagination',['rows'=>$applications])
+<div class="page-wrap">
+    <h1 class="page-title">M&amp;E application calls</h1>
+    <p class="page-intro">Create a call, share its link or QR code, then review applications. Approved learners start a 12-hour course trial.</p>
+    <ol class="panel">
+        <li>Create and publish a course with its modules, lessons and resources.</li>
+        <li>Publish a call and share its link or QR code.</li>
+        <li>Learners sign up, complete their profile and apply.</li>
+        <li>M&amp;E reviews and approves. The 12-hour trial starts at enrollment.</li>
+        <li>Lessons unlock in order. When the trial ends, content locks until course payment is confirmed.</li>
+        <li>Learners finish every lesson and pass practical assessments.</li>
+        <li>The assigned instructor recommends completion. Learners then view and download their PDF certificate.</li>
+    </ol>
+    <form class="panel grid" method="post" action="/admin/calls">@csrf
+        <div class="field"><label>Call title</label><input name="title" required></div>
+        <div class="field"><label>Course (optional)</label><select name="course_id"><option value="">No course</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></div>
+        <div class="field"><label>Opportunity (optional)</label><select name="opportunity_id"><option value="">No opportunity</option>@foreach($opportunities as $opportunity)<option value="{{ $opportunity->id }}">{{ $opportunity->title }}</option>@endforeach</select></div>
+        <div class="field"><label>Description and eligibility</label><textarea name="description" required></textarea></div>
+        <div class="field"><label>Opens at</label><input type="datetime-local" name="opens_at" required></div>
+        <div class="field"><label>Closes at</label><input type="datetime-local" name="closes_at" required></div>
+        <div class="field"><label>Status</label><select name="status"><option>draft</option><option>published</option><option>closed</option></select></div>
+        <div class="field"><button type="submit">Create call</button></div>
+    </form>
+    <form class="filter-form panel" method="get"><div class="field"><label>Status</label><select name="status">@foreach(['all','draft','published','closed'] as $value)<option @selected($status===$value)>{{ $value }}</option>@endforeach</select></div><button type="submit">Apply</button></form>
+    @foreach($calls as $call)
+    <details class="panel">
+        <summary>{{ $call->title }} · {{ $call->status }}</summary>
+        <p>{{ $call->description }}</p>
+        <label>Application link<input readonly value="{{ url('/calls/'.$call->token) }}"></label>
+        <p><a href="/admin/calls/{{ $call->id }}/qr.svg" download="call-{{ $call->id }}-qr.svg">Download QR code</a></p>
+        <img src="/admin/calls/{{ $call->id }}/qr.svg" alt="QR code for {{ $call->title }}" width="180" height="180">
+        <form method="post" action="/admin/calls/{{ $call->id }}">@csrf @method('PUT')<input type="hidden" name="title" value="{{ $call->title }}"><input type="hidden" name="description" value="{{ $call->description }}"><input type="hidden" name="course_id" value="{{ $call->course_id }}"><input type="hidden" name="opportunity_id" value="{{ $call->opportunity_id }}"><div class="grid"><div class="field"><label>Opens at</label><input name="opens_at" type="datetime-local" value="{{ \Carbon\Carbon::parse($call->opens_at)->format('Y-m-d\TH:i') }}" required></div><div class="field"><label>Closes at</label><input name="closes_at" type="datetime-local" value="{{ \Carbon\Carbon::parse($call->closes_at)->format('Y-m-d\TH:i') }}" required></div><div class="field"><label>Status</label><select name="status">@foreach(['draft','published','closed'] as $value)<option @selected($call->status===$value)>{{ $value }}</option>@endforeach</select></div></div><button type="submit">Update call</button></form>
+    </details>
+    @endforeach
+    @include('partials.pagination',['rows'=>$calls])
+    <h2>Application review</h2>
+    @foreach($applications as $application)
+    <details class="panel">
+        <summary>{{ $application->name }} · {{ $application->title }} · {{ $application->status }}</summary>
+        <p>{{ $application->email }}</p>
+        <p>{{ $application->motivation }}</p>
+        @if($application->status!=='approved')<form method="post" action="/admin/calls/applications/{{ $application->id }}">@csrf @method('PUT')<div class="field"><label>Decision</label><select name="status"><option value="approved">Approve</option><option value="rejected">Reject</option></select></div><div class="field"><label>Feedback</label><textarea name="feedback">{{ $application->feedback }}</textarea></div><button type="submit">Save decision</button></form>@endif
+    </details>
+    @endforeach
+    @include('partials.pagination',['rows'=>$applications])
+</div>
 @endsection
