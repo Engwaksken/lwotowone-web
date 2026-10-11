@@ -105,8 +105,12 @@
         </section>
     </section>
     <section class="tab-panel" role="tabpanel" id="settings-panel-backups" aria-labelledby="settings-tab-backups" hidden>
-        <div class="grid">
-            <section class="panel" id="backup-settings">
+        <div class="tabs settings-subtabs" data-tabs>
+            <div class="tab-list" role="tablist" aria-label="Backup options">
+                <button type="button" role="tab" id="backup-tab-local" aria-controls="backup-panel-local" aria-selected="true">Local backups</button>
+                <button type="button" role="tab" id="backup-tab-remote" aria-controls="backup-settings" aria-selected="false" tabindex="-1">Remote storage</button>
+            </div>
+            <section class="tab-panel" role="tabpanel" id="backup-settings" aria-labelledby="backup-tab-remote" hidden>
                 <h2>Remote backup destination (S3-compatible)</h2>
                 <p>Configure AWS S3, Cloudflare R2, DigitalOcean Spaces or another S3-compatible service. Credentials are encrypted at rest.</p>
                 <form class="settings-form" method="post" action="/admin/site-settings/backups">
@@ -123,9 +127,9 @@
                     <div class="settings-save"><button type="submit">Save remote destination</button></div>
                 </form>
             </section>
-            <section class="panel">
+            <section class="tab-panel" role="tabpanel" id="backup-panel-local" aria-labelledby="backup-tab-local">
                 <h2>Create a backup</h2>
-                <p>Manual archive includes a database export and application-uploaded files. Local copies are stored privately under storage.</p>
+                <p>Manual archives include a database export and uploaded files. Local copies are private to the server; you can also upload to the configured remote destination.</p>
                 <form method="post" action="/admin/site-settings/backups/run" class="grid">@csrf
                     <div class="field"><label for="backup-destination">Save destination</label><select id="backup-destination" name="destination" required><option value="local">Local storage</option><option value="remote">Remote S3-compatible storage</option><option value="both">Both local and remote</option></select></div>
                     <div class="field"><button type="submit">Create backup now</button></div>
@@ -193,8 +197,10 @@
             ? (old('ai_provider') !== null ? 'ai-settings-dialog' : (old('provider_type') !== null ? 'payment-settings-dialog' : null))
             : null;
         $openSettingsTab = session('open_settings_tab') ?? (old('mail_driver') !== null ? 'email' : ((old('backup_s3_endpoint') !== null || old('destination') !== null) ? 'backups' : null));
+        $openBackupTab = session('open_backup_tab') ?? (old('backup_s3_endpoint') !== null ? 'backup-tab-remote' : null);
     @endphp
     @if($settingsReopen)<div data-reopen-dialog="{{ $settingsReopen }}" hidden></div>@endif
     @if($openSettingsTab)<div data-open-settings-tab="{{ $openSettingsTab }}" hidden></div>@endif
+    @if($openBackupTab)<div data-open-tab-id="{{ $openBackupTab }}" hidden></div>@endif
 </div>
 @endsection

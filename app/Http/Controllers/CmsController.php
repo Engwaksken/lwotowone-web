@@ -169,10 +169,10 @@ class CmsController extends Controller {
    abort_unless($r->user()->role==='admin',403);
    $data=$r->validate(['destination'=>'required|in:local,remote,both']);
    try{$result=app(\App\Services\BackupManager::class)->create($data['destination']);}
-   catch(\Throwable $e){return back()->withErrors(['backup'=>$e->getMessage()])->with('open_settings_tab','backups');}
+   catch(\Throwable $e){return back()->withErrors(['backup'=>$e->getMessage()])->with('open_settings_tab','backups')->with('open_backup_tab',$data['destination']==='local'?'backup-tab-local':'backup-tab-remote');}
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'create-backup','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
    $target=match($data['destination']){'local'=>'locally','remote'=>'remotely','both'=>'locally and remotely'};
-   return redirect('/admin/site-settings#backup-settings')->with('success','Backup created '.$target.': '.$result['name']);
+   return redirect('/admin/site-settings#backup-panel-local')->with('success','Backup created '.$target.': '.$result['name']);
   }
   public function downloadBackup(Request $r,string $filename){
    abort_unless($r->user()->role==='admin'&&preg_match('/^backup-[A-Za-z0-9-]+\.zip$/',$filename),404);
