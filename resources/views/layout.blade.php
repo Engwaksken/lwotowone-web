@@ -167,7 +167,7 @@
     <div class="footer-bottom"><p>© 2026 Lwotowone Enterprises Ltd · Uganda</p></div>
 </footer>
 @endunless
-<script src="{{ asset('assets/app.js') }}?v=20261011-backup-tabs" defer></script>
+<script src="{{ asset('assets/app.js') }}?v=20261011-flash-dismiss" defer></script>
 <x-help-widget />
 </body>
 </html>

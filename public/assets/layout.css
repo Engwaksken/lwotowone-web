@@ -723,3 +723,6 @@ header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
 .enquiry-message{min-width:240px;max-width:420px;white-space:normal}
 .enquiry-message details summary{cursor:pointer;color:var(--green);font-weight:600}
 .enquiry-message details p{min-width:240px;max-width:420px;white-space:pre-wrap}
+.flash-auto-dismiss{opacity:1;transition:opacity .6s ease}
+.flash-auto-dismiss.is-fading{opacity:0}
+@media(prefers-reduced-motion:reduce){.flash-auto-dismiss{transition:none}}

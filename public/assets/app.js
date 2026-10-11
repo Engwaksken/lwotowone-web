@@ -509,3 +509,10 @@ if(pageBulkForm){
     });
     update();
 }
+
+document.querySelectorAll('[data-auto-dismiss]').forEach(message=>{
+    window.setTimeout(()=>{
+        message.classList.add('is-fading');
+        window.setTimeout(()=>message.remove(),600);
+    },5000);
+});
