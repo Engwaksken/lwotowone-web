@@ -82,7 +82,7 @@ class CmsController extends Controller {
    if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
     $d=$r->validate($rules);
     $temporaryPassword=null;
-    if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(24);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
+    if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(8);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
    if($module==='events'&&!$id)$d['registration_token']=(string)\Illuminate\Support\Str::uuid();
    if($formattedContent)$d=array_merge($d,\App\Services\LearningContent::validate($r,$module,$id?$record:null));
    $assignmentIds=[];$leadId=null;

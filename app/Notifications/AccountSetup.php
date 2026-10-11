@@ -5,7 +5,7 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\{DB,URL};
 
 class AccountSetup extends Notification
 {
@@ -27,18 +27,27 @@ class AccountSetup extends Notification
             ['id' => $notifiable->getKey(), 'hash' => sha1($notifiable->email)],
         );
 
-        $mail = (new MailMessage)
-            ->subject('Verify your Lwotowone account')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('Your Lwotowone account has been created. Verify your email address to activate sign-in.');
+        $mail = (new MailMessage)->subject('Verify your Lwotowone account');
 
-        if ($this->temporaryPassword !== null) {
-            $mail->line('Sign-in email: '.$notifiable->email)
-                ->line('Temporary password: '.$this->temporaryPassword)
-                ->line('After signing in, you will be required to choose a new password.');
-        }
+        $logo = DB::table('settings')->where('key', 'site_logo')->value('value');
+        $primary = DB::table('settings')->where('key', 'primary_color')->value('value');
+        $brandName = config('app.name', 'Lwotowone Enterprises Ltd');
 
-        return $mail->action('Verify email address', $verificationUrl)
-            ->line('This verification link expires in 24 hours.');
+        return $mail->view('emails.account-setup', [
+                'name' => $notifiable->name,
+                'email' => $notifiable->email,
+                'temporaryPassword' => $this->temporaryPassword,
+                'verificationUrl' => $verificationUrl,
+                'brandName' => $brandName,
+                'logoUrl' => $logo ? (str_starts_with($logo, 'http') ? $logo : url($logo)) : null,
+                'primaryColor' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $primary) ? $primary : '#175742',
+            ])
+            ->text('emails.account-setup-text', [
+                'name' => $notifiable->name,
+                'email' => $notifiable->email,
+                'temporaryPassword' => $this->temporaryPassword,
+                'verificationUrl' => $verificationUrl,
+                'brandName' => $brandName,
+            ]);
     }
 }
