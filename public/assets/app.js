@@ -316,7 +316,8 @@ document.querySelectorAll('[data-tabs]').forEach(tabs=>{
     tabs.classList.add('tabs-enhanced');
     const hashTarget=document.getElementById(decodeURIComponent(location.hash.slice(1)));
     const hashTab=hashTarget&&tabButtons.find(tab=>document.getElementById(tab.getAttribute('aria-controls'))?.contains(hashTarget));
-    activate(hashTab||tabButtons.find(tab=>tab.getAttribute('aria-selected')==='true')||tabButtons[0]);
+    const requestedTab=document.querySelector('[data-open-settings-tab]')?.dataset.openSettingsTab;
+    activate(document.getElementById(requestedTab?`settings-tab-${requestedTab}`:'')||hashTab||tabButtons.find(tab=>tab.getAttribute('aria-selected')==='true')||tabButtons[0]);
     tablist?.addEventListener('click',event=>{
         const tab=event.target.closest('[role="tab"]');
         if(tab&&tabButtons.includes(tab))activate(tab);

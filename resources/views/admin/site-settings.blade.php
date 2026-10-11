@@ -22,6 +22,7 @@
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-appearance" aria-controls="settings-panel-appearance" aria-selected="true">Website appearance</button>@endif
         <button type="button" role="tab" id="settings-tab-payments" aria-controls="settings-panel-payments" aria-selected="{{ auth()->user()->role==='admin'?'false':'true' }}" @if(auth()->user()->role==='admin')tabindex="-1"@endif>Payment gateway settings</button>
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-ai" aria-controls="settings-panel-ai" aria-selected="false" tabindex="-1">AI API settings</button>@endif
+        @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-email" aria-controls="settings-panel-email" aria-selected="false" tabindex="-1">Email settings</button><button type="button" role="tab" id="settings-tab-backups" aria-controls="settings-panel-backups" aria-selected="false" tabindex="-1">Backups</button>@endif
     </div>
     @if(auth()->user()->role==='admin')
     <section class="tab-panel" role="tabpanel" id="settings-panel-appearance" aria-labelledby="settings-tab-appearance">
@@ -80,6 +81,63 @@
         </section>
     </section>
     @endif
+    @if(auth()->user()->role==='admin')
+    <section class="tab-panel" role="tabpanel" id="settings-panel-email" aria-labelledby="settings-tab-email" hidden>
+        <section class="panel" id="email-settings">
+            <h2>Email delivery</h2>
+            <p>Configure SMTP delivery for verification links, account notifications and platform email. Secrets are encrypted and never shown after saving.</p>
+            <form class="settings-form" method="post" action="/admin/site-settings/email">
+                @csrf @method('PUT')
+                <div class="settings-fields">
+                    <div class="field"><label for="mail-driver">Mail transport</label><select id="mail-driver" name="mail_driver" required><option value="smtp" @selected(old('mail_driver',$settings['mail_driver']??'smtp')==='smtp')>SMTP</option><option value="log" @selected(old('mail_driver',$settings['mail_driver']??'smtp')==='log')>Log only (testing)</option></select></div>
+                    <div class="field"><label for="mail-host">SMTP host</label><input id="mail-host" name="mail_host" value="{{ old('mail_host',$settings['mail_host']??'') }}" placeholder="smtp.example.com" maxlength="255"></div>
+                    <div class="field"><label for="mail-port">SMTP port</label><input id="mail-port" name="mail_port" type="number" min="1" max="65535" value="{{ old('mail_port',$settings['mail_port']??587) }}"></div>
+                    <div class="field"><label for="mail-scheme">Encryption</label><select id="mail-scheme" name="mail_scheme"><option value="smtp" @selected(old('mail_scheme',$settings['mail_scheme']??'smtp')==='smtp')>STARTTLS</option><option value="smtps" @selected(old('mail_scheme',$settings['mail_scheme']??'smtp')==='smtps')>SSL/TLS</option></select></div>
+                    <div class="field"><label for="mail-username">SMTP username</label><input id="mail-username" name="mail_username" value="{{ old('mail_username',$settings['mail_username']??'') }}" autocomplete="off" maxlength="255"></div>
+                    <div class="field"><label for="mail-password">SMTP password {{ !empty($settings['mail_password'])?'(configured; leave blank to keep it)':'' }}</label><input id="mail-password" type="password" name="mail_password" autocomplete="new-password" maxlength="4096" placeholder="{{ !empty($settings['mail_password'])?'Saved securely':'SMTP password' }}"></div>
+                    @if(!empty($settings['mail_password']))<div class="field"><label><input type="checkbox" name="clear_mail_password" value="1"> Clear saved SMTP password</label></div>@endif
+                    <div class="field"><label for="mail-from-address">From email address</label><input id="mail-from-address" type="email" name="mail_from_address" value="{{ old('mail_from_address',$settings['mail_from_address']??config('mail.from.address')) }}" required maxlength="190"></div>
+                    <div class="field"><label for="mail-from-name">From name</label><input id="mail-from-name" name="mail_from_name" value="{{ old('mail_from_name',$settings['mail_from_name']??config('mail.from.name')) }}" required maxlength="190"></div>
+                </div>
+                <div class="settings-save"><button type="submit">Save email settings</button></div>
+            </form>
+            <form method="post" action="/admin/site-settings/email/test" class="actions">@csrf<button class="secondary" type="submit">Send test email to {{ auth()->user()->email }}</button></form>
+        </section>
+    </section>
+    <section class="tab-panel" role="tabpanel" id="settings-panel-backups" aria-labelledby="settings-tab-backups" hidden>
+        <div class="grid">
+            <section class="panel" id="backup-settings">
+                <h2>Remote backup destination (S3-compatible)</h2>
+                <p>Configure AWS S3, Cloudflare R2, DigitalOcean Spaces or another S3-compatible service. Credentials are encrypted at rest.</p>
+                <form class="settings-form" method="post" action="/admin/site-settings/backups">
+                    @csrf @method('PUT')
+                    <div class="settings-fields">
+                        <div class="field"><label for="backup-endpoint">S3 endpoint URL</label><input id="backup-endpoint" type="url" name="backup_s3_endpoint" value="{{ old('backup_s3_endpoint',$settings['backup_s3_endpoint']??'') }}" placeholder="https://s3.region.amazonaws.com" required maxlength="500"></div>
+                        <div class="field"><label for="backup-bucket">Bucket</label><input id="backup-bucket" name="backup_s3_bucket" value="{{ old('backup_s3_bucket',$settings['backup_s3_bucket']??'') }}" required maxlength="255"></div>
+                        <div class="field"><label for="backup-region">Region</label><input id="backup-region" name="backup_s3_region" value="{{ old('backup_s3_region',$settings['backup_s3_region']??'auto') }}" required maxlength="100"></div>
+                        <div class="field"><label for="backup-access-key">Access key ID</label><input id="backup-access-key" name="backup_s3_access_key" value="{{ old('backup_s3_access_key',$settings['backup_s3_access_key']??'') }}" autocomplete="off" required maxlength="255"></div>
+                        <div class="field"><label for="backup-secret">Secret access key {{ !empty($settings['backup_s3_secret'])?'(configured; leave blank to keep it)':'' }}</label><input id="backup-secret" type="password" name="backup_s3_secret" autocomplete="new-password" maxlength="4096" placeholder="{{ !empty($settings['backup_s3_secret'])?'Saved securely':'Secret access key' }}"></div>
+                        @if(!empty($settings['backup_s3_secret']))<div class="field"><label><input type="checkbox" name="clear_backup_s3_secret" value="1"> Clear saved secret</label></div>@endif
+                        <div class="field"><label for="backup-prefix">Remote folder / prefix</label><input id="backup-prefix" name="backup_s3_prefix" value="{{ old('backup_s3_prefix',$settings['backup_s3_prefix']??'backups') }}" maxlength="255"></div>
+                    </div>
+                    <div class="settings-save"><button type="submit">Save remote destination</button></div>
+                </form>
+            </section>
+            <section class="panel">
+                <h2>Create a backup</h2>
+                <p>Manual archive includes a database export and application-uploaded files. Local copies are stored privately under storage.</p>
+                <form method="post" action="/admin/site-settings/backups/run" class="grid">@csrf
+                    <div class="field"><label for="backup-destination">Save destination</label><select id="backup-destination" name="destination" required><option value="local">Local storage</option><option value="remote">Remote S3-compatible storage</option><option value="both">Both local and remote</option></select></div>
+                    <div class="field"><button type="submit">Create backup now</button></div>
+                </form>
+                <h3>Recent local backups</h3>
+                <div class="table-wrap"><table><thead><tr><th>Archive</th><th>Size</th><th>Created</th><th>Action</th></tr></thead><tbody>
+                    @forelse($localBackups as $backup)<tr><td>{{ $backup['name'] }}</td><td>{{ number_format($backup['size']/1048576,2) }} MB</td><td>{{ \Carbon\Carbon::createFromTimestamp($backup['modified'])->format('d M Y H:i') }}</td><td><a class="button small" href="/admin/site-settings/backups/{{ rawurlencode($backup['name']) }}">Download</a></td></tr>@empty<tr><td colspan="4">No local backups yet.</td></tr>@endforelse
+                </tbody></table></div>
+            </section>
+        </div>
+    </section>
+    @endif
     </div>
 
     <dialog class="form-dialog" id="payment-settings-dialog" aria-labelledby="payment-settings-dialog-title">
@@ -134,7 +192,9 @@
         $settingsReopen = $errors->any()
             ? (old('ai_provider') !== null ? 'ai-settings-dialog' : (old('provider_type') !== null ? 'payment-settings-dialog' : null))
             : null;
+        $openSettingsTab = session('open_settings_tab') ?? (old('mail_driver') !== null ? 'email' : ((old('backup_s3_endpoint') !== null || old('destination') !== null) ? 'backups' : null));
     @endphp
     @if($settingsReopen)<div data-reopen-dialog="{{ $settingsReopen }}" hidden></div>@endif
+    @if($openSettingsTab)<div data-open-settings-tab="{{ $openSettingsTab }}" hidden></div>@endif
 </div>
 @endsection

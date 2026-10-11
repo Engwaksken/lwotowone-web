@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
 use Carbon\CarbonImmutable;
 class CmsController extends Controller {
- public function siteSettings(Request $r){abort_unless($r->user()->manager(),403);$settings=DB::table('settings')->pluck('value','key')->all();$gateways=DB::table('payment_gateways')->orderBy('name')->get();$aiConfigured=app(\App\Services\AiAssistant::class)->configured();return view('admin.site-settings',compact('settings','gateways','aiConfigured'));}
+  public function siteSettings(Request $r){abort_unless($r->user()->manager(),403);$settings=DB::table('settings')->pluck('value','key')->all();$gateways=DB::table('payment_gateways')->orderBy('name')->get();$aiConfigured=app(\App\Services\AiAssistant::class)->configured();$localBackups=$r->user()->role==='admin'?collect(\Illuminate\Support\Facades\Storage::disk('local')->files('backups'))->map(fn($path)=>['path'=>$path,'name'=>basename($path),'size'=>\Illuminate\Support\Facades\Storage::disk('local')->size($path),'modified'=>\Illuminate\Support\Facades\Storage::disk('local')->lastModified($path)])->sortByDesc('modified')->take(10):collect();return view('admin.site-settings',compact('settings','gateways','aiConfigured','localBackups'));}
  public function saveSiteSettings(Request $r){
   abort_unless($r->user()->role==='admin',403);
   $data=$r->validate([
@@ -34,7 +34,7 @@ class CmsController extends Controller {
   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-ai','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
   return redirect('/admin/site-settings#settings-panel-ai')->with('success','AI assistant and mentor matching settings saved.');
  }
- public function testAiConnection(Request $r){
+  public function testAiConnection(Request $r){
   abort_unless($r->user()->role==='admin',403);
   $data=$this->aiSettingsData($r);
   return response()->json(app(\App\Services\AiAssistant::class)->testConnection($data));
@@ -141,4 +141,43 @@ class CmsController extends Controller {
    }
    return redirect('/admin/'.$module)->with('success',count($ids).' record(s) deleted.');
   }
+  public function saveEmailSettings(Request $r){
+   abort_unless($r->user()->role==='admin',403);
+   $data=$r->validate(['mail_driver'=>'required|in:log,smtp','mail_host'=>'required_if:mail_driver,smtp|nullable|string|max:255','mail_port'=>'required_if:mail_driver,smtp|nullable|integer|min:1|max:65535','mail_scheme'=>'nullable|in:smtp,smtps','mail_username'=>'nullable|string|max:255','mail_password'=>'nullable|string|max:4096','clear_mail_password'=>'nullable|boolean','mail_from_address'=>'required|email|max:190','mail_from_name'=>'required|string|max:190']);
+   $clear=$r->boolean('clear_mail_password');unset($data['clear_mail_password']);
+   foreach($data as $key=>$value){if($key==='mail_password'){if($clear){$this->saveSetting('mail_password','');}elseif(is_string($value)&&$value!==''){$this->saveSetting('mail_password','enc:'.\Illuminate\Support\Facades\Crypt::encryptString($value));}continue;}$this->saveSetting($key,(string)($value??''));}
+   if($clear)$this->saveSetting('mail_password','');
+   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-email','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+   return redirect('/admin/site-settings#email-settings')->with('success','Email settings saved.');
+  }
+  public function sendTestEmail(Request $r){
+   abort_unless($r->user()->role==='admin',403);
+   try{\Illuminate\Support\Facades\Mail::raw('This is a test email from '.config('app.name').'. Your email settings are working.',fn($message)=>$message->to($r->user()->email)->subject(config('app.name').' email test'));}
+   catch(\Throwable $e){return back()->withErrors(['mail_test'=>'Test email failed. Check the SMTP settings and server mail logs.'])->with('open_settings_tab','email');}
+   return redirect('/admin/site-settings#email-settings')->with('success','Test email sent to '.$r->user()->email.'.');
+  }
+  public function saveBackupSettings(Request $r){
+   abort_unless($r->user()->role==='admin',403);
+   $data=$r->validate(['backup_s3_endpoint'=>'required|url:https|max:500','backup_s3_bucket'=>'required|string|max:255|regex:/^[a-zA-Z0-9._-]+$/','backup_s3_region'=>'required|string|max:100','backup_s3_access_key'=>'required|string|max:255','backup_s3_secret'=>'nullable|string|max:4096','clear_backup_s3_secret'=>'nullable|boolean','backup_s3_prefix'=>'nullable|string|max:255|regex:/^[A-Za-z0-9/_-]*$/']);
+   $secret=$data['backup_s3_secret']??'';$clear=$r->boolean('clear_backup_s3_secret');unset($data['backup_s3_secret'],$data['clear_backup_s3_secret']);
+   foreach($data as $key=>$value)$this->saveSetting($key,(string)($value??''));
+   if($secret!=='')$this->saveSetting('backup_s3_secret','enc:'.\Illuminate\Support\Facades\Crypt::encryptString($secret));elseif($clear)$this->saveSetting('backup_s3_secret','');
+   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-backup','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+   return redirect('/admin/site-settings#backup-settings')->with('success','Remote backup settings saved.');
+  }
+  public function createBackup(Request $r){
+   abort_unless($r->user()->role==='admin',403);
+   $data=$r->validate(['destination'=>'required|in:local,remote,both']);
+   try{$result=app(\App\Services\BackupManager::class)->create($data['destination']);}
+   catch(\Throwable $e){return back()->withErrors(['backup'=>$e->getMessage()])->with('open_settings_tab','backups');}
+   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'create-backup','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+   $target=match($data['destination']){'local'=>'locally','remote'=>'remotely','both'=>'locally and remotely'};
+   return redirect('/admin/site-settings#backup-settings')->with('success','Backup created '.$target.': '.$result['name']);
+  }
+  public function downloadBackup(Request $r,string $filename){
+   abort_unless($r->user()->role==='admin'&&preg_match('/^backup-[A-Za-z0-9-]+\.zip$/',$filename),404);
+   $path='backups/'.$filename;abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path),404);
+   return \Illuminate\Support\Facades\Storage::disk('local')->download($path);
+  }
+  private function saveSetting(string $key,string $value): void{$exists=DB::table('settings')->where('key',$key)->exists();if($exists)DB::table('settings')->where('key',$key)->update(['value'=>$value,'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>$key,'value'=>$value,'created_at'=>now(),'updated_at'=>now()]);}
  }

@@ -9,5 +9,5 @@ class PlatformNotice extends Notification implements ShouldQueue {
  public function __construct(public string $title,public string $body){}
  public function via($notifiable): array {return ['database','mail'];}
  public function toArray($notifiable): array {return ['title'=>$this->title,'body'=>$this->body];}
- public function toMail($notifiable): MailMessage {return (new MailMessage)->subject($this->title)->line($this->body)->action('Open your dashboard',url('/dashboard'));}
+  public function toMail($notifiable): MailMessage {\App\Http\Middleware\ApplyMailSettings::apply();return (new MailMessage)->subject($this->title)->line($this->body)->action('Open your dashboard',url('/dashboard'));}
 }

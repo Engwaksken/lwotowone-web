@@ -20,6 +20,7 @@ class AccountSetup extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        \App\Http\Middleware\ApplyMailSettings::apply();
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addDay(),

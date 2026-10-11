@@ -50,7 +50,9 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
  Route::get('/admin/calls/{id}/qr.svg',[\App\Http\Controllers\CallController::class,'qr']);
  Route::put('/admin/calls/applications/{id}',[\App\Http\Controllers\CallController::class,'review']);
   Route::post('/logout',[AuthController::class,'logout']);Route::get('/dashboard',[PortalController::class,'dashboard']);
-   Route::get('/admin/site-settings',[CmsController::class,'siteSettings']);Route::put('/admin/site-settings',[CmsController::class,'saveSiteSettings']);
+    Route::get('/admin/site-settings',[CmsController::class,'siteSettings']);Route::put('/admin/site-settings',[CmsController::class,'saveSiteSettings']);
+    Route::put('/admin/site-settings/email',[CmsController::class,'saveEmailSettings']);Route::post('/admin/site-settings/email/test',[CmsController::class,'sendTestEmail']);
+    Route::put('/admin/site-settings/backups',[CmsController::class,'saveBackupSettings']);Route::post('/admin/site-settings/backups/run',[CmsController::class,'createBackup']);Route::get('/admin/site-settings/backups/{filename}',[CmsController::class,'downloadBackup'])->where('filename','[^/]+');
    Route::put('/admin/site-settings/ai',[CmsController::class,'saveAiSettings']);
    Route::post('/admin/site-settings/ai/test',[CmsController::class,'testAiConnection'])->middleware('throttle:5,1');
   Route::post('/admin/site-settings/payment-gateways', [\App\Http\Controllers\MelController::class,'saveGateway']);
