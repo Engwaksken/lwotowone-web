@@ -33,21 +33,17 @@ class AccountSetup extends Notification
         $primary = DB::table('settings')->where('key', 'primary_color')->value('value');
         $brandName = config('app.name', 'Lwotowone Enterprises Ltd');
 
-        return $mail->view('emails.account-setup', [
-                'name' => $notifiable->name,
-                'email' => $notifiable->email,
-                'temporaryPassword' => $this->temporaryPassword,
-                'verificationUrl' => $verificationUrl,
-                'brandName' => $brandName,
-                'logoUrl' => $logo ? (str_starts_with($logo, 'http') ? $logo : url($logo)) : null,
-                'primaryColor' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $primary) ? $primary : '#175742',
-            ])
-            ->text('emails.account-setup-text', [
-                'name' => $notifiable->name,
-                'email' => $notifiable->email,
-                'temporaryPassword' => $this->temporaryPassword,
-                'verificationUrl' => $verificationUrl,
-                'brandName' => $brandName,
-            ]);
+        $data = [
+            'name' => $notifiable->name,
+            'email' => $notifiable->email,
+            'temporaryPassword' => $this->temporaryPassword,
+            'verificationUrl' => $verificationUrl,
+            'brandName' => $brandName,
+            'logoUrl' => $logo ? (str_starts_with($logo, 'http') ? $logo : url($logo)) : null,
+            'primaryColor' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $primary) ? $primary : '#175742',
+        ];
+
+        return $mail->view('emails.account-setup', $data)
+            ->text('emails.account-setup-text', $data);
     }
 }

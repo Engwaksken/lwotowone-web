@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\AccountSetup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\{Crypt,DB,Hash,Mail,Storage};
 use Tests\TestCase;
@@ -31,6 +32,16 @@ class SystemSettingsTest extends TestCase
         $this->assertSame('secret-password', Crypt::decryptString(substr($stored, 4)));
         $this->post('/admin/site-settings/email/test')->assertRedirect('/admin/site-settings#email-settings');
         $this->assertSame('smtp.example.test', config('mail.mailers.smtp.host'));
+    }
+
+    public function test_branded_account_email_passes_brand_data_to_both_templates(): void
+    {
+        $mail = (new AccountSetup('Ab3dEf7x'))->toMail($this->admin());
+
+        $this->assertSame('emails.account-setup', $mail->view['html']);
+        $this->assertSame('emails.account-setup-text', $mail->view['text']);
+        $this->assertArrayHasKey('primaryColor', $mail->viewData);
+        $this->assertArrayHasKey('logoUrl', $mail->viewData);
     }
 
     public function test_admin_can_create_and_download_a_local_backup(): void
