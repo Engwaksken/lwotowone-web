@@ -40,7 +40,7 @@ class Catalog {
   if($module==='resources' && $id)$rules['file'][0]='nullable';
   if(in_array($module,['slots','events']))$rules['ends_at'][]='after:starts_at';
   if($module==='assignments')$rules['pass_mark'][]='max:100';
-  if($module==='users'&&!$id)$rules['password'][0]='required';
+   if($module==='users')unset($rules['password']);
   return $rules;
  }
  public static function options(string $module,User $u): array {

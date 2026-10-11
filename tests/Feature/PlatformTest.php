@@ -2,14 +2,14 @@
 namespace Tests\Feature;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\{DB,Hash};
+use Illuminate\Support\Facades\{DB,Hash,Notification};
 use App\Models\User;
 use App\Services\Workflow;
 class PlatformTest extends TestCase {
  use RefreshDatabase;
  private function user($role='participant'){return User::create(['name'=>'Test '.$role,'email'=>uniqid().'@example.test','password'=>Hash::make('A-long-test-password'),'role'=>$role,'status'=>'active','profile_complete'=>$role==='participant','learning_access_paid'=>$role==='participant']);}
  private function course($instructor){$p=Workflow::insert('programs',['title'=>'Test programme','slug'=>uniqid(),'category'=>'TVET','summary'=>'Test','body'=>'Test','status'=>'published']);$id=Workflow::insert('courses',['title'=>'Test course','program_id'=>$p,'instructor_id'=>$instructor->id,'summary'=>'Test','level'=>'Beginner','duration_hours'=>2,'status'=>'published']);Workflow::insert('course_instructors',['course_id'=>$id,'user_id'=>$instructor->id]);return $id;}
- public function test_registration_cannot_escalate_role():void{$this->post('/api/register',['name'=>'Learner','email'=>'learner@example.test','password'=>'A-long-test-password','password_confirmation'=>'A-long-test-password','consent'=>1,'role'=>'admin'])->assertCreated();$this->assertDatabaseHas('users',['email'=>'learner@example.test','role'=>'participant']);}
+ public function test_registration_cannot_escalate_role():void{Notification::fake();$this->post('/api/register',['name'=>'Learner','email'=>'learner@example.test','password'=>'A-long-test-password','password_confirmation'=>'A-long-test-password','consent'=>1,'role'=>'admin'])->assertCreated();$this->assertDatabaseHas('users',['email'=>'learner@example.test','role'=>'participant']);}
   public function test_inactive_account_cannot_login():void{$u=$this->user();$u->update(['status'=>'inactive']);$this->postJson('/api/login',['email'=>$u->email,'password'=>'A-long-test-password'])->assertUnprocessable();}
   public function test_participants_and_staff_can_manage_their_own_profile_details():void{
    $staff=$this->user('manager');

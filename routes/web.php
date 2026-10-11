@@ -17,13 +17,16 @@ Route::get('/contact',[PublicController::class,'contact']);
 Route::post('/contact',[PublicController::class,'sendContact'])->middleware('throttle:5,1');
 Route::get('/explore/{type}',[PublicController::class,'listing']);
 Route::get('/explore/{type}/{id}',[PublicController::class,'detail']);
+Route::get('/verify-email/{id}/{hash}',[AuthController::class,'verifyEmail'])->middleware('signed')->name('verification.verify');
 Route::middleware('guest')->group(function(){
  Route::get('/login',[AuthController::class,'form'])->name('login');Route::post('/login',[AuthController::class,'login'])->middleware('throttle:login');
  Route::get('/register',[AuthController::class,'registerForm']);Route::post('/register',[AuthController::class,'register'])->middleware('throttle:5,1');
  Route::get('/forgot-password',[AuthController::class,'forgot'])->name('password.request');Route::post('/forgot-password',[AuthController::class,'sendReset'])->middleware('throttle:5,1');
  Route::get('/reset-password/{token}',[AuthController::class,'resetForm'])->name('password.reset');Route::post('/reset-password',[AuthController::class,'reset']);
 });
-Route::middleware(['auth','active'])->group(function(){
+Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::class])->group(function(){
+  Route::get('/change-password',[AuthController::class,'changePasswordForm']);
+  Route::post('/change-password',[AuthController::class,'changePassword']);
   Route::middleware(\App\Http\Middleware\EnsureLearningAccess::class)->group(function(){
     Route::get('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'show']);
     Route::post('/calls/{token}/apply',[\App\Http\Controllers\CallController::class,'apply'])->middleware('throttle:5,1');

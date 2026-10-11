@@ -1,5 +1,6 @@
 @foreach($meta['fields'] as $field=>$raw)
     @continue($module==='courses' && $field==='instructor_id')
+    @continue($module==='users' && $field==='password')
     @continue(in_array($module,['lessons','resources']) && in_array($field,['body','video_url','file']))
     @php
         $optional=is_string($raw)&&str_starts_with($raw,'optional:');

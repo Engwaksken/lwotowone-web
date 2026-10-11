@@ -77,10 +77,12 @@ class CmsController extends Controller {
    $assignmentChange=$assignable&&($r->exists('instructor_ids')||$r->exists('assignments_present')||$r->exists('lead_instructor_id')||$r->exists('instructor_id'));
    if($assignmentChange)abort_unless($r->user()->role==='admin',403);
    if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);
-   $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
+    $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
    $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
    if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
-   $d=$r->validate($rules);
+    $d=$r->validate($rules);
+    $temporaryPassword=null;
+    if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(24);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
    if($module==='events'&&!$id)$d['registration_token']=(string)\Illuminate\Support\Str::uuid();
    if($formattedContent)$d=array_merge($d,\App\Services\LearningContent::validate($r,$module,$id?$record:null));
    $assignmentIds=[];$leadId=null;
@@ -113,7 +115,8 @@ class CmsController extends Controller {
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
   });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);throw $e;}
   if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
-  if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
+   if($module==='users'&&$temporaryPassword!==null)$record->notify(new \App\Notifications\AccountSetup($temporaryPassword));
+   if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
   return redirect('/admin/'.$module)->with('success','Saved successfully.');
  }
  public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
