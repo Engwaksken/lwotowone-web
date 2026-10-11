@@ -678,8 +678,8 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 header{position:relative;z-index:12}
 header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
 .header-menu-toggle{display:none;align-items:center;justify-content:center;width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--green)}
-.profile-menu{position:relative;z-index:15}
-.profile-menu>summary{display:flex;align-items:center;gap:8px;max-width:220px;cursor:pointer;list-style:none;font-weight:700}
+.profile-menu{position:relative;z-index:15;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.profile-menu>summary{display:flex;align-items:center;gap:8px;max-width:220px;padding:0!important;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;cursor:pointer;list-style:none;font-weight:700}
 .profile-menu>summary::-webkit-details-marker{display:none}
 .profile-menu>summary>i{font-size:11px;color:var(--muted)}
 .profile-menu-avatar{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:#e8f0e8;color:var(--green);font-size:14px}
