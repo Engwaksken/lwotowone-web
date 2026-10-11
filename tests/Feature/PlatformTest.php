@@ -11,7 +11,7 @@ class PlatformTest extends TestCase {
  private function course($instructor){$p=Workflow::insert('programs',['title'=>'Test programme','slug'=>uniqid(),'category'=>'TVET','summary'=>'Test','body'=>'Test','status'=>'published']);$id=Workflow::insert('courses',['title'=>'Test course','program_id'=>$p,'instructor_id'=>$instructor->id,'summary'=>'Test','level'=>'Beginner','duration_hours'=>2,'status'=>'published']);Workflow::insert('course_instructors',['course_id'=>$id,'user_id'=>$instructor->id]);return $id;}
  public function test_registration_cannot_escalate_role():void{Notification::fake();$this->post('/api/register',['name'=>'Learner','email'=>'learner@example.test','password'=>'A-long-test-password','password_confirmation'=>'A-long-test-password','consent'=>1,'role'=>'admin'])->assertCreated();$this->assertDatabaseHas('users',['email'=>'learner@example.test','role'=>'participant']);}
   public function test_inactive_account_cannot_login():void{$u=$this->user();$u->update(['status'=>'inactive']);$this->postJson('/api/login',['email'=>$u->email,'password'=>'A-long-test-password'])->assertUnprocessable();}
-  public function test_participants_and_staff_can_manage_their_own_profile_details():void{
+   public function test_participants_and_staff_can_manage_their_own_profile_details():void{
    $staff=$this->user('manager');
    $this->actingAs($staff)->get('/profile')->assertOk()->assertSee($staff->email)->assertSee('About me');
    $this->post('/profile',['name'=>'Programme Lead','phone'=>'+256700000001','district'=>'Kampala','expertise'=>'Youth development','bio'=>'I support practical learning.'])->assertRedirect();
@@ -19,7 +19,8 @@ class PlatformTest extends TestCase {
    $participant=$this->user();
    $this->actingAs($participant)->get('/profile')->assertOk();
    $this->get('/portal/profile')->assertOk();
-  }
+   }
+   public function test_participant_api_allows_basic_profile_edits_without_completing_learner_profile():void{$learner=$this->user();$learner->update(['profile_complete'=>false]);$token=$learner->createToken('mobile')->plainTextToken;$this->withToken($token)->postJson('/api/profile',['name'=>'Updated learner','phone'=>'+256700000001','district'=>'Kampala'])->assertOk()->assertJson(['ok'=>true]);$this->assertDatabaseHas('users',['id'=>$learner->id,'name'=>'Updated learner','phone'=>'+256700000001','district'=>'Kampala','profile_complete'=>false]);}
  public function test_participant_cannot_manage_cms():void{$this->actingAs($this->user())->get('/admin/pages')->assertForbidden();}
  public function test_instructor_cannot_edit_another_course():void{$a=$this->user('instructor');$id=$this->course($a);$this->actingAs($this->user('instructor'))->get('/admin/courses/'.$id.'/edit')->assertNotFound();}
  public function test_progress_requires_enrolment_and_is_idempotent():void{$u=$this->user();$c=$this->course($this->user('instructor'));$l=Workflow::insert('lessons',['course_id'=>$c,'title'=>'Lesson','body'=>'Text','position'=>1,'status'=>'published']);$this->actingAs($u)->postJson('/actions/complete',['lesson_id'=>$l])->assertForbidden();Workflow::insert('enrolments',['user_id'=>$u->id,'course_id'=>$c,'payment_confirmed_at'=>now()]);Workflow::run($u,'complete',['lesson_id'=>$l]);Workflow::run($u,'complete',['lesson_id'=>$l]);$this->assertDatabaseCount('lesson_progress',1);}

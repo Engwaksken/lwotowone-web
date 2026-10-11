@@ -120,12 +120,16 @@ class PortalController extends Controller {
    return response()->json(['ok'=>true]);
  }
  public function readNotice(Request $r,string $id){$r->user()->notifications()->where('id',$id)->firstOrFail()->markAsRead();return $r->is('api/*')?['ok'=>true]:back();}
-   public function profile(Request $r){
-    if($r->user()->role!=='participant'){
-     $d=$r->validate(['name'=>'required|string|max:100','phone'=>'nullable|string|max:40','district'=>'nullable|string|max:100','expertise'=>'nullable|string|max:255','bio'=>'nullable|string|max:5000']);
-     $r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Profile updated.');
-    }
-     $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>"required|in:No formal education,Primary,O-Level,A-Level,Certificate,Diploma,Bachelor's degree,Postgraduate,Other",'employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
+    public function profile(Request $r){
+     if($r->user()->role!=='participant'){
+      $d=$r->validate(['name'=>'required|string|max:100','phone'=>'nullable|string|max:40','district'=>'nullable|string|max:100','expertise'=>'nullable|string|max:255','bio'=>'nullable|string|max:5000']);
+      $r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Profile updated.');
+     }
+     if($r->is('api/*')&&!$r->exists('selected_course_id')){
+      $d=$r->validate(['name'=>'required|string|max:100','phone'=>'nullable|string|max:40','district'=>'nullable|string|max:100']);
+      $r->user()->update($d);return ['ok'=>true];
+     }
+      $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>"required|in:No formal education,Primary,O-Level,A-Level,Certificate,Diploma,Bachelor's degree,Postgraduate,Other",'employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
      $samePaidCourse=$r->user()->learning_access_paid&&(int)$r->user()->selected_course_id===(int)$d['selected_course_id'];
      abort_unless($samePaidCourse||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
      abort_unless(!$r->user()->learning_access_paid||$samePaidCourse,422,'Contact your programme administrator to change your paid course selection.');
