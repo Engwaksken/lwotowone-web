@@ -606,7 +606,7 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .content-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .learning-content-fields [hidden]{display:none!important}
 .resource-audio{width:100%;margin:16px 0}
-.header-search-disclosure{position:relative;flex:0 0 auto;z-index:8}
+.header-search-disclosure{position:relative;flex:0 0 auto;z-index:8;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
 .header-search-disclosure>summary{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;color:var(--green);cursor:pointer;list-style:none}
 .header-search-disclosure>summary::-webkit-details-marker{display:none}
 .header-search-disclosure>summary:hover,.header-search-disclosure[open]>summary{background:transparent!important;box-shadow:none!important}
