@@ -118,7 +118,7 @@ class CmsController extends Controller {
   if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
     if($module==='users'&&$temporaryPassword!==null){
      try{$record->notify(new \App\Notifications\AccountSetup($temporaryPassword));}
-     catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('New user setup email failed.', ['user_id'=>$record->id,'exception'=>$e]);return redirect('/admin/users')->withErrors(['email'=>'The user was added, but the setup email could not be sent. Check Email settings, then use “Resend setup email” in the user list.']);}
+     catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('New user setup email failed.', ['user_id'=>$record->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return redirect('/admin/users')->withErrors(['email'=>'The user was added, but the setup email failed: '.$detail.' Check Email settings, then use “Resend setup email”.']);}
     }
    if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
   return redirect('/admin/'.$module)->with('success','Saved successfully.');
@@ -130,7 +130,7 @@ class CmsController extends Controller {
    $temporaryPassword=\Illuminate\Support\Str::random(8);
    $user->forceFill(['password'=>$temporaryPassword,'must_change_password'=>true])->save();
    try{$user->notify(new \App\Notifications\AccountSetup($temporaryPassword));}
-   catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('User setup email resend failed.', ['user_id'=>$user->id,'exception'=>$e]);return redirect('/admin/users')->withErrors(['email'=>'The temporary password was reset, but email delivery failed. Check Email settings and try again.']);}
+   catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('User setup email resend failed.', ['user_id'=>$user->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return redirect('/admin/users')->withErrors(['email'=>'The temporary password was reset, but email delivery failed: '.$detail.' Check Email settings and try again.']);}
    return redirect('/admin/users')->with('success','Setup email sent again to '.$user->email.'.');
   }
   public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
@@ -167,7 +167,7 @@ class CmsController extends Controller {
   public function sendTestEmail(Request $r){
    abort_unless($r->user()->role==='admin',403);
    try{\Illuminate\Support\Facades\Mail::raw('This is a test email from '.config('app.name').'. Your email settings are working.',fn($message)=>$message->to($r->user()->email)->subject(config('app.name').' email test'));}
-   catch(\Throwable $e){return back()->withErrors(['mail_test'=>'Test email failed. Check the SMTP settings and server mail logs.'])->with('open_settings_tab','email');}
+   catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('SMTP test email failed.', ['user_id'=>$r->user()->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return back()->withErrors(['mail_test'=>'Test email failed: '.$detail])->with('open_settings_tab','email');}
    return redirect('/admin/site-settings#email-settings')->with('success','Test email sent to '.$r->user()->email.'.');
   }
   public function saveBackupSettings(Request $r){
