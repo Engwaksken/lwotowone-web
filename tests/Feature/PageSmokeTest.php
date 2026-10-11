@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -55,6 +56,16 @@ class PageSmokeTest extends TestCase
         }
 
         $this->assertPagesRender($admin, $urls);
+    }
+
+    public function test_enquiries_and_audit_trail_render_as_tables(): void
+    {
+        $admin = $this->user('admin');
+        DB::table('contacts')->insert(['name' => 'Amina', 'email' => 'amina@example.test', 'message' => 'Please contact me about training.', 'status' => 'new', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('audit_logs')->insert(['user_id' => $admin->id, 'action' => 'update-settings', 'module' => 'settings', 'record_id' => 0, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->actingAs($admin)->get('/admin/reviews/contacts')->assertOk()->assertSee('<table', false)->assertSee('Amina')->assertDontSee('review-list');
+        $this->get('/admin/reviews/audit_logs')->assertOk()->assertSee('<table', false)->assertSee('Update Settings')->assertDontSee('review-list');
     }
 
     public function test_every_admin_page_renders_for_manager_without_admin_only_settings(): void

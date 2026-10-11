@@ -718,3 +718,8 @@ header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
 .page-select-cell{width:44px;text-align:center}
 .page-select-cell input{width:16px;height:16px;accent-color:var(--green);cursor:pointer}
 .page-bulk-actions{margin-left:auto}
+.review-status-form{display:flex;align-items:center;gap:6px}
+.review-status-form select{min-width:112px}
+.enquiry-message{min-width:240px;max-width:420px;white-space:normal}
+.enquiry-message details summary{cursor:pointer;color:var(--green);font-weight:600}
+.enquiry-message details p{min-width:240px;max-width:420px;white-space:pre-wrap}
