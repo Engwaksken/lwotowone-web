@@ -485,3 +485,24 @@ document.querySelectorAll('[data-header-toggle]').forEach(toggle=>{
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&toggle.getAttribute('aria-expanded')==='true'){toggle.click();toggle.focus();}});
 });
 document.querySelectorAll('.profile-menu').forEach(menu=>document.addEventListener('click',event=>{if(menu.open&&!menu.contains(event.target))menu.open=false;}));
+
+const pageBulkForm=document.querySelector('[data-page-bulk-form]');
+if(pageBulkForm){
+    const rows=[...document.querySelectorAll('[data-page-row-select]')];
+    const selectAll=document.querySelector('[data-page-select-all]');
+    const submit=pageBulkForm.querySelector('[data-page-bulk-submit]');
+    const count=pageBulkForm.querySelector('[data-page-selected-count]');
+    const update=()=>{
+        const selected=rows.filter(input=>input.checked).length;
+        count.textContent=selected;
+        submit.disabled=selected===0;
+        selectAll.checked=rows.length>0&&selected===rows.length;
+        selectAll.indeterminate=selected>0&&selected<rows.length;
+    };
+    rows.forEach(input=>input.addEventListener('change',update));
+    selectAll?.addEventListener('change',()=>{rows.forEach(input=>input.checked=selectAll.checked);update();});
+    pageBulkForm.addEventListener('submit',event=>{
+        if(!window.confirm(`Delete ${rows.filter(input=>input.checked).length} selected page(s)? This cannot be undone.`))event.preventDefault();
+    });
+    update();
+}

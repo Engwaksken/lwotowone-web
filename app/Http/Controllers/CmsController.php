@@ -119,5 +119,17 @@ class CmsController extends Controller {
    if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
   return redirect('/admin/'.$module)->with('success','Saved successfully.');
  }
- public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
-}
+  public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
+  public function bulkDeletePages(Request $r){
+   $this->access($r,'pages');
+   $data=$r->validate(['page_ids'=>'required|array|min:1|max:100','page_ids.*'=>'required|integer|distinct|exists:pages,id']);
+   $ids=array_map('intval',$data['page_ids']);
+   DB::transaction(function()use($ids,$r){
+    foreach($ids as $id){
+     DB::table('pages')->where('id',$id)->delete();
+     DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>'pages','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);
+    }
+   });
+   return redirect('/admin/pages')->with('success',count($ids).' page(s) deleted.');
+  }
+ }

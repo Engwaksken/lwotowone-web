@@ -81,6 +81,7 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
   Route::post('/profile',[PortalController::class,'profile']);
 
   Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
+  Route::post('/admin/pages/bulk-delete',[CmsController::class,'bulkDeletePages']);
   Route::get('/admin/events',[\App\Http\Controllers\EventController::class,'index']);
   Route::get('/admin/events/{id}/qr.svg',[\App\Http\Controllers\EventController::class,'qr'])->whereNumber('id');
   Route::get('/admin/events/{id}/attendance',[\App\Http\Controllers\EventController::class,'attendance'])->whereNumber('id');

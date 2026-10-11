@@ -715,3 +715,6 @@ header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
 }
 @media(max-width:800px){.site-sidebar{border-bottom:1px solid var(--line)}}
 @media(max-width:560px){.brand{min-width:0;max-width:calc(100% - 58px)}.site-logo{max-width:175px;max-height:50px}.sidebar-nav{grid-template-columns:1fr!important}}
+.page-select-cell{width:44px;text-align:center}
+.page-select-cell input{width:16px;height:16px;accent-color:var(--green);cursor:pointer}
+.page-bulk-actions{margin-left:auto}
