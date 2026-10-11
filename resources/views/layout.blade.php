@@ -18,7 +18,8 @@
 <a class="skip" href="#main">Skip to content</a>
 <header>
     <a class="brand" href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'site-logo','siteSettings'=>$siteSettings])</a>
-    <nav aria-label="Main navigation">
+    <button class="header-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-header-toggle><span class="sr-only">Toggle navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <nav id="primary-navigation" aria-label="Main navigation" data-primary-navigation>
         @guest
         <a href="/pages/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
         <a href="/explore/opportunities">Opportunities</a><a href="/calls">Apply</a><a href="/explore/events">Events</a><a href="/explore/posts">Stories</a><a href="/contact">Contact</a>
@@ -28,9 +29,11 @@
             <form id="site-search-form" class="header-search" method="get" action="/search" role="search"><label class="sr-only" for="site-search">Search the site</label><input id="site-search" type="search" name="q" value="{{ request()->is('search')?request('q'):'' }}" placeholder="Search the site" aria-label="Search the site" required><button type="submit" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></button><button type="button" class="secondary" data-search-close aria-label="Close search"><i class="fas fa-times" aria-hidden="true"></i></button></form>
         </details>
         @else
-        <a class="button small" href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Dashboard</a>
-        <a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> Profile</a>
-        <form class="topbar-logout" method="post" action="/logout">@csrf<button class="secondary small" type="submit"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Logout</button></form>
+        <a class="button small" href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a>
+        <details class="profile-menu">
+            <summary><span class="profile-menu-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="profile-menu-name">{{ auth()->user()->name }}</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+            <div class="profile-menu-panel"><a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> My profile</a><form class="topbar-logout" method="post" action="/logout">@csrf<button type="submit"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sign out</button></form></div>
+        </details>
         @endif
     </nav>
 </header>

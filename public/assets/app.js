@@ -470,3 +470,18 @@ if(helpChat){
         finally{input.disabled=false;input.focus();messages.scrollTop=messages.scrollHeight;}
     });
 }
+
+
+// Responsive primary navigation and dismissible profile menu.
+document.querySelectorAll('[data-header-toggle]').forEach(toggle=>{
+    const nav=document.getElementById(toggle.getAttribute('aria-controls'));
+    toggle.addEventListener('click',()=>{
+        const expanded=toggle.getAttribute('aria-expanded')==='true';
+        toggle.setAttribute('aria-expanded',String(!expanded));
+        nav.classList.toggle('is-open',!expanded);
+        toggle.querySelector('i').className=`fas ${expanded?'fa-bars':'fa-times'}`;
+    });
+    nav?.addEventListener('click',event=>{if(event.target.closest('a')){toggle.setAttribute('aria-expanded','false');nav.classList.remove('is-open');toggle.querySelector('i').className='fas fa-bars';}});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&toggle.getAttribute('aria-expanded')==='true'){toggle.click();toggle.focus();}});
+});
+document.querySelectorAll('.profile-menu').forEach(menu=>document.addEventListener('click',event=>{if(menu.open&&!menu.contains(event.target))menu.open=false;}));
