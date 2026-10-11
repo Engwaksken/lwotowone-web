@@ -27,7 +27,7 @@ class HelpAndBrandingTest extends TestCase
 
         $this->actingAs($manager)->get('/admin/site-settings')->assertOk()->assertSee('Payment gateways and methods')->assertDontSee('Choose an accessible brand colour');
         $this->actingAs($admin)->get('/admin/site-settings')->assertOk()->assertSee('Website appearance')->assertSee('role="tab"',false)->assertSee('Payment gateway settings');
-        $this->get('/dashboard')->assertOk()->assertSee('Dashboard')->assertDontSee('class="site-footer"',false)->assertSee('management-list')->assertSee('Settings')->assertSee('Payment gateway settings');
+        $this->get('/dashboard')->assertOk()->assertSee('Overview')->assertDontSee('Dashboard')->assertDontSee('class="site-footer"',false)->assertSee('management-list')->assertSee('Settings')->assertSee('Payment gateway settings');
         $listing=$this->get('/admin/programs')->assertOk();$html=$listing->getContent();
         $this->assertLessThan(strpos($html,'class="public-stat-strip"'),strpos($html,'<h1>Programmes</h1>'));
         $this->assertLessThan(strpos($html,'class="filter-bar"'),strpos($html,'class="public-stat-strip"'));

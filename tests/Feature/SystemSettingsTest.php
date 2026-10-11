@@ -46,6 +46,10 @@ class SystemSettingsTest extends TestCase
 
     public function test_admin_can_create_and_download_a_local_backup(): void
     {
+        if (! class_exists(\ZipArchive::class)) {
+            $this->markTestSkipped('The PHP zip extension is required to create backups.');
+        }
+
         Storage::fake('local');
         $admin = $this->admin();
         $this->actingAs($admin)->post('/admin/site-settings/backups/run', ['destination' => 'local'])
