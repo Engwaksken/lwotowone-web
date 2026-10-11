@@ -502,7 +502,7 @@ if(pageBulkForm){
     rows.forEach(input=>input.addEventListener('change',update));
     selectAll?.addEventListener('change',()=>{rows.forEach(input=>input.checked=selectAll.checked);update();});
     pageBulkForm.addEventListener('submit',event=>{
-        if(!window.confirm(`Delete ${rows.filter(input=>input.checked).length} selected page(s)? This cannot be undone.`))event.preventDefault();
+        if(!window.confirm(`Delete ${rows.filter(input=>input.checked).length} selected record(s)? This cannot be undone.`))event.preventDefault();
     });
     update();
 }

@@ -42,18 +42,16 @@
     @if($module!=='courses'||auth()->user()->manager())
     <button type="button" data-dialog-open="create-record"><i class="fas fa-plus" aria-hidden="true"></i> Add new</button>
     @endif
-    @if($module==='pages')
-    <form id="page-bulk-delete" class="page-bulk-actions" data-page-bulk-form method="post" action="/admin/pages/bulk-delete">@csrf<button class="danger" type="submit" data-page-bulk-submit disabled>Delete selected (<span data-page-selected-count>0</span>)</button></form>
-    @endif
+    <form id="cms-bulk-delete" class="page-bulk-actions" data-page-bulk-form method="post" action="/admin/{{ $module }}/bulk-delete">@csrf<button class="danger" type="submit" data-page-bulk-submit disabled>Delete selected (<span data-page-selected-count>0</span>)</button></form>
 </div>
 <div class="panel table-wrap cms-table-wrap"><table class="data-table cms-table">
     <caption class="sr-only">{{ $meta['title'] }} records</caption>
-    <thead><tr>@if($module==='pages')<th scope="col" class="page-select-cell"><input type="checkbox" aria-label="Select all pages on this page" data-page-select-all></th>@endif<th scope="col" class="column-primary">{{ $module==='users'?'Name':($module==='settings'?'Setting':'Title') }}</th>@foreach($tableColumns as $column=>$label)<th scope="col" class="{{ $column==='position'||$column==='pass_mark'?'column-number':'column-context' }}">{{ $label }}</th>@endforeach<th scope="col" class="column-status">Status</th><th scope="col" class="column-date">Updated</th><th scope="col" class="column-actions">Actions</th></tr></thead>
+    <thead><tr><th scope="col" class="page-select-cell"><input type="checkbox" aria-label="Select all records on this page" data-page-select-all></th><th scope="col" class="column-primary">{{ $module==='users'?'Name':($module==='settings'?'Setting':'Title') }}</th>@foreach($tableColumns as $column=>$label)<th scope="col" class="{{ $column==='position'||$column==='pass_mark'?'column-number':'column-context' }}">{{ $label }}</th>@endforeach<th scope="col" class="column-status">Status</th><th scope="col" class="column-date">Updated</th><th scope="col" class="column-actions">Actions</th></tr></thead>
     <tbody>
     @forelse($rows as $row)
         @php $rowName = $row->title??$row->name??$row->key; @endphp
         <tr>
-            @if($module==='pages')<td class="page-select-cell"><input type="checkbox" name="page_ids[]" value="{{ $row->id }}" form="page-bulk-delete" aria-label="Select {{ $rowName }}" data-page-row-select></td>@endif
+            <td class="page-select-cell"><input type="checkbox" name="record_ids[]" value="{{ $row->id }}" form="cms-bulk-delete" aria-label="Select {{ $rowName }}" data-page-row-select></td>
             <td class="column-primary"><strong>{{ $rowName }}</strong><small>Record #{{ $row->id }}</small></td>
             @foreach($tableColumns as $column=>$label)
                 @php
@@ -77,7 +75,7 @@
             </div></td>
         </tr>
     @empty
-        <tr><td colspan="{{ count($tableColumns)+4+($module==='pages'?1:0) }}" class="table-empty">Nothing here yet. Add your first record.</td></tr>
+        <tr><td colspan="{{ count($tableColumns)+5 }}" class="table-empty">Nothing here yet. Add your first record.</td></tr>
     @endforelse
     </tbody>
 </table>@include('partials.pagination',['rows'=>$rows])</div>
