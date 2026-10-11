@@ -71,8 +71,9 @@ class CmsController extends Controller {
    return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
  }
  public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
- public function save(Request $r,string $module,?string $id=null){
-   $this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):Catalog::model($module);
+  public function save(Request $r,string $module,?string $id=null){
+    $this->access($r,$module);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):Catalog::model($module);
+    if($module==='users'&&!$id&&(!\Illuminate\Support\Facades\Schema::hasColumn('users','requires_email_verification')||!\Illuminate\Support\Facades\Schema::hasColumn('users','must_change_password')))return back()->withErrors(['email'=>'Run the pending database migrations on the live server before adding users.']);
    $assignable=in_array($module,['courses','programs'],true);
    $assignmentChange=$assignable&&($r->exists('instructor_ids')||$r->exists('assignments_present')||$r->exists('lead_instructor_id')||$r->exists('instructor_id'));
    if($assignmentChange)abort_unless($r->user()->role==='admin',403);
@@ -115,10 +116,23 @@ class CmsController extends Controller {
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
   });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);throw $e;}
   if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
-   if($module==='users'&&$temporaryPassword!==null)$record->notify(new \App\Notifications\AccountSetup($temporaryPassword));
+    if($module==='users'&&$temporaryPassword!==null){
+     try{$record->notify(new \App\Notifications\AccountSetup($temporaryPassword));}
+     catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('New user setup email failed.', ['user_id'=>$record->id,'exception'=>$e]);return redirect('/admin/users')->withErrors(['email'=>'The user was added, but the setup email could not be sent. Check Email settings, then use “Resend setup email” in the user list.']);}
+    }
    if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
   return redirect('/admin/'.$module)->with('success','Saved successfully.');
  }
+  public function resendUserSetup(Request $r,string $id){
+   abort_unless($r->user()->role==='admin',403);
+   $user=\App\Models\User::findOrFail($id);
+   abort_unless($user->requires_email_verification||$user->must_change_password,422,'This account does not need setup email.');
+   $temporaryPassword=\Illuminate\Support\Str::random(8);
+   $user->forceFill(['password'=>$temporaryPassword,'must_change_password'=>true])->save();
+   try{$user->notify(new \App\Notifications\AccountSetup($temporaryPassword));}
+   catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('User setup email resend failed.', ['user_id'=>$user->id,'exception'=>$e]);return redirect('/admin/users')->withErrors(['email'=>'The temporary password was reset, but email delivery failed. Check Email settings and try again.']);}
+   return redirect('/admin/users')->with('success','Setup email sent again to '.$user->email.'.');
+  }
   public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
   public function bulkDelete(Request $r,string $module){
    abort_unless(isset(config('modules')[$module]),404);

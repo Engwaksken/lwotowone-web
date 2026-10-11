@@ -51,6 +51,7 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
  Route::put('/admin/calls/applications/{id}',[\App\Http\Controllers\CallController::class,'review']);
   Route::post('/logout',[AuthController::class,'logout']);Route::get('/dashboard',[PortalController::class,'dashboard']);
     Route::get('/admin/site-settings',[CmsController::class,'siteSettings']);Route::put('/admin/site-settings',[CmsController::class,'saveSiteSettings']);
+    Route::post('/admin/users/{id}/resend-setup',[CmsController::class,'resendUserSetup'])->whereNumber('id');
     Route::put('/admin/site-settings/email',[CmsController::class,'saveEmailSettings']);Route::post('/admin/site-settings/email/test',[CmsController::class,'sendTestEmail']);
     Route::put('/admin/site-settings/backups',[CmsController::class,'saveBackupSettings']);Route::post('/admin/site-settings/backups/run',[CmsController::class,'createBackup']);Route::get('/admin/site-settings/backups/{filename}',[CmsController::class,'downloadBackup'])->where('filename','[^/]+');
    Route::put('/admin/site-settings/ai',[CmsController::class,'saveAiSettings']);
