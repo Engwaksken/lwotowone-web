@@ -487,6 +487,18 @@ document.querySelectorAll('[data-header-toggle]').forEach(toggle=>{
     nav?.addEventListener('click',event=>{if(event.target.closest('a')){toggle.setAttribute('aria-expanded','false');nav.classList.remove('is-open');toggle.querySelector('i').className='fas fa-bars';}});
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&toggle.getAttribute('aria-expanded')==='true'){toggle.click();toggle.focus();}});
 });
+document.querySelectorAll('[data-account-nav-toggle]').forEach(toggle=>{
+    const nav=document.getElementById(toggle.getAttribute('aria-controls'));
+    const setOpen=open=>{
+        toggle.setAttribute('aria-expanded',String(open));
+        toggle.querySelector('i').className=`fas ${open?'fa-times':'fa-bars'}`;
+        toggle.querySelector('.sr-only').textContent=`${open?'Close':'Open'} account navigation`;
+        nav?.classList.toggle('is-open',open);
+    };
+    toggle.addEventListener('click',()=>setOpen(toggle.getAttribute('aria-expanded')!=='true'));
+    nav?.addEventListener('click',event=>{if(event.target.closest('a'))setOpen(false);});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&toggle.getAttribute('aria-expanded')==='true'){setOpen(false);toggle.focus();}});
+});
 document.querySelectorAll('.profile-menu').forEach(menu=>document.addEventListener('click',event=>{if(menu.open&&!menu.contains(event.target))menu.open=false;}));
 
 const pageBulkForm=document.querySelector('[data-page-bulk-form]');

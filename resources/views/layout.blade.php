@@ -18,7 +18,7 @@
 <a class="skip" href="#main">Skip to content</a>
 <header>
     <a class="brand" href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'site-logo','siteSettings'=>$siteSettings])</a>
-    <button class="header-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-header-toggle><span class="sr-only">Toggle navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <button class="header-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-header-toggle><span class="sr-only">Open main navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
     <nav id="primary-navigation" aria-label="Main navigation" data-primary-navigation>
         @guest
         <a href="/pages/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
@@ -31,7 +31,7 @@
         @else
         <a class="button small" href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a>
         <details class="profile-menu">
-            <summary><span class="profile-menu-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="profile-menu-name">{{ auth()->user()->name }}</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+            <summary aria-label="Account menu for {{ auth()->user()->name }}"><span class="profile-menu-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="profile-menu-name">{{ auth()->user()->name }}</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
             <div class="profile-menu-panel"><a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> My profile</a><form class="topbar-logout" method="post" action="/logout">@csrf<button type="submit"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sign out</button></form></div>
         </details>
         @endif
@@ -40,9 +40,10 @@
 
 <div class="shell">
     @auth
-    <aside class="site-sidebar" aria-label="Account navigation">
+    <button class="account-menu-toggle" type="button" aria-expanded="false" aria-controls="account-navigation" data-account-nav-toggle><span class="sr-only">Open account navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <aside id="account-navigation" class="site-sidebar" aria-label="Account navigation" data-account-navigation>
         <div class="sidebar-identity"><strong>{{ auth()->user()->name }}</strong><small>{{ ucwords(str_replace('_',' ',auth()->user()->role)) }}</small></div>
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" aria-label="Account">
             <section class="sidebar-group">
                 <h2 class="sidebar-heading">Workspace</h2>
                 <ul class="sidebar-links">
