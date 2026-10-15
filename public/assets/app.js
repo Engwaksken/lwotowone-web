@@ -547,3 +547,66 @@ document.querySelectorAll('[data-auto-dismiss]').forEach(message=>{
         window.setTimeout(()=>message.remove(),600);
     },5000);
 });
+
+// Registration: both policies must be opened and scrolled to the end before the learner can agree and continue.
+const registerForm=document.querySelector('[data-register-form]');
+if(registerForm){
+    const keys=['terms','privacy'];
+    const input=key=>registerForm.querySelector(`[data-policy-input="${key}"]`);
+    const dialog=key=>document.querySelector(`[data-policy-dialog="${key}"]`);
+    const consent=registerForm.querySelector('[data-policy-consent]');
+    const unread=()=>keys.find(key=>input(key)?.value!=='1');
+    const markRead=key=>{
+        input(key).value='1';
+        const status=registerForm.querySelector(`[data-policy-status="${key}"]`);
+        status.innerHTML='<i class="fas fa-check-circle" aria-hidden="true"></i> Read';
+        status.closest('[data-policy-open]').classList.add('is-read');
+    };
+    const open=key=>{
+        const box=dialog(key);if(!box)return;
+        box.showModal();
+        const body=box.querySelector('[data-policy-body]');body.scrollTop=0;body.focus();checkEnd(box);
+    };
+    const checkEnd=box=>{
+        const body=box.querySelector('[data-policy-body]');
+        if(body.scrollTop+body.clientHeight<body.scrollHeight-8)return;
+        box.querySelector('[data-policy-accept]').disabled=false;
+        box.querySelector('[data-policy-hint]').textContent='Thank you for reading.';
+    };
+    keys.forEach(key=>{
+        if(input(key)?.value==='1')markRead(key);
+        const box=dialog(key);if(!box)return;
+        box.querySelector('[data-policy-body]').addEventListener('scroll',()=>checkEnd(box),{passive:true});
+        box.querySelector('[data-policy-accept]').addEventListener('click',()=>{
+            markRead(key);box.close();
+            const next=unread();
+            if(next)open(next);else{consent.checked=true;consent.focus();}
+        });
+    });
+    registerForm.querySelectorAll('[data-policy-open]').forEach(button=>button.addEventListener('click',()=>open(button.dataset.policyOpen)));
+    consent.addEventListener('change',()=>{const next=unread();if(consent.checked&&next){consent.checked=false;open(next);}});
+    registerForm.addEventListener('submit',event=>{const next=unread();if(next){event.preventDefault();open(next);}});
+}
+
+// Learner profile: update the completion bar live as required answers are filled in.
+const profileProgress=document.querySelector('[data-profile-progress]');
+const learnerProfileForm=document.querySelector('form[data-learner-profile]');
+if(profileProgress&&learnerProfileForm&&!profileProgress.classList.contains('is-complete')){
+    const update=()=>{
+        const groups=new Map();
+        [...learnerProfileForm.elements].forEach(field=>{
+            if(!field.required||!field.willValidate||field.closest('[hidden]:not([role="tabpanel"])'))return;
+            const key=field.type==='radio'?`radio:${field.name}`:field;
+            const filled=field.type==='radio'||field.type==='checkbox'?field.checked:field.value.trim()!=='';
+            groups.set(key,(groups.get(key)||false)||filled);
+        });
+        const total=groups.size||1;const done=[...groups.values()].filter(Boolean).length;
+        const percent=Math.round(100*done/total);
+        profileProgress.querySelector('[data-profile-progress-value]').textContent=`${percent}%`;
+        const bar=profileProgress.querySelector('[data-profile-progress-bar]');
+        bar.setAttribute('aria-valuenow',String(percent));bar.querySelector('span').style.width=`${percent}%`;
+        const note=profileProgress.querySelector('[data-profile-progress-note]');
+        if(note)note.textContent=percent===100?'All required answers are filled in. Save your profile to unlock learning.':'Courses, lessons, resources, events and opportunities open once your profile is complete.';
+    };
+    learnerProfileForm.addEventListener('input',update);learnerProfileForm.addEventListener('change',()=>requestAnimationFrame(update));update();
+}

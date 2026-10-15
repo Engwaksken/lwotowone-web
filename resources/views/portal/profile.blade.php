@@ -15,6 +15,7 @@
 <div class="field"><label for="profile-bio">About me</label><textarea id="profile-bio" name="bio">{{ old('bio',$user->bio) }}</textarea></div>
 <button type="submit">Save profile</button></form>
 @else
+@include('partials.profile-progress',['progressUser'=>$user,'onProfilePage'=>true])
 <form class="panel profile-form" method="post" action="/profile" data-learner-profile novalidate>@csrf
 @php $refugee=(string)old('refugee',(int)$user->refugee)==='1';$pwd=(string)old('pwd',(int)$user->pwd)==='1';$employed=(string)old('employed',(int)$user->employed)==='1'; @endphp
 <div class="tabs" data-tabs>
@@ -51,7 +52,7 @@
 </div>
 @if($user->profile_complete)<div class="panel learner-enrollment-summary"><h2>Enrollment details</h2><p><strong>Learner number:</strong> {{ $user->learner_no??'Assigned after payment is confirmed' }}</p><p><strong>Enrollment category:</strong> {{ $user->enrollment_category??'Set by your cohort' }}</p><p><strong>Enrollment date:</strong> {{ $user->enrollment_date??'Set when payment is confirmed' }}</p></div>@endif
 <div class="profile-actions"><button type="submit">Save learner profile</button></div></form>
-@if($user->profile_complete)<p class="notice success">Profile complete. Learning access: {{ $user->learning_access_paid?'Payment confirmed':'Payment required' }}.</p>@endif
+@if($user->profile_complete)<p class="notice success">Profile complete. Learning access: {{ $user->learning_access_paid?'Payment confirmed':(\App\Services\FreeAccess::active()?'Free during the free access period':'Payment required') }}.</p>@endif
 @endif
 </div>
 @endsection

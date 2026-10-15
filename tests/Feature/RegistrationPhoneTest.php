@@ -21,6 +21,8 @@ class RegistrationPhoneTest extends TestCase
             'password' => 'A-long-test-password',
             'password_confirmation' => 'A-long-test-password',
             'consent' => 1,
+            'terms_read' => 1,
+            'privacy_read' => 1,
         ];
     }
 

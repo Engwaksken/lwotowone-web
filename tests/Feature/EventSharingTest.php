@@ -49,7 +49,7 @@ class EventSharingTest extends TestCase
 
     public function test_public_event_registration_does_not_require_paid_learning_and_uses_own_identity(): void
     {
-        $event = $this->event(); $learner = $this->user('participant');
+        $event = $this->event(); $learner = $this->user('participant'); $learner->update(['profile_complete' => true]);
         $this->actingAs($learner)->post('/events/'.$event->registration_token.'/register', ['name' => 'Spoof', 'email' => 'spoof@example.test', 'status' => 'attended'])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertDatabaseHas('event_registrations', ['event_id' => $event->id, 'user_id' => $learner->id, 'participant_name' => $learner->name, 'participant_email' => $learner->email, 'status' => 'registered']);
         $this->get('/events/'.$event->registration_token)->assertOk()->assertSee('Your registration status');

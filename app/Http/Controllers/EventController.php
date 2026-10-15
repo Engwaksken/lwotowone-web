@@ -44,6 +44,7 @@ class EventController extends Controller
     public function register(Request $request, string $token)
     {
         $event = DB::table('events')->where('registration_token', $token)->where('status', 'published')->first(); abort_unless($event, 404);
+        if ($request->user()?->role === 'participant' && !$request->user()->profile_complete) return redirect('/profile')->with('learning_access_notice', 'Complete your learner profile to register for events.');
         $data = $request->user() ? [] : $request->validate(['name' => 'required|string|max:255', 'email' => 'required|email|max:255', 'phone' => 'nullable|string|max:40']);
         $id = EventParticipation::register((int)$event->id, $request->user(), $data);
         Workflow::insert('audit_logs', ['user_id' => $request->user()?->id, 'module' => 'event_registrations', 'action' => 'register', 'record_id' => $id]);

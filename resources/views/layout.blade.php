@@ -48,14 +48,14 @@
 <div class="shell">
     @if($workspace)
     <button class="account-menu-toggle" type="button" aria-expanded="false" aria-controls="account-navigation" data-account-nav-toggle><span class="sr-only">Open account navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
-    <aside id="account-navigation" class="site-sidebar" aria-label="Account navigation" data-account-navigation>
+    <aside id="account-navigation" class="site-sidebar{{ auth()->user()->role==='participant'&&!auth()->user()->profile_complete?' profile-locked':'' }}" aria-label="Account navigation" data-account-navigation>
         <div class="sidebar-identity"><span class="sidebar-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="sidebar-identity-text"><strong>{{ auth()->user()->name }}</strong><small>{{ ucwords(str_replace('_',' ',auth()->user()->role)) }}</small></span></div>
         <nav class="sidebar-nav" aria-label="Account">
             <section class="sidebar-group">
                 <h2 class="sidebar-heading">Workspace</h2>
                 <ul class="sidebar-links">
                     <li><a href="/dashboard" @if(request()->is('dashboard')) aria-current="page" @endif><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a></li>
-                    @if(auth()->user()->role==='participant')<li><a href="/calls" @if(request()->is('calls*')) aria-current="page" @endif><i class="fas fa-bullhorn" aria-hidden="true"></i> Open calls</a></li>@endif
+                    @if(auth()->user()->role==='participant')<li><a href="/calls" data-requires-profile @if(request()->is('calls*')) aria-current="page" @endif><i class="fas fa-bullhorn" aria-hidden="true"></i> Open calls</a></li>@endif
                 </ul>
             </section>
             @if(auth()->user()->staff())
@@ -125,17 +125,17 @@
                 <details class="sidebar-group sidebar-disclosure" data-sidebar-group="learning" @if(request()->is('portal/learn*')||request()->is('portal/practice*')) open @endif>
                     <summary><h2 class="sidebar-heading">Learning</h2></summary>
                     <ul class="sidebar-links">
-                        <li><a href="/portal/learn" @if(request()->is('portal/learn*')) aria-current="page" @endif><i class="fas fa-book-open" aria-hidden="true"></i> My learning</a></li>
-                        <li><a href="/portal/practice" @if(request()->is('portal/practice*')) aria-current="page" @endif><i class="fas fa-tools" aria-hidden="true"></i> Practical skills</a></li>
+                        <li><a href="/portal/learn" data-requires-profile @if(request()->is('portal/learn*')) aria-current="page" @endif><i class="fas fa-book-open" aria-hidden="true"></i> My learning</a></li>
+                        <li><a href="/portal/practice" data-requires-profile @if(request()->is('portal/practice*')) aria-current="page" @endif><i class="fas fa-tools" aria-hidden="true"></i> Practical skills</a></li>
                     </ul>
                 </details>
                 <details class="sidebar-group sidebar-disclosure" data-sidebar-group="grow-connect" @if(request()->is('portal/mentorship*')||request()->is('portal/opportunities*')||request()->is('portal/enterprise*')||request()->is('portal/events*')) open @endif>
                     <summary><h2 class="sidebar-heading">Grow and connect</h2></summary>
                     <ul class="sidebar-links">
-                        <li><a href="/portal/mentorship" @if(request()->is('portal/mentorship*')) aria-current="page" @endif><i class="fas fa-hands-helping" aria-hidden="true"></i> Mentorship</a></li>
-                        <li><a href="/portal/opportunities" @if(request()->is('portal/opportunities*')) aria-current="page" @endif><i class="fas fa-briefcase" aria-hidden="true"></i> Opportunities</a></li>
-                        <li><a href="/portal/enterprise" @if(request()->is('portal/enterprise*')) aria-current="page" @endif><i class="fas fa-store" aria-hidden="true"></i> Enterprise and earnings</a></li>
-                        <li><a href="/portal/events" @if(request()->is('portal/events*')) aria-current="page" @endif><i class="fas fa-calendar-alt" aria-hidden="true"></i> Events</a></li>
+                        <li><a href="/portal/mentorship" data-requires-profile @if(request()->is('portal/mentorship*')) aria-current="page" @endif><i class="fas fa-hands-helping" aria-hidden="true"></i> Mentorship</a></li>
+                        <li><a href="/portal/opportunities" data-requires-profile @if(request()->is('portal/opportunities*')) aria-current="page" @endif><i class="fas fa-briefcase" aria-hidden="true"></i> Opportunities</a></li>
+                        <li><a href="/portal/enterprise" data-requires-profile @if(request()->is('portal/enterprise*')) aria-current="page" @endif><i class="fas fa-store" aria-hidden="true"></i> Enterprise and earnings</a></li>
+                        <li><a href="/portal/events" data-requires-profile @if(request()->is('portal/events*')) aria-current="page" @endif><i class="fas fa-calendar-alt" aria-hidden="true"></i> Events</a></li>
                     </ul>
                 </details>
                 <details class="sidebar-group sidebar-disclosure" data-sidebar-group="updates" @if(request()->is('portal/notifications*')) open @endif>

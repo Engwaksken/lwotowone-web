@@ -6,6 +6,7 @@
 @if($registration&&$registration->status!=='cancelled')<div class="notice">Your registration status: <strong>{{ ucfirst($registration->status) }}</strong>.</div>
 @elseif(now()->gte($event->starts_at))<div class="notice">Registration is closed. The event has started.</div>
 @elseif($event->capacity&&$registered>=$event->capacity)<div class="notice">This event is full.</div>
+@elseif(auth()->check()&&auth()->user()->role==='participant'&&!auth()->user()->profile_complete)<div class="notice">Complete your learner profile to register for this event. <a href="/profile">Complete my profile</a></div>
 @elseif(auth()->check()&&auth()->user()->role!=='participant')<div class="notice">This registration form is for participants. Staff can manage the roster from the events workspace.</div>
 @else
 <form class="panel public-response-form" method="post" action="/events/{{ $event->registration_token }}/register">@csrf<h2>Register for this event</h2>
