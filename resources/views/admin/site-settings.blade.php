@@ -53,6 +53,23 @@
     @endif
     <section class="tab-panel" role="tabpanel" id="settings-panel-payments" aria-labelledby="settings-tab-payments" @if(auth()->user()->role==='admin')hidden @endif>
     @php $gatewayList=collect($gateways); $gatewayActive=$gatewayList->where('active',true)->count(); @endphp
+    @php $freeEnds=\App\Services\FreeAccess::endsAt(); $freeActive=\App\Services\FreeAccess::active(); @endphp
+    <section class="panel free-access-settings" id="free-access">
+        <div class="mel-panel-heading">
+            <div>
+                <h2>Free access period</h2>
+                <p>@if($freeActive)<span class="status-badge" data-status="published">Free access on</span> @if($freeEnds)Learners use all courses, materials and events free until <strong>{{ $freeEnds->format('d M Y, H:i') }}</strong>. Payment is required after that.@else Learners use all courses, materials and events free. No end date is set, so payment is not required yet.@endif @else<span class="status-badge" data-status="closed">Free access ended</span> The free period ended on <strong>{{ $freeEnds->format('d M Y, H:i') }}</strong>. Learners now pay or subscribe to continue, and event payment amounts apply.@endif</p>
+            </div>
+        </div>
+        <form method="post" action="/admin/site-settings/free-access" class="inline-form">@csrf @method('PUT')
+            <div class="field">
+                <label for="free-access-ends-at">Free access ends (optional)</label>
+                <input id="free-access-ends-at" type="datetime-local" name="free_access_ends_at" value="{{ old('free_access_ends_at',$freeEnds?->format('Y-m-d\TH:i')) }}">
+                <small>Set a date to activate the expiry. Leave blank to keep everything free with no end date.</small>
+            </div>
+            <div class="actions"><button type="submit">Save free access period</button>@if($freeActive)<button type="submit" class="secondary" name="end_now" value="1" data-confirm="End free access now? Learners without confirmed payment will be asked to pay.">End free access now</button>@endif</div>
+        </form>
+    </section>
     <section class="panel payment-settings" id="payment-methods">
         <div class="mel-panel-heading">
             <div>

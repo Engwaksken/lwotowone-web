@@ -11,11 +11,11 @@ class LearningAccess
     public static function allowed(User $user,int $courseId): bool {
         $row=self::enrollment($user,$courseId);
         $prerequisite=DB::table('courses')->where('id',$courseId)->value('prerequisite_course_id');
-        return $user->profile_complete&&$row&&(!$prerequisite||self::completionReady($user,(int)$prerequisite))&&($row->payment_confirmed_at||(!$row->trial_started_at&&$user->learning_access_paid)||($row->trial_expires_at&&now()->lt(Carbon::parse($row->trial_expires_at))));
+        return $user->profile_complete&&$row&&(!$prerequisite||self::completionReady($user,(int)$prerequisite))&&(FreeAccess::active()||$row->payment_confirmed_at||(!$row->trial_started_at&&$user->learning_access_paid)||($row->trial_expires_at&&now()->lt(Carbon::parse($row->trial_expires_at))));
     }
     public static function requireCourse(User $user,int $courseId): void {
         Workflow::enrolled($user,$courseId);
-        abort_unless(self::allowed($user,$courseId),403,'Complete the prerequisite course and confirm payment if your 12-hour trial has ended.');
+        abort_unless(self::allowed($user,$courseId),403,FreeAccess::active()?'Complete the prerequisite course first.':'Complete the prerequisite course and confirm payment if your 12-hour trial has ended.');
     }
     public static function lessons(int $courseId) {
         return DB::table('lessons')->leftJoin('course_modules','course_modules.id','=','lessons.module_id')->where('lessons.course_id',$courseId)->where('lessons.status','published')

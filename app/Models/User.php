@@ -19,7 +19,7 @@ class User extends Authenticatable {
     });
   }
   public function fullAccessActive(): bool {return $this->full_access_until?->isFuture() ?? false;}
-  public function learningAccessOpen(): bool {return (bool) $this->learning_access_paid || $this->fullAccessActive();}
+  public function learningAccessOpen(): bool {return \App\Services\FreeAccess::active() || (bool) $this->learning_access_paid || $this->fullAccessActive();}
  public function staff(): bool {return in_array($this->role,['admin','manager','instructor','mentor']);}
  public function manager(): bool {return in_array($this->role,['admin','manager']);}
 }

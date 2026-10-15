@@ -11,6 +11,12 @@ class LearningWindowAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->endFreeAccess();
+    }
+
     private function participant(bool $profileComplete = false): User
     {
         return User::create([

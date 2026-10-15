@@ -56,6 +56,7 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
     Route::put('/admin/site-settings/backups',[CmsController::class,'saveBackupSettings']);Route::post('/admin/site-settings/backups/run',[CmsController::class,'createBackup']);Route::get('/admin/site-settings/backups/{filename}',[CmsController::class,'downloadBackup'])->where('filename','[^/]+');
    Route::put('/admin/site-settings/ai',[CmsController::class,'saveAiSettings']);
    Route::post('/admin/site-settings/ai/test',[CmsController::class,'testAiConnection'])->middleware('throttle:5,1');
+  Route::put('/admin/site-settings/free-access',[CmsController::class,'saveFreeAccess']);
   Route::post('/admin/site-settings/payment-gateways', [\App\Http\Controllers\MelController::class,'saveGateway']);
   Route::delete('/admin/site-settings/payment-gateways/{id}', [\App\Http\Controllers\MelController::class,'deleteGateway']);
    Route::get('/admin/enrollment', [\App\Http\Controllers\MelController::class,'enrollment']);

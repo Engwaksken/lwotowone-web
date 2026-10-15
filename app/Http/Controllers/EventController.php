@@ -36,7 +36,9 @@ class EventController extends Controller
         $event = DB::table('events')->where('registration_token', $token)->where('status', 'published')->first(); abort_unless($event, 404);
         $registered = DB::table('event_registrations')->where('event_id', $event->id)->where('status', '!=', 'cancelled')->count();
         $own = $request->user()?->role === 'participant' ? DB::table('event_registrations')->where('event_id', $event->id)->where('user_id', $request->user()->id)->first() : null;
-        return view('public.event-registration', ['event' => $event, 'registered' => $registered, 'registration' => $own]);
+        $feeDue = (float)($event->payment_amount ?? 0) > 0 && !\App\Services\FreeAccess::active();
+        $gateways = $feeDue ? DB::table('payment_gateways')->where('active', true)->orderBy('name')->get() : collect();
+        return view('public.event-registration', ['event' => $event, 'registered' => $registered, 'registration' => $own, 'feeDue' => $feeDue, 'gateways' => $gateways, 'currency' => $gateways->first()->currency ?? 'UGX']);
     }
 
     public function register(Request $request, string $token)

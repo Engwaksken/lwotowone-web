@@ -7,7 +7,8 @@
         ->map(fn ($value, $key) => ['label' => \Illuminate\Support\Str::headline((string) $key), 'value' => $value, 'group' => 'More details'])
         ->values()->all();
 @endphp<div class="page-wrap"><span class="eyebrow">Your learning journey</span><h1 class="page-title">{{ match($section){'learn'=>'My learning','practice'=>'Practical skills','mentorship'=>'Mentorship','enterprise'=>'Enterprise and earnings',default=>ucfirst($section)} }}</h1>
-@if(auth()->user()->full_access_until && auth()->user()->full_access_until->isFuture() && ! auth()->user()->learning_access_paid)
+@if(auth()->user()->role==='participant')@include('partials.free-access-notice')@endif
+@if(!\App\Services\FreeAccess::active() && auth()->user()->full_access_until && auth()->user()->full_access_until->isFuture() && ! auth()->user()->learning_access_paid)
     <div class="notice" role="status">You have full access until <strong>{{ auth()->user()->full_access_until->format('d M Y, H:i') }}</strong>. <a href="/portal/payment">Confirm payment</a> to keep access after that.</div>
 @endif
 @if($section==='learn')

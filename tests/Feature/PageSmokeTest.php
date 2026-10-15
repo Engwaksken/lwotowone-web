@@ -136,6 +136,7 @@ class PageSmokeTest extends TestCase
 
     public function test_participant_in_free_window_can_open_portal_pages(): void
     {
+        $this->endFreeAccess();
         $participant = $this->user('participant', ['profile_complete' => true]);
 
         $this->assertPagesRender($participant, [

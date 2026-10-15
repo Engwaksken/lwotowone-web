@@ -7,8 +7,13 @@
 @if(session('learning_access_notice'))<div class="notice" role="status">{{ session('learning_access_notice') }}</div>@endif
 
 @php $unpaidTrials=\Illuminate\Support\Facades\DB::table('enrolments')->join('courses','courses.id','=','enrolments.course_id')->where('enrolments.user_id',$user->id)->whereNotNull('enrolments.trial_started_at')->whereNull('enrolments.payment_confirmed_at')->get(['courses.title','enrolments.trial_expires_at']); @endphp
+@php $freeAccess=\App\Services\FreeAccess::active(); @endphp
+@include('partials.free-access-notice')
+@unless($freeAccess)
 @foreach($unpaidTrials as $trial)<div class="notice"><strong>{{ $trial->title }}</strong> · Trial ends {{ $trial->trial_expires_at }}. Payment must be confirmed to keep learning after that.</div>@endforeach
+@endunless
 @if(!$user->profile_complete)<p>Please <a href="/profile">complete your learner profile</a> to request access.</p>
+@elseif($freeAccess)<div class="panel"><h2>No payment needed yet</h2><p>You can use every course, learning material and event for free during the free access period. Payment options will appear here when the free period ends.</p><p><a class="button" href="/portal/learn">Go to my learning</a></p></div>
 @elseif($user->learning_access_paid&&$unpaidTrials->isEmpty())<div class="notice success">Payment confirmed. <a href="/portal/learn">Go to my learning</a>.</div>
 @else<div class="panel"><h2>Payment required</h2><p>Your learner profile is complete. Selected course: <strong>{{ \Illuminate\Support\Facades\DB::table('courses')->where('id',$user->selected_course_id)->value('title')??'Not selected' }}</strong>.</p><p>Pay with one of the methods below, then contact your coordinator to confirm payment. Once verified, your cohort, enrollment category, date and learner number are assigned automatically, and course access is activated.</p>
 @forelse($gateways as $gateway)

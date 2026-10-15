@@ -31,6 +31,7 @@ class Catalog {
     'password'=>['string','min:12','max:128'],
     'slug'=>['string','max:150','regex:/^[a-z0-9_-]+$/',Rule::unique($module,$field)->ignore($id)],
     'number'=>['integer','min:0','max:100000'],
+    'money'=>['numeric','min:0','max:1000000000','decimal:0,2'],
     'date','datetime'=>['date'],
     'url'=>['url:http,https','max:1000'],
      'file'=>$module==='resources'?['file','mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg','max:102400']:['file','mimes:pdf,txt,jpg,jpeg,png','max:10240'],

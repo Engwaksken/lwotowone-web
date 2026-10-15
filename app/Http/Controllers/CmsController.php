@@ -193,5 +193,13 @@ class CmsController extends Controller {
    $path='backups/'.$filename;abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path),404);
    return \Illuminate\Support\Facades\Storage::disk('local')->download($path);
   }
+ public function saveFreeAccess(Request $r){
+  abort_unless($r->user()->manager(),403);
+  $data=$r->validate(['free_access_ends_at'=>['nullable','date'],'end_now'=>['nullable','boolean']]);
+  $ends=$r->boolean('end_now')?now():(!empty($data['free_access_ends_at'])?\Carbon\Carbon::parse($data['free_access_ends_at']):null);
+  $this->saveSetting(\App\Services\FreeAccess::SETTING,$ends?$ends->toDateTimeString():'');
+  DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-free-access','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+  return redirect('/admin/site-settings#free-access')->with('success',$ends?($ends->isFuture()?'Free access will end on '.$ends->format('d M Y, H:i').'.':'Free access has ended. Learners now need to pay to continue.'):'Free access is on with no end date.');
+ }
   private function saveSetting(string $key,string $value): void{$exists=DB::table('settings')->where('key',$key)->exists();if($exists)DB::table('settings')->where('key',$key)->update(['value'=>$value,'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>$key,'value'=>$value,'created_at'=>now(),'updated_at'=>now()]);}
  }

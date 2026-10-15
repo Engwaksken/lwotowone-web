@@ -11,6 +11,12 @@ use Tests\TestCase;
 class LearnerJourneyTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->endFreeAccess();
+    }
     private function user(string $role='participant',array $extra=[]): User {return User::create(array_merge(['name'=>'Test '.$role,'email'=>uniqid().'@example.test','password'=>'Long-test-password','role'=>$role,'status'=>'active','profile_complete'=>true],$extra));}
     private function course(?User $teacher=null): int {$teacher??=$this->user('instructor');$program=Workflow::insert('programs',['title'=>'Program','slug'=>uniqid(),'summary'=>'Text','body'=>'Text','category'=>'TVET','status'=>'published']);$id=Workflow::insert('courses',['title'=>'Course','program_id'=>$program,'instructor_id'=>$teacher->id,'summary'=>'Text','duration_hours'=>10,'status'=>'published']);Workflow::insert('course_instructors',['course_id'=>$id,'user_id'=>$teacher->id]);return $id;}
     private function lesson(int $course,int $position,?int $module=null): int {return Workflow::insert('lessons',['course_id'=>$course,'title'=>'Lesson '.$position,'position'=>$position,'module_id'=>$module,'body'=>'Private body '.$position,'video_url'=>'https://youtu.be/abcdefghijk','status'=>'published']);}

@@ -78,6 +78,7 @@ class LearningContentFormatsTest extends TestCase
 
     public function test_uploaded_lesson_is_private_sequenced_and_redacted_when_locked(): void
     {
+        $this->endFreeAccess();
         Storage::fake('local'); $teacher = $this->user('instructor'); $course = $this->course($teacher); $learner = $this->user('participant');
         $first = Workflow::insert('lessons', ['course_id' => $course, 'title' => 'First', 'body' => 'Read first', 'position' => 1, 'status' => 'published']);
         $this->actingAs($teacher)->post('/admin/lessons', array_replace($this->payload($course, 'lessons'), ['position' => 2, 'content_format' => 'audio', 'content_source' => 'upload', 'file' => UploadedFile::fake()->create('lesson.mp3', 12, 'audio/mpeg')]))->assertSessionHasNoErrors();

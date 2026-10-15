@@ -7,20 +7,30 @@
         <li>Create and publish a course with its modules, lessons and resources.</li>
         <li>Publish a call and share its link or QR code.</li>
         <li>Learners sign up, complete their profile and apply.</li>
-        <li>M&amp;E reviews and approves. The 12-hour trial starts at enrollment.</li>
+        <li>M&amp;E reviews and approves. During the free access period learning is free; after it ends, a 12-hour trial starts at enrollment.</li>
         <li>Lessons unlock in order. When the trial ends, content locks until course payment is confirmed.</li>
         <li>Learners finish every lesson and pass practical assessments.</li>
         <li>The assigned instructor recommends completion. Learners then view and download their PDF certificate.</li>
     </ol>
-    <form class="panel grid" method="post" action="/admin/calls">@csrf
-        <div class="field"><label>Call title</label><input name="title" required></div>
-        <div class="field"><label>Course (optional)</label><select name="course_id"><option value="">No course</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></div>
-        <div class="field"><label>Opportunity (optional)</label><select name="opportunity_id"><option value="">No opportunity</option>@foreach($opportunities as $opportunity)<option value="{{ $opportunity->id }}">{{ $opportunity->title }}</option>@endforeach</select></div>
-        <div class="field"><label>Description and eligibility</label><textarea name="description" required></textarea></div>
-        <div class="field"><label>Opens at</label><input type="datetime-local" name="opens_at" required></div>
-        <div class="field"><label>Closes at</label><input type="datetime-local" name="closes_at" required></div>
-        <div class="field"><label>Status</label><select name="status"><option>draft</option><option>published</option><option>closed</option></select></div>
-        <div class="field"><button type="submit">Create call</button></div>
+    <form class="panel" method="post" action="/admin/calls">@csrf
+        <h2>New call</h2>
+        <div class="tabs form-tabs" data-tabs>
+            <div class="tab-list" role="tablist" aria-label="Call sections"><button type="button" role="tab" id="call-tab-details" aria-controls="call-panel-details" aria-selected="true">Details</button><button type="button" role="tab" id="call-tab-description" aria-controls="call-panel-description" aria-selected="false" tabindex="-1">Description</button><button type="button" role="tab" id="call-tab-schedule" aria-controls="call-panel-schedule" aria-selected="false" tabindex="-1">Schedule</button></div>
+            <section class="tab-panel" role="tabpanel" id="call-panel-details" aria-labelledby="call-tab-details">
+                <div class="field"><label>Call title</label><input name="title" required></div>
+                <div class="field"><label>Course (optional)</label><select name="course_id"><option value="">No course</option>@foreach($courses as $course)<option value="{{ $course->id }}">{{ $course->title }}</option>@endforeach</select></div>
+                <div class="field"><label>Opportunity (optional)</label><select name="opportunity_id"><option value="">No opportunity</option>@foreach($opportunities as $opportunity)<option value="{{ $opportunity->id }}">{{ $opportunity->title }}</option>@endforeach</select></div>
+                <div class="field"><label>Status</label><select name="status"><option>draft</option><option>published</option><option>closed</option></select></div>
+            </section>
+            <section class="tab-panel" role="tabpanel" id="call-panel-description" aria-labelledby="call-tab-description" hidden>
+                <div class="field"><label>Description and eligibility</label><textarea name="description" required></textarea></div>
+            </section>
+            <section class="tab-panel" role="tabpanel" id="call-panel-schedule" aria-labelledby="call-tab-schedule" hidden>
+                <div class="field"><label>Opens at</label><input type="datetime-local" name="opens_at" required></div>
+                <div class="field"><label>Closes at</label><input type="datetime-local" name="closes_at" required></div>
+            </section>
+        </div>
+        <div class="form-actions"><button type="submit">Create call</button></div>
     </form>
     <x-filter-bar
         :action="'/admin/calls'"

@@ -7,7 +7,7 @@
 <h1 class="page-title">{{ $course->title }}</h1>
 <p class="course-summary">{{ $course->summary }}</p>
 @php $courseAccess=collect($data['course_access'])->firstWhere('course_id',$course->id); @endphp
-@if(!$courseAccess['allowed'])<div class="notice error">Lessons and resources are locked. Finish the prerequisite course if there is one, and confirm payment when your 12-hour trial ends. <a href="/portal/payment">View payment instructions</a>.</div>@elseif(!$courseAccess['paid']&&$courseAccess['trial_expires_at'])<div class="notice">Trial access expires {{ $courseAccess['trial_expires_at'] }}. Lessons unlock in order as you finish each one.</div>@endif
+@if(!$courseAccess['allowed'])<div class="notice error">Lessons and resources are locked. Finish the prerequisite course if there is one, and confirm payment when your 12-hour trial ends. <a href="/portal/payment">View payment instructions</a>.</div>@elseif(\App\Services\FreeAccess::active())@include('partials.free-access-notice')@elseif(!$courseAccess['paid']&&$courseAccess['trial_expires_at'])<div class="notice">Trial access expires {{ $courseAccess['trial_expires_at'] }}. Lessons unlock in order as you finish each one.</div>@endif
 @include('portal.progress',['progressCourseId'=>$course->id])
 @php
     $courseLessons=collect($data['lessons'])->where('course_id',$course->id)->sortBy('sort_order');

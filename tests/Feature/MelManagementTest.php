@@ -22,6 +22,7 @@ class MelManagementTest extends TestCase
 
     public function test_managers_can_manage_payment_methods_and_learners_only_see_active_methods(): void
     {
+        $this->endFreeAccess();
         $manager = $this->account('manager');
         $this->actingAs($this->account('participant'))->get('/admin/mel')->assertForbidden();
         $this->actingAs($manager)->get('/admin/mel')->assertOk()->assertSee('Overview')->assertSee('Learner gender distribution')->assertSee('Participation and inclusion')->assertDontSee('Enrollment cohorts');

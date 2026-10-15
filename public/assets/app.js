@@ -1,4 +1,4 @@
-document.addEventListener('submit',event=>{const form=event.target;if(form.dataset.confirm&&!confirm(form.dataset.confirm)){event.preventDefault();return;}const button=form.querySelector('button[type="submit"]');if(button){button.disabled=true;setTimeout(()=>button.disabled=false,5000);}});
+document.addEventListener('submit',event=>{if(event.defaultPrevented)return;const form=event.target;const message=event.submitter?.dataset.confirm||form.dataset.confirm;if(message&&!confirm(message)){event.preventDefault();return;}const button=form.querySelector('button[type="submit"]');if(button){button.disabled=true;setTimeout(()=>button.disabled=false,5000);}});
 
 const labelFor=field=>{
     const container=field.closest('.field')||field.parentElement;
@@ -337,8 +337,11 @@ document.querySelectorAll('[data-tabs]').forEach(tabs=>{
     });
 });
 
-document.querySelectorAll('form[data-learner-profile]').forEach(form=>form.addEventListener('submit',event=>{
-    const invalid=[...form.elements].find(field=>field.required&&!field.disabled&&!field.checkValidity());
+// Tabbed forms validate in script so a required field on a hidden tab opens that tab instead of failing silently.
+const tabbedForms=[...document.querySelectorAll('form')].filter(form=>form.matches('[data-learner-profile]')||form.querySelector('.form-tabs'));
+tabbedForms.forEach(form=>{form.noValidate=true;});
+tabbedForms.forEach(form=>form.addEventListener('submit',event=>{
+    const invalid=[...form.elements].find(field=>field.willValidate&&!field.checkValidity());
     if(!invalid)return;
     event.preventDefault();
     const panel=invalid.closest('[role="tabpanel"]');

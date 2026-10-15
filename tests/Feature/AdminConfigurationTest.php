@@ -18,6 +18,7 @@ class AdminConfigurationTest extends TestCase
 
     public function test_bank_fields_are_required_and_unrelated_type_fields_are_not_saved(): void
     {
+        $this->endFreeAccess();
         $this->actingAs($this->user('manager'));
         $this->get('/admin/site-settings')->assertOk()->assertSee('id="payment-type-fields"',false);
         $base=['name'=>'Bank transfer','provider_type'=>'Bank','currency'=>'UGX','active'=>1];

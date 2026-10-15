@@ -12,6 +12,12 @@ class LearnerAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->endFreeAccess();
+    }
+
     private function learner(): User
     {
         return User::create([
