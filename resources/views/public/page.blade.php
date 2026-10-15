@@ -30,8 +30,15 @@
     </section>
     <section class="about-cta"><div><span class="eyebrow">Keep exploring</span><h2>There’s more than one way to begin.</h2><p>Take a look at our programmes and learning opportunities.</p></div><a class="button" href="/explore/programs">Explore programmes</a></section>
 @else
-    <span class="eyebrow">Lwotowone Enterprises Ltd</span>
-    <h1>{{ $page->title }}</h1>
-    <div class="prose page-content">{{ $page->body }}</div>
+    @php $legal=in_array($page->slug,['terms','privacy'],true); @endphp
+    <article class="content-page{{ $legal?' legal-page':'' }}">
+        <div class="content-page-header">
+            <span class="eyebrow">{{ $legal?'Legal':'Lwotowone Enterprises Ltd' }}</span>
+            <h1>{{ $page->title }}</h1>
+            @if(!empty($page->updated_at))<p class="content-page-meta">Last updated {{ \Carbon\Carbon::parse($page->updated_at)->format('j F Y') }}</p>@endif
+        </div>
+        <div class="prose page-content">{{ $page->body }}</div>
+        @if($legal)<p class="content-page-footer">Questions about this page? <a href="/contact">Contact us</a>.</p>@endif
+    </article>
 @endif
 @endsection
