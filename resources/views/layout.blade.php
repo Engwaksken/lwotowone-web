@@ -15,32 +15,38 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('assets/theme.css') }}?v=20261015-theme">
 </head>
-<body class="site-page">
+@php
+    // Account workspace pages get the sidebar; public website pages keep the public header and footer even when signed in.
+    $workspacePath=request()->is('dashboard','admin','admin/*','portal/*','learning/*','profile','certificates/*','change-password','calls/*/apply','files/*');
+    $workspace=auth()->check()&&$workspacePath;
+@endphp
+<body class="site-page{{ $workspace?' workspace-page':' public-page' }}">
 <a class="skip" href="#main">Skip to content</a>
 <header>
     <a class="brand" href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'site-logo','siteSettings'=>$siteSettings])</a>
     <button class="header-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-header-toggle><span class="sr-only">Open main navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
     <nav id="primary-navigation" aria-label="Main navigation" data-primary-navigation>
-        @guest
+        @unless($workspace)
         <a href="/pages/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
         <a href="/explore/opportunities">Opportunities</a><a href="/calls">Apply</a><a href="/explore/events">Events</a><a href="/explore/posts">Stories</a><a href="/contact">Contact</a>
-        <a href="/login">Sign in</a><a class="button small" href="/register">Join us</a>
+        @guest<a href="/login">Sign in</a><a class="button small" href="/register">Join us</a>@endguest
         <details class="header-search-disclosure" data-header-search>
             <summary role="button" aria-label="Open site search" aria-controls="site-search-form" title="Search"><i class="fas fa-search" aria-hidden="true"></i></summary>
             <form id="site-search-form" class="header-search" method="get" action="/search" role="search"><label class="sr-only" for="site-search">Search the site</label><input id="site-search" type="search" name="q" value="{{ request()->is('search')?request('q'):'' }}" placeholder="Search the site" aria-label="Search the site" required><button type="submit" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i></button><button type="button" class="secondary" data-search-close aria-label="Close search"><i class="fas fa-times" aria-hidden="true"></i></button></form>
         </details>
-        @else
+        @endunless
+        @auth
         <a class="button small" href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a>
         <details class="profile-menu">
             <summary aria-label="Account menu for {{ auth()->user()->name }}"><span class="profile-menu-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="profile-menu-name">{{ auth()->user()->name }}</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
             <div class="profile-menu-panel"><a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> My profile</a><form class="topbar-logout" method="post" action="/logout">@csrf<button type="submit"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sign out</button></form></div>
         </details>
-        @endif
+        @endauth
     </nav>
 </header>
 
 <div class="shell">
-    @auth
+    @if($workspace)
     <button class="account-menu-toggle" type="button" aria-expanded="false" aria-controls="account-navigation" data-account-nav-toggle><span class="sr-only">Open account navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
     <aside id="account-navigation" class="site-sidebar" aria-label="Account navigation" data-account-navigation>
         <div class="sidebar-identity"><span class="sidebar-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="sidebar-identity-text"><strong>{{ auth()->user()->name }}</strong><small>{{ ucwords(str_replace('_',' ',auth()->user()->role)) }}</small></span></div>
@@ -148,7 +154,7 @@
         </nav>
         <form class="sidebar-signout" method="post" action="/logout">@csrf<button class="secondary">Sign out</button></form>
     </aside>
-    @endauth
+    @endif
     <main id="main">
         @hasSection('inline-form-feedback')
         @else
@@ -158,7 +164,7 @@
     </main>
 </div>
 
-@unless(request()->is('dashboard','admin/*','portal/*','learning/*','profile','certificates/*'))
+@unless($workspacePath)
 <footer class="site-footer">
     <div class="footer-main">
         <div class="footer-column footer-brand"><a href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'footer-logo','siteSettings'=>$siteSettings])</a><p>Practical learning, useful skills and support for young people building their livelihoods.</p></div>
