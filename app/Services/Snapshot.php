@@ -4,7 +4,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 class Snapshot {
  public static function get(User $u): array {
-  $out=['user'=>$u->only(['id','name','email','phone','district','role','selected_course_id','gender','location','urban_rural','learner_age','refugee','settlement','pwd','impairment','employed','employer_name','transformation_objective','profile_complete','learning_access_paid']),'synced_at'=>now()->toIso8601String()];
+  $out=['user'=>$u->only(['id','name','email','phone','district','role','selected_course_id','gender','location','urban_rural','learner_age','refugee','settlement','pwd','impairment','education_level','employed','employer_name','transformation_objective','profile_complete','learning_access_paid']),'synced_at'=>now()->toIso8601String()];
   $out['user']['profile_complete']=(bool)$u->profile_complete;$out['user']['learning_access_paid']=(bool)$u->learning_access_paid;
   $freeEnds=FreeAccess::endsAt();
   $out['access']=['free_access'=>FreeAccess::active(),'free_access_ends_at'=>$freeEnds?->toIso8601String(),'learning_open'=>$u->role!=='participant'||((bool)$u->profile_complete&&$u->learningAccessOpen()),'profile_complete'=>(bool)$u->profile_complete,'profile_percent'=>ProfileProgress::percent($u),'profile_missing'=>ProfileProgress::missing($u)];

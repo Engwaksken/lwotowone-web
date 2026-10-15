@@ -45,10 +45,10 @@ class ProfileAndPoliciesTest extends TestCase
     public function test_profile_progress_reflects_missing_answers(): void
     {
         $learner = $this->participant();
-        $this->assertSame(20, ProfileProgress::percent($learner));
+        $this->assertSame(18, ProfileProgress::percent($learner));
         $this->assertContains('Course choice', ProfileProgress::missing($learner));
 
-        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Complete your profile to unlock learning')->assertSee('aria-valuenow="20"', false);
+        $this->actingAs($learner)->get('/profile')->assertOk()->assertSee('Complete your profile to unlock learning')->assertSee('aria-valuenow="18"', false);
         $this->get('/dashboard')->assertRedirect('/profile');
 
         $learner->update(['profile_complete' => true]);
@@ -76,7 +76,7 @@ class ProfileAndPoliciesTest extends TestCase
         Workflow::insert('events', ['title' => 'Paid fair', 'description' => 'Welcome', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addHour(), 'location' => 'Arua', 'capacity' => 10, 'status' => 'published', 'payment_amount' => 5000, 'registration_token' => 'paid-fair']);
         $learner = $this->participant();
         $snapshot = $this->actingAs($learner, 'sanctum')->getJson('/api/snapshot')->assertOk();
-        $snapshot->assertJsonPath('access.profile_complete', false)->assertJsonPath('access.profile_percent', 20)->assertJsonPath('access.free_access', true)->assertJsonPath('access.learning_open', false)
+        $snapshot->assertJsonPath('access.profile_complete', false)->assertJsonPath('access.profile_percent', 18)->assertJsonPath('access.free_access', true)->assertJsonPath('access.learning_open', false)
             ->assertJsonPath('settlements.0.name', 'Bidibidi')->assertJsonPath('user.profile_complete', false)->assertJsonPath('events.0.fee_due', false);
 
         $this->endFreeAccess();

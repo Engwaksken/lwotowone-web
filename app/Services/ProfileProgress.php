@@ -19,6 +19,7 @@ class ProfileProgress
             'Urban or rural' => filled($user->urban_rural),
             'Refugee status' => $answered && (!$user->refugee || filled($user->settlement)),
             'Disability status' => $answered && (!$user->pwd || filled($user->impairment)),
+            'Education level' => filled($user->education_level),
             'Employment status' => $user->employed !== null && (!$user->employed || filled($user->employer_name)),
         ];
     }
