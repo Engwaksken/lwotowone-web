@@ -68,4 +68,19 @@ class ProfileAndPoliciesTest extends TestCase
         $this->post('/events/open-day-token/register')->assertRedirect('/profile');
         $this->assertDatabaseMissing('event_registrations', ['event_id' => $id]);
     }
+    public function test_mobile_api_exposes_policies_profile_progress_and_free_access(): void
+    {
+        $this->getJson('/api/policies')->assertOk()->assertJsonPath('policies.terms.title', 'Terms of use')->assertJsonPath('policies.privacy.title', 'Privacy notice');
+
+        DB::table('mel_settlements')->insert(['name' => 'Bidibidi', 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        Workflow::insert('events', ['title' => 'Paid fair', 'description' => 'Welcome', 'starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addHour(), 'location' => 'Arua', 'capacity' => 10, 'status' => 'published', 'payment_amount' => 5000, 'registration_token' => 'paid-fair']);
+        $learner = $this->participant();
+        $snapshot = $this->actingAs($learner, 'sanctum')->getJson('/api/snapshot')->assertOk();
+        $snapshot->assertJsonPath('access.profile_complete', false)->assertJsonPath('access.profile_percent', 20)->assertJsonPath('access.free_access', true)->assertJsonPath('access.learning_open', false)
+            ->assertJsonPath('settlements.0.name', 'Bidibidi')->assertJsonPath('user.profile_complete', false)->assertJsonPath('events.0.fee_due', false);
+
+        $this->endFreeAccess();
+        $learner->update(['profile_complete' => true]);
+        $this->getJson('/api/snapshot')->assertJsonPath('access.free_access', false)->assertJsonPath('access.profile_percent', 100)->assertJsonPath('events.0.fee_due', true)->assertJsonPath('events.0.currency', 'UGX');
+    }
 }

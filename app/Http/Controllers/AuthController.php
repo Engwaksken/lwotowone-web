@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 class AuthController extends Controller {
  public function form(){return view('auth.login');}
- public function registerForm(){$policies=\Illuminate\Support\Facades\DB::table('pages')->whereIn('slug',['terms','privacy'])->where('status','published')->get()->keyBy('slug');return view('auth.register',compact('policies'));}
+ public function registerForm(){return view('auth.register');}
  public function register(Request $r){
      $phone=$r->is('api/*')?'nullable':'required';
    $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>$phone.'|string|max:40','district'=>'nullable|string|max:100','consent'=>'accepted']+($r->is('api/*')?[]:['terms_read'=>'accepted','privacy_read'=>'accepted']),['terms_read.accepted'=>'Open and read the terms of use before creating your account.','privacy_read.accepted'=>'Open and read the privacy notice before creating your account.']);unset($d['consent'],$d['password_confirmation'],$d['terms_read'],$d['privacy_read']);

@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{AuthController,PortalController};
 Route::post('/stripe/webhook',[PortalController::class,'stripeWebhook'])->middleware('throttle:api');
+Route::get('/policies',fn()=>['policies'=>\App\Services\Policies::all()])->middleware('throttle:api');
 Route::middleware('throttle:login')->group(function(){Route::post('/login',[AuthController::class,'login']);Route::post('/register',[AuthController::class,'register']);});
 Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
  Route::post('/logout',[AuthController::class,'logout']);Route::get('/snapshot',[PortalController::class,'snapshot']);

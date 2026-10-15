@@ -73,7 +73,7 @@ class PortalController extends Controller {
   }
   public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);return view('portal.course',compact('data','course'));}
  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}
-  public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);abort_unless($r->user()->profile_complete&&($r->user()->learning_access_paid||DB::table('enrolments')->where('user_id',$r->user()->id)->where('trial_expires_at','>',now())->exists()),403,'Complete your profile and confirm payment or obtain an approved trial to access learning data.');return Snapshot::get($r->user());}
+  public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);return Snapshot::get($r->user());}
   public function registerDeviceToken(Request $r){
     abort_unless($r->user()->role==='participant',403);
     $data=$r->validate(['token'=>'required|string|max:4096']);

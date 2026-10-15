@@ -40,24 +40,7 @@
                 @error('password_confirmation')<p class="field-error" id="password_confirmation-error" role="alert">{{ $message }}</p>@enderror
             </div>
         </div>
-        @php
-            $policyDocs=[
-                'terms'=>['title'=>$policies['terms']->title??'Terms of use','body'=>$policies['terms']->body??"By creating an account you agree to use Lwotowone services lawfully and respectfully, to give accurate information about yourself, and to keep your password private.
-
-Course materials are provided for your personal learning. Do not copy, resell or share them without permission.
-
-We may suspend accounts that misuse the platform, harass other people or try to access information that is not theirs.
-
-Contact us if you have questions about these terms."],
-                'privacy'=>['title'=>$policies['privacy']->title??'Privacy notice','body'=>$policies['privacy']->body??"We collect the details you give us, such as your name, email, phone number and learner profile, to run your training, track progress and connect you with mentors and opportunities.
-
-Your information is shared only with Lwotowone staff, instructors, mentors and partners who support your learning, or when the law requires it.
-
-We keep your data secure and only for as long as needed for these purposes.
-
-You can ask to see, correct or delete your information by contacting us."],
-            ];
-        @endphp
+        @php $policyDocs=\App\Services\Policies::all(); @endphp
         <div class="policy-reading" data-policy-reading>
             <p class="policy-reading-intro">Before you create your account, please read both documents. Open each one and scroll to the end.</p>
             <div class="policy-reading-list">

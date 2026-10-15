@@ -59,7 +59,7 @@ class LearnerAccessTest extends TestCase
         $this->travel(25)->hours();
         $this->get('/portal/learn')->assertRedirect('/portal/payment');
         $token = $learner->createToken('test')->plainTextToken;
-        $this->withToken($token)->getJson('/api/snapshot')->assertForbidden();
+        $this->withToken($token)->getJson('/api/snapshot')->assertOk()->assertJsonPath('access.learning_open', false)->assertJsonPath('mentors', []);
         $this->postJson('/actions/enrol', ['course_id' => $course])->assertForbidden();
 
         $this->post('/profile', [

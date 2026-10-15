@@ -90,7 +90,7 @@ class LearnerJourneyTest extends TestCase
         $this->withToken($token)->getJson('/api/snapshot')->assertOk()->assertJsonPath('lessons.0.body','Private body 1')->assertJsonPath('lessons.1.body',null)->assertJsonPath('lessons.1.video_url',null);
         $this->postJson('/api/actions/complete',['lesson_id'=>$next])->assertForbidden();$this->postJson('/api/actions/complete',['lesson_id'=>$first,'client_id'=>$client])->assertOk();
         $this->getJson('/api/snapshot')->assertOk()->assertJsonPath('lessons.1.body','Private body 2');
-        $this->travel(12)->hours();$this->getJson('/api/snapshot')->assertForbidden();$this->postJson('/api/actions/complete',['lesson_id'=>$first,'client_id'=>$client])->assertForbidden();
+        $this->travel(12)->hours();$this->getJson('/api/snapshot')->assertOk()->assertJsonPath('lessons.0.body',null)->assertJsonPath('lessons.0.locked',true);$this->postJson('/api/actions/complete',['lesson_id'=>$first,'client_id'=>$client])->assertForbidden();
     }
 
     public function test_opportunity_only_call_approval_records_outcome_without_creating_course_trial(): void {
