@@ -6,14 +6,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="@yield('description','Skills for Life. Enterprise for Livelihoods. Opportunities for Youth.')">
     <title>@yield('title','Lwotowone Enterprises Ltd')</title>
-    <link rel="stylesheet" href="{{ asset('assets/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/layout.css') }}?v=20261011-review-tables">
+    <link rel="stylesheet" href="{{ \App\Services\AssetVersion::url('assets/app.css') }}">
+    <link rel="stylesheet" href="{{ \App\Services\AssetVersion::url('assets/layout.css') }}">
     <link rel="icon" href="{{ $siteSettings['site_favicon']??asset('favicon.ico') }}">
     <style>:root{--green:{{ $siteSettings['primary_color']??'#175742' }};--gold:{{ $siteSettings['accent_color']??'#dfb452' }};--site-font-size:{{ (int)($siteSettings['font_size']??16) }}px;--site-font-family:{{ match($siteSettings['font_family']??'Arial'){'system'=>'system-ui, sans-serif','Georgia'=>'Georgia, serif','Atkinson Hyperlegible'=>'Atkinson Hyperlegible, Arial, sans-serif',default=>'Arial, sans-serif'} }} }</style>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     @include('partials.site-font')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('assets/theme.css') }}?v=20261015-theme">
+    <link rel="stylesheet" href="{{ \App\Services\AssetVersion::url('assets/theme.css') }}">
 </head>
 @php
     // Account workspace pages get the sidebar; public website pages keep the public header and footer even when signed in.
@@ -175,7 +175,7 @@
     <div class="footer-bottom"><p>© 2026 Lwotowone Enterprises Ltd · Uganda</p></div>
 </footer>
 @endunless
-<script src="{{ asset('assets/app.js') }}?v=20261011-flash-dismiss" defer></script>
+<script src="{{ \App\Services\AssetVersion::url('assets/app.js') }}" defer></script>
 <x-help-widget />
 </body>
 </html>
