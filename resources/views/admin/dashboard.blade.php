@@ -56,7 +56,7 @@
     $tiles[] = ['label' => 'MEL learners', 'value' => number_format($count($programmes['mel_learners'] ?? 0)), 'icon' => 'fa-chart-line'];
 @endphp
 <div class="page-wrap dash">
-    <div class="dash-head">
+    <div class="dash-head page-hero">
         <div>
             <span class="eyebrow">Management portal</span>
             <h1 class="page-title">Today at a glance</h1>

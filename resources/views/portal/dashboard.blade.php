@@ -1,9 +1,11 @@
 @extends('layout')
 @section('content')
 <div class="page-wrap">
-    <span class="eyebrow">Learn · Practice · Create · Earn</span>
-    <h1 class="page-title">Hello, {{ $data['user']['name'] }}</h1>
-    <p class="page-intro">Take your next step toward a skill, a business and a steady income.</p>
+    <div class="page-hero">
+        <span class="eyebrow">Learn · Practice · Create · Earn</span>
+        <h1 class="page-title">Hello, {{ $data['user']['name'] }}</h1>
+        <p class="page-intro">Take your next step toward a skill, a business and a steady income.</p>
+    </div>
     <div class="stats">
         <div class="stat"><span class="stat-icon"><i class="fas fa-book-open" aria-hidden="true"></i></span><strong>{{ count($data['enrolments']) }}</strong><span>Enrolled courses</span></div>
         <div class="stat"><span class="stat-icon"><i class="fas fa-check-double" aria-hidden="true"></i></span><strong>{{ count($data['lesson_progress']) }}</strong><span>Lessons completed</span></div>

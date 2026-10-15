@@ -13,6 +13,7 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     @include('partials.site-font')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/theme.css') }}?v=20261015-theme">
 </head>
 <body class="site-page">
 <a class="skip" href="#main">Skip to content</a>
@@ -42,13 +43,13 @@
     @auth
     <button class="account-menu-toggle" type="button" aria-expanded="false" aria-controls="account-navigation" data-account-nav-toggle><span class="sr-only">Open account navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
     <aside id="account-navigation" class="site-sidebar" aria-label="Account navigation" data-account-navigation>
-        <div class="sidebar-identity"><strong>{{ auth()->user()->name }}</strong><small>{{ ucwords(str_replace('_',' ',auth()->user()->role)) }}</small></div>
+        <div class="sidebar-identity"><span class="sidebar-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span class="sidebar-identity-text"><strong>{{ auth()->user()->name }}</strong><small>{{ ucwords(str_replace('_',' ',auth()->user()->role)) }}</small></span></div>
         <nav class="sidebar-nav" aria-label="Account">
             <section class="sidebar-group">
                 <h2 class="sidebar-heading">Workspace</h2>
                 <ul class="sidebar-links">
-                    <li><a href="/dashboard"><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a></li>
-                    @if(auth()->user()->role==='participant')<li><a href="/calls"><i class="fas fa-bullhorn" aria-hidden="true"></i> Open calls</a></li>@endif
+                    <li><a href="/dashboard" @if(request()->is('dashboard')) aria-current="page" @endif><i class="fas fa-tachometer-alt" aria-hidden="true"></i> Overview</a></li>
+                    @if(auth()->user()->role==='participant')<li><a href="/calls" @if(request()->is('calls*')) aria-current="page" @endif><i class="fas fa-bullhorn" aria-hidden="true"></i> Open calls</a></li>@endif
                 </ul>
             </section>
             @if(auth()->user()->staff())
@@ -69,10 +70,10 @@
                                 @endforeach
                                 @if($groupTitle==='Learning and content'&&auth()->user()->manager())
                                     <li><a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a></li>
-                                    <li><a href="/admin/calls"><i class="fas fa-bullhorn" aria-hidden="true"></i> M&E application calls</a></li>
+                                    <li><a href="/admin/calls" @if(request()->is('admin/calls*')) aria-current="page" @endif><i class="fas fa-bullhorn" aria-hidden="true"></i> M&E application calls</a></li>
                                 @endif
                                 @if($groupTitle==='Learning and content'&&(auth()->user()->manager()||auth()->user()->role==='instructor'))
-                                    <li><a href="/admin/certificates"><i class="fas fa-certificate" aria-hidden="true"></i> Certificates</a></li>
+                                    <li><a href="/admin/certificates" @if(request()->is('admin/certificates*')) aria-current="page" @endif><i class="fas fa-certificate" aria-hidden="true"></i> Certificates</a></li>
                                 @endif
                             </ul>
                         </details>
@@ -108,8 +109,8 @@
                     <details class="sidebar-group sidebar-disclosure" data-sidebar-group="reports" @if(request()->is('admin/mel*')||request()->is('admin/reports/*')) open @endif>
                         <summary><h2 class="sidebar-heading">Reports</h2></summary>
                         <ul class="sidebar-links">
-                            <li><a href="/admin/mel"><i class="fas fa-chart-line" aria-hidden="true"></i> MEL reports</a></li>
-                            <li><a href="/admin/mel/surveys" @if(request()->is('admin/mel/surveys*'))aria-current="page"@endif><i class="fas fa-poll" aria-hidden="true"></i> MEL surveys</a></li>
+                            <li><a href="/admin/mel" @if(request()->is('admin/mel')) aria-current="page" @endif><i class="fas fa-chart-line" aria-hidden="true"></i> MEL reports</a></li>
+                            <li><a href="/admin/mel/surveys" @if(request()->is('admin/mel/surveys*')) aria-current="page" @endif><i class="fas fa-poll" aria-hidden="true"></i> MEL surveys</a></li>
                             <li><a href="/admin/reports/impact.csv"><i class="fas fa-file-export" aria-hidden="true"></i> Export impact report</a></li>
                         </ul>
                     </details>
@@ -141,7 +142,7 @@
             <section class="sidebar-group">
                 <h2 class="sidebar-heading">Account</h2>
                 <ul class="sidebar-links">
-                    <li><a href="/profile"><i class="fas fa-user-circle" aria-hidden="true"></i> My profile</a></li>
+                    <li><a href="/profile" @if(request()->is('profile')) aria-current="page" @endif><i class="fas fa-user-circle" aria-hidden="true"></i> My profile</a></li>
                 </ul>
             </section>
         </nav>
