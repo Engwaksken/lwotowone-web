@@ -26,22 +26,22 @@
     </div>
     @if(auth()->user()->role==='admin')
     <section class="tab-panel" role="tabpanel" id="settings-panel-appearance" aria-labelledby="settings-tab-appearance">
-    <form class="panel settings-form" method="post" action="/admin/site-settings" enctype="multipart/form-data">
+    <form class="panel settings-form" id="appearance-form" method="post" action="/admin/site-settings" enctype="multipart/form-data" data-form-tabs="Appearance sections">
         @csrf @method('PUT')
-        <section class="settings-group"><h2>Colours</h2><p>Pick accessible colours for buttons, links and highlights.</p>
+        <section class="settings-group" data-tab-label="Colours"><h2>Colours</h2><p>Pick accessible colours for buttons, links and highlights.</p>
             <div class="settings-fields">
                 <div class="field"><label for="primary_color">Primary brand colour</label><input id="primary_color" type="color" name="primary_color" value="{{ old('primary_color',$settings['primary_color']??'#175742') }}" required><small>Used for primary actions and links.</small></div>
                 <div class="field"><label for="accent_color">Accent colour</label><input id="accent_color" type="color" name="accent_color" value="{{ old('accent_color',$settings['accent_color']??'#dfb452') }}" required><small>Used for focus rings and supporting details.</small></div>
             </div>
         </section>
-        <section class="settings-group"><h2>Typography</h2><p>Choose a clear typeface and comfortable base text size.</p>
+        <section class="settings-group" data-tab-label="Typography"><h2>Typography</h2><p>Choose a clear typeface and comfortable base text size.</p>
             <div class="settings-fields">
                 <div class="field"><label for="font_family">Font family</label><input id="font_family" name="font_family" list="font-families" value="{{ old('font_family',$settings['font_family']??'Arial') }}" maxlength="120" required><datalist id="font-families">@foreach(['Arial','system','Georgia','Atkinson Hyperlegible','Inter','Roboto','Open Sans','Lato','Montserrat'] as $family)<option value="{{ $family }}">@endforeach</datalist><small>Choose a suggestion or enter any font family name.</small></div>
                 <div class="field"><label for="font_url">Custom font file URL (optional)</label><input id="font_url" name="font_url" type="url" value="{{ old('font_url',$settings['font_url']??'') }}" placeholder="https://example.com/fonts/my-font.woff2"><small>Direct HTTPS link to a WOFF or WOFF2 file, not a stylesheet. Leave blank to use fonts on the visitor’s device.</small></div>
                 <div class="field"><label for="font_size">Base text size</label><select id="font_size" name="font_size" required>@foreach([14,15,16,17,18,19,20] as $size)<option value="{{ $size }}" @selected((int)old('font_size',$settings['font_size']??16)===$size)>{{ $size }} px</option>@endforeach</select></div>
             </div>
         </section>
-        <section class="settings-group"><h2>Logo and favicon</h2><p>Upload a clear logo and a square icon. Logos: PNG, JPG or WebP, up to 4 MB. Favicons: PNG or ICO, up to 1 MB.</p>
+        <section class="settings-group" data-tab-label="Logo and favicon"><h2>Logo and favicon</h2><p>Upload a clear logo and a square icon. Logos: PNG, JPG or WebP, up to 4 MB. Favicons: PNG or ICO, up to 1 MB.</p>
             <div class="settings-fields">
                 <div class="field"><label for="logo">Site logo <span class="optional">(optional)</span></label><input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp">@if(!empty($settings['site_logo']))<img class="settings-preview-logo" src="{{ $settings['site_logo'] }}" alt="Current site logo">@endif</div>
                 <div class="field"><label for="favicon">Favicon <span class="optional">(optional)</span></label><input id="favicon" type="file" name="favicon" accept="image/png,image/x-icon">@if(!empty($settings['site_favicon']))<img class="settings-preview-icon" src="{{ $settings['site_favicon'] }}" alt="Current site favicon">@endif</div>
@@ -103,16 +103,20 @@
         <section class="panel" id="email-settings">
             <h2>Email delivery</h2>
             <p>Configure SMTP delivery for verification links, account notifications and platform email. Secrets are encrypted and never shown after saving.</p>
-            <form class="settings-form" method="post" action="/admin/site-settings/email">
+            <form class="settings-form" id="email-form" method="post" action="/admin/site-settings/email" data-form-tabs="Email settings sections">
                 @csrf @method('PUT')
-                <div class="settings-fields">
+                <div class="settings-fields" data-tab-label="Server">
                     <div class="field"><label for="mail-driver">Mail transport</label><select id="mail-driver" name="mail_driver" required><option value="smtp" @selected(old('mail_driver',$settings['mail_driver']??'smtp')==='smtp')>SMTP</option><option value="log" @selected(old('mail_driver',$settings['mail_driver']??'smtp')==='log')>Log only (testing)</option></select></div>
                     <div class="field"><label for="mail-host">SMTP host</label><input id="mail-host" name="mail_host" value="{{ old('mail_host',$settings['mail_host']??'') }}" placeholder="smtp.example.com" maxlength="255"></div>
                     <div class="field"><label for="mail-port">SMTP port</label><input id="mail-port" name="mail_port" type="number" min="1" max="65535" value="{{ old('mail_port',$settings['mail_port']??587) }}"></div>
                     <div class="field"><label for="mail-scheme">Encryption</label><select id="mail-scheme" name="mail_scheme"><option value="smtp" @selected(old('mail_scheme',$settings['mail_scheme']??'smtp')==='smtp')>STARTTLS</option><option value="smtps" @selected(old('mail_scheme',$settings['mail_scheme']??'smtp')==='smtps')>SSL/TLS</option></select></div>
+                </div>
+                <div class="settings-fields" data-tab-label="Sign-in">
                     <div class="field"><label for="mail-username">SMTP username</label><input id="mail-username" name="mail_username" value="{{ old('mail_username',$settings['mail_username']??'') }}" autocomplete="off" maxlength="255"></div>
                     <div class="field"><label for="mail-password">SMTP password {{ !empty($settings['mail_password'])?'(configured; leave blank to keep it)':'' }}</label><input id="mail-password" type="password" name="mail_password" autocomplete="new-password" maxlength="4096" placeholder="{{ !empty($settings['mail_password'])?'Saved securely':'SMTP password' }}"></div>
                     @if(!empty($settings['mail_password']))<div class="field"><label><input type="checkbox" name="clear_mail_password" value="1"> Clear saved SMTP password</label></div>@endif
+                </div>
+                <div class="settings-fields" data-tab-label="Sender">
                     <div class="field"><label for="mail-from-address">From email address</label><input id="mail-from-address" type="email" name="mail_from_address" value="{{ old('mail_from_address',$settings['mail_from_address']??config('mail.from.address')) }}" required maxlength="190"></div>
                     <div class="field"><label for="mail-from-name">From name</label><input id="mail-from-name" name="mail_from_name" value="{{ old('mail_from_name',$settings['mail_from_name']??config('mail.from.name')) }}" required maxlength="190"></div>
                 </div>
@@ -130,16 +134,18 @@
             <section class="tab-panel" role="tabpanel" id="backup-settings" aria-labelledby="backup-tab-remote" hidden>
                 <h2>Remote backup destination (S3-compatible)</h2>
                 <p>Configure AWS S3, Cloudflare R2, DigitalOcean Spaces or another S3-compatible service. Credentials are encrypted at rest.</p>
-                <form class="settings-form" method="post" action="/admin/site-settings/backups">
+                <form class="settings-form" id="backup-remote-form" method="post" action="/admin/site-settings/backups" data-form-tabs="Remote storage sections">
                     @csrf @method('PUT')
-                    <div class="settings-fields">
+                    <div class="settings-fields" data-tab-label="Storage location">
                         <div class="field"><label for="backup-endpoint">S3 endpoint URL</label><input id="backup-endpoint" type="url" name="backup_s3_endpoint" value="{{ old('backup_s3_endpoint',$settings['backup_s3_endpoint']??'') }}" placeholder="https://s3.region.amazonaws.com" required maxlength="500"></div>
                         <div class="field"><label for="backup-bucket">Bucket</label><input id="backup-bucket" name="backup_s3_bucket" value="{{ old('backup_s3_bucket',$settings['backup_s3_bucket']??'') }}" required maxlength="255"></div>
                         <div class="field"><label for="backup-region">Region</label><input id="backup-region" name="backup_s3_region" value="{{ old('backup_s3_region',$settings['backup_s3_region']??'auto') }}" required maxlength="100"></div>
+                        <div class="field"><label for="backup-prefix">Remote folder / prefix</label><input id="backup-prefix" name="backup_s3_prefix" value="{{ old('backup_s3_prefix',$settings['backup_s3_prefix']??'backups') }}" maxlength="255"></div>
+                    </div>
+                    <div class="settings-fields" data-tab-label="Credentials">
                         <div class="field"><label for="backup-access-key">Access key ID</label><input id="backup-access-key" name="backup_s3_access_key" value="{{ old('backup_s3_access_key',$settings['backup_s3_access_key']??'') }}" autocomplete="off" required maxlength="255"></div>
                         <div class="field"><label for="backup-secret">Secret access key {{ !empty($settings['backup_s3_secret'])?'(configured; leave blank to keep it)':'' }}</label><input id="backup-secret" type="password" name="backup_s3_secret" autocomplete="new-password" maxlength="4096" placeholder="{{ !empty($settings['backup_s3_secret'])?'Saved securely':'Secret access key' }}"></div>
                         @if(!empty($settings['backup_s3_secret']))<div class="field"><label><input type="checkbox" name="clear_backup_s3_secret" value="1"> Clear saved secret</label></div>@endif
-                        <div class="field"><label for="backup-prefix">Remote folder / prefix</label><input id="backup-prefix" name="backup_s3_prefix" value="{{ old('backup_s3_prefix',$settings['backup_s3_prefix']??'backups') }}" maxlength="255"></div>
                     </div>
                     <div class="settings-save"><button type="submit">Save remote destination</button></div>
                 </form>
@@ -164,17 +170,25 @@
     <dialog class="form-dialog" id="payment-settings-dialog" aria-labelledby="payment-settings-dialog-title">
         <div class="dialog-heading"><h2 id="payment-settings-dialog-title">Payment gateway settings</h2><button class="secondary small" type="button" data-dialog-close>Close</button></div>
         <div class="dialog-form">
-            <form method="post" action="/admin/site-settings/payment-gateways" class="grid" data-payment-gateway>@csrf
-                <div class="field"><label for="gateway-name">Display name</label><input id="gateway-name" name="name" required></div>
-                <div class="field"><label for="gateway-type">Payment type</label><select id="gateway-type" name="provider_type" required>@foreach(array_keys(config('payments.types')) as $type)<option value="{{ $type }}" @selected(old('provider_type','IOTEC')===$type)>{{ $type }}</option>@endforeach</select></div>
+            <form method="post" action="/admin/site-settings/payment-gateways" id="gateway-form" data-payment-gateway data-form-tabs="Payment option sections">@csrf
                 @php $gatewayFields=collect(config('payments.types'))->flatMap(fn($fields)=>$fields)->all(); @endphp
-                <div class="field"><label><input type="checkbox" name="configure_api" value="1" @checked(old('configure_api'))> Configure provider API credentials</label><small>Saved credentials are encrypted. This does not turn on automatic payments. Payments still need manager confirmation.</small></div>
-                <div class="field" data-gateway-api-environment><label for="gateway-environment">API environment</label><select id="gateway-environment" name="api_environment"><option value="sandbox">Sandbox / testing</option><option value="production" @selected(old('api_environment')==='production')>Production</option></select></div>
-                @foreach($gatewayFields as $key=>$field)<div class="field" data-gateway-field="{{ $key }}"><label for="gateway-{{ $key }}">{{ $field['label'] }}</label><input id="gateway-{{ $key }}" name="{{ $key }}" type="{{ ($field['secret']??false)?'password':($field['type']??'text') }}" value="{{ ($field['secret']??false)?'':old($key) }}" data-secret-label="{{ $field['label'] }}" autocomplete="{{ ($field['secret']??false)?'new-password':'off' }}" maxlength="4096"></div>@endforeach
-                <div class="field"><label for="gateway-currency">Currency</label><select id="gateway-currency" name="currency" required>@foreach(['UGX','USD','EUR','GBP','KES'] as $currency)<option value="{{ $currency }}">{{ $currency }}</option>@endforeach</select></div>
-                <div class="field"><label for="gateway-amount">Amount <span class="optional">(optional)</span></label><input id="gateway-amount" type="number" min="0" step="0.01" name="amount"></div>
-                <div class="field"><label for="gateway-instructions">Payment instructions</label><textarea id="gateway-instructions" name="instructions"></textarea></div>
-                <div class="field"><label><input type="checkbox" name="active" value="1" checked> Show to learners</label></div>
+                <div class="grid" data-tab-label="Payment method">
+                    <div class="field"><label for="gateway-name">Display name</label><input id="gateway-name" name="name" required></div>
+                    <div class="field"><label for="gateway-type">Payment type</label><select id="gateway-type" name="provider_type" required>@foreach(array_keys(config('payments.types')) as $type)<option value="{{ $type }}" @selected(old('provider_type','IOTEC')===$type)>{{ $type }}</option>@endforeach</select></div>
+                    <div class="field"><label for="gateway-currency">Currency</label><select id="gateway-currency" name="currency" required>@foreach(['UGX','USD','EUR','GBP','KES'] as $currency)<option value="{{ $currency }}">{{ $currency }}</option>@endforeach</select></div>
+                    <div class="field"><label for="gateway-amount">Amount <span class="optional">(optional)</span></label><input id="gateway-amount" type="number" min="0" step="0.01" name="amount"></div>
+                    <div class="field"><label><input type="checkbox" name="active" value="1" checked> Show to learners</label></div>
+                </div>
+                <div class="grid" data-tab-label="Account details">
+                    @foreach($gatewayFields as $key=>$field)<div class="field" data-gateway-field="{{ $key }}"><label for="gateway-{{ $key }}">{{ $field['label'] }}</label><input id="gateway-{{ $key }}" name="{{ $key }}" type="{{ ($field['secret']??false)?'password':($field['type']??'text') }}" value="{{ ($field['secret']??false)?'':old($key) }}" data-secret-label="{{ $field['label'] }}" autocomplete="{{ ($field['secret']??false)?'new-password':'off' }}" maxlength="4096"></div>@endforeach
+                </div>
+                <div class="grid" data-tab-label="Instructions">
+                    <div class="field"><label for="gateway-instructions">Payment instructions</label><textarea id="gateway-instructions" name="instructions"></textarea></div>
+                </div>
+                <div class="grid" data-tab-label="API access">
+                    <div class="field"><label><input type="checkbox" name="configure_api" value="1" @checked(old('configure_api'))> Configure provider API credentials</label><small>Saved credentials are encrypted. This does not turn on automatic payments. Payments still need manager confirmation.</small></div>
+                    <div class="field" data-gateway-api-environment><label for="gateway-environment">API environment</label><select id="gateway-environment" name="api_environment"><option value="sandbox">Sandbox / testing</option><option value="production" @selected(old('api_environment')==='production')>Production</option></select></div>
+                </div>
                 <div class="field"><button type="submit">Add payment option</button> <button type="button" class="secondary" data-dialog-close>Cancel</button></div>
             </form>
             <script type="application/json" id="payment-type-fields">{!! json_encode(config('payments.types'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) !!}</script>

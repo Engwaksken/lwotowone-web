@@ -299,6 +299,22 @@ if(aiSettings){
     });
 }
 
+// Forms marked data-form-tabs get one tab per [data-tab-label] section; without script every section stays visible.
+document.querySelectorAll('form[data-form-tabs]').forEach((form,formIndex)=>{
+    const sections=[...form.querySelectorAll('[data-tab-label]')].filter(section=>section.closest('form')===form);
+    if(sections.length<2)return;
+    const base=form.id||`form-tabs-${formIndex}`;
+    const wrapper=document.createElement('div');wrapper.className='tabs form-tabs';wrapper.dataset.tabs='';
+    const list=document.createElement('div');list.className='tab-list';list.setAttribute('role','tablist');list.setAttribute('aria-label',form.dataset.formTabs||'Form sections');
+    wrapper.append(list);sections[0].before(wrapper);
+    sections.forEach((section,index)=>{
+        const tab=document.createElement('button');tab.type='button';tab.setAttribute('role','tab');tab.id=`${base}-tab-${index}`;tab.textContent=section.dataset.tabLabel;
+        section.id||=`${base}-panel-${index}`;tab.setAttribute('aria-controls',section.id);tab.setAttribute('aria-selected',String(index===0));if(index)tab.tabIndex=-1;
+        section.classList.add('tab-panel');section.setAttribute('role','tabpanel');section.setAttribute('aria-labelledby',tab.id);section.hidden=index>0;
+        list.append(tab);wrapper.append(section);
+    });
+});
+
 document.querySelectorAll('[data-tabs]').forEach(tabs=>{
     const tablist=tabs.querySelector('[role="tablist"]');
     const tabButtons=[...(tablist?.querySelectorAll('[role="tab"]')||[])];

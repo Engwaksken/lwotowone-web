@@ -285,3 +285,7 @@ html.theme-high-contrast .site-sidebar .sidebar-nav a,html.theme-high-contrast .
 .form-actions{display:flex;justify-content:flex-end;gap:8px}
 .free-access-settings{margin-bottom:16px}
 .free-access-settings .actions{display:flex;flex-wrap:wrap;gap:8px}
+.form-tabs .tab-panel.grid{gap:18px}
+.form-tabs .settings-group.tab-panel{border-bottom:1px solid var(--border);padding:16px}
+.form-tabs .settings-group>h2{display:none}
+.form-tabs .settings-group>p{margin-top:0}
