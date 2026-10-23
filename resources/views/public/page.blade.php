@@ -28,7 +28,7 @@
             <article><h3>Support and connection</h3><p>Mentorship and community connections can help turn a new skill into a next step.</p></article>
         </div>
     </section>
-    <section class="about-cta"><div><span class="eyebrow">Keep exploring</span><h2>There’s more than one way to begin.</h2><p>Take a look at our programmes and learning opportunities.</p></div><a class="button" href="/explore/programs">Explore programmes</a></section>
+    <section class="about-cta"><div><span class="eyebrow">Keep exploring</span><h2>There’s more than one way to begin.</h2><p>Take a look at our programmes and learning opportunities.</p></div><a class="button" href="/programs">Explore programmes</a></section>
 @else
     @php $legal=in_array($page->slug,['terms','privacy'],true); @endphp
     <article class="content-page{{ $legal?' legal-page':'' }}">

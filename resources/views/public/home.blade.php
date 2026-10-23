@@ -7,7 +7,7 @@
         <span class="eyebrow">{{ $site['hero_eyebrow']??'Learning that leads somewhere' }}</span>
         <h1>{{ $site['hero_title']??'Learn something useful. Build something of your own.' }}</h1>
         <p class="home-lead">{{ $site['hero_summary']??'At Lwotowone, young people learn by doing. We bring practical training, mentorship and enterprise support together so a skill can grow into a livelihood.' }}</p>
-        <div class="actions home-actions"><a class="button" href="/explore/programs">Explore our programmes</a><a class="button secondary" href="/about">Get to know us</a></div>
+        <div class="actions home-actions"><a class="button" href="/programs">Explore our programmes</a><a class="button secondary" href="/about">Get to know us</a></div>
         <p class="home-note">Based in Uganda. Focused on practical skills, enterprise and opportunity.</p>
     </div>
     <aside class="home-journey" aria-label="How learning can grow into opportunity">
@@ -29,9 +29,9 @@
 </section>
 
 <section class="home-pillars" aria-label="Ways to take your next step">
-    <article><span class="pillar-number">01</span><h3>Build a useful skill</h3><p>Explore hands-on learning shaped around work, business and community life.</p><a href="/explore/courses">Browse courses</a></article>
+    <article><span class="pillar-number">01</span><h3>Build a useful skill</h3><p>Explore hands-on learning shaped around work, business and community life.</p><a href="/courses">Browse courses</a></article>
     <article><span class="pillar-number">02</span><h3>Learn with people</h3><p>Get guidance, practise together and build confidence from experience.</p><a href="/approach">Our approach</a></article>
-    <article><span class="pillar-number">03</span><h3>Make an idea real</h3><p>Take the next step towards an enterprise, a job or a new opportunity.</p><a href="/explore/opportunities">See opportunities</a></article>
+    <article><span class="pillar-number">03</span><h3>Make an idea real</h3><p>Take the next step towards an enterprise, a job or a new opportunity.</p><a href="/opportunities">See opportunities</a></article>
 </section>
 
 <section class="home-explore">
@@ -42,8 +42,8 @@
             <button type="button" role="tab" id="tab-courses" aria-controls="panel-courses" aria-selected="false" tabindex="-1">Courses</button>
             <button type="button" role="tab" id="tab-stories" aria-controls="panel-stories" aria-selected="false" tabindex="-1">Stories</button>
         </div>
-        <section class="tab-panel" role="tabpanel" id="panel-programmes" aria-labelledby="tab-programmes"><div class="grid">@forelse($programs as $program)<article class="card home-card"><span class="tag">{{ $program->category }}</span><h3>{{ $program->title }}</h3><p>{{ $program->summary }}</p><a href="/explore/programs/{{ $program->id }}">Learn about this programme</a></article>@empty<div class="empty">We’re preparing information about our programmes. Please check back soon.</div>@endforelse</div></section>
-        <section class="tab-panel" role="tabpanel" id="panel-courses" aria-labelledby="tab-courses" hidden><div class="grid">@forelse($courses as $course)<article class="card home-card"><span class="tag">{{ $course->level }} · {{ $course->duration_hours }} hours</span><h3>{{ $course->title }}</h3><p>{{ $course->summary }}</p><a href="/explore/courses/{{ $course->id }}">View course details</a></article>@empty<div class="empty">New courses will be announced here.</div>@endforelse</div></section>
+        <section class="tab-panel" role="tabpanel" id="panel-programmes" aria-labelledby="tab-programmes"><div class="grid">@forelse($programs as $program)<article class="card home-card"><span class="tag">{{ $program->category }}</span><h3>{{ $program->title }}</h3><p>{{ $program->summary }}</p><a href="/programs/{{ $program->id }}">Learn about this programme</a></article>@empty<div class="empty">We’re preparing information about our programmes. Please check back soon.</div>@endforelse</div></section>
+        <section class="tab-panel" role="tabpanel" id="panel-courses" aria-labelledby="tab-courses" hidden><div class="grid">@forelse($courses as $course)<article class="card home-card"><span class="tag">{{ $course->level }} · {{ $course->duration_hours }} hours</span><h3>{{ $course->title }}</h3><p>{{ $course->summary }}</p><a href="/courses/{{ $course->id }}">View course details</a></article>@empty<div class="empty">New courses will be announced here.</div>@endforelse</div></section>
         <section class="tab-panel" role="tabpanel" id="panel-stories" aria-labelledby="tab-stories" hidden><div class="grid">@forelse($posts as $post)<article class="card home-card"><span class="eyebrow">From our community</span><h3>{{ $post->title }}</h3><p>{{ \Illuminate\Support\Str::limit($post->body,180) }}</p><a href="/posts/{{ $post->id }}">Read the story</a></article>@empty<div class="empty">Stories from our work will appear here.</div>@endforelse</div></section>
     </div>
 </section>

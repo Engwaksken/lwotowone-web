@@ -22,12 +22,12 @@ class PublicSearchTest extends TestCase
         ]);
 
         $this->get('/search?q='.urlencode('%_!'))->assertOk()->assertSee('Climate 100%_! training')
-            ->assertDontSee('Climate private draft')->assertSee('/explore/programs/1');
+            ->assertDontSee('Climate private draft')->assertSee('/programs/1');
         $this->get('/search?q=learning')->assertOk()->assertSee('Climate learning guide')->assertSee('/pages/climate-guide');
     }
 
     public function test_public_listing_has_no_page_level_search_form(): void
     {
-        $this->get('/explore/programs')->assertOk()->assertSee('Search the site')->assertDontSee('No published items match your search.');
+        $this->get('/programs')->assertOk()->assertSee('Search the site')->assertDontSee('No published items match your search.');
     }
 }

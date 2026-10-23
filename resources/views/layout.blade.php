@@ -27,8 +27,8 @@
     <button class="header-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-header-toggle><span class="sr-only">Open main navigation</span><i class="fas fa-bars" aria-hidden="true"></i></button>
     <nav id="primary-navigation" aria-label="Main navigation" data-primary-navigation>
         @unless($workspace)
-        <a href="/about">About us</a><a href="/explore/programs">Programmes</a><a href="/explore/courses">Learn</a>
-        <a href="/explore/opportunities">Opportunities</a><a href="/calls">Apply</a><a href="/explore/events">Events</a><a href="/posts">Stories</a><a href="/contact">Contact</a>
+        <a href="/about">About us</a><a href="/programs">Programmes</a><a href="/courses">Learn</a>
+        <a href="/opportunities">Opportunities</a><a href="/calls">Apply</a><a href="/events">Events</a><a href="/posts">Stories</a><a href="/contact">Contact</a>
         @guest<a href="/login">Sign in</a><a class="button small" href="/register">Join us</a>@endguest
         <details class="header-search-disclosure" data-header-search>
             <summary role="button" aria-label="Open site search" aria-controls="site-search-form" title="Search"><i class="fas fa-search" aria-hidden="true"></i></summary>
@@ -169,7 +169,7 @@
     <div class="footer-main">
         <div class="footer-column footer-brand"><a href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'footer-logo','siteSettings'=>$siteSettings])</a><p>Practical learning, useful skills and support for young people building their livelihoods.</p></div>
         <div class="footer-column"><h2>About Lwotowone</h2><ul><li><a href="/about">Who we are</a></li>@foreach($contentPages->whereNotIn('slug',['about','privacy','terms'])->take(4) as $navPage)<li><a href="/pages/{{ $navPage->slug }}">{{ $navPage->title }}</a></li>@endforeach</ul></div>
-        <div class="footer-column"><h2>Explore</h2><ul><li><a href="/explore/programs">Programmes</a></li><li><a href="/explore/courses">Courses</a></li><li><a href="/explore/opportunities">Opportunities</a></li><li><a href="/explore/events">Events</a></li><li><a href="/posts">Stories</a></li></ul></div>
+        <div class="footer-column"><h2>Explore</h2><ul><li><a href="/programs">Programmes</a></li><li><a href="/courses">Courses</a></li><li><a href="/opportunities">Opportunities</a></li><li><a href="/events">Events</a></li><li><a href="/posts">Stories</a></li></ul></div>
         <div class="footer-column"><h2>Get in touch</h2><ul><li><a href="/contact">Contact us</a></li><li><a href="/faq">Frequently asked questions</a></li><li><a href="/user-guide">User guide</a></li><li><a href="/register">Join Lwotowone</a></li><li><a href="/login">Sign in</a></li><li><a href="/pages/privacy">Privacy notice</a></li><li><a href="/pages/terms">Terms of use</a></li></ul></div>
     </div>
     <div class="footer-bottom"><p>© 2026 Lwotowone Enterprises Ltd · Uganda</p></div>

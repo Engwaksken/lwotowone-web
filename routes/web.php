@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{AuthController,PublicController,CmsController,PortalController,ReviewController};
 Route::get('/',[PublicController::class,'home']);
+Route::get('/events/{id}',[PublicController::class,'detail'])->whereNumber('id');
 Route::get('/calls',[\App\Http\Controllers\CallController::class,'listing']);
 Route::get('/calls/{token}',[\App\Http\Controllers\CallController::class,'show']);
 Route::get('/events/{token}',[\App\Http\Controllers\EventController::class,'show']);
@@ -12,18 +13,18 @@ Route::get('/about',[PublicController::class,'page'])->defaults('slug','about');
 Route::get('/approach',[PublicController::class,'page'])->defaults('slug','approach');
 Route::get('/pages/about',fn()=>redirect('/about',301));
 Route::get('/pages/{slug}',[PublicController::class,'page']);
-Route::get('/posts',[PublicController::class,'listing'])->defaults('type','posts');
-Route::get('/posts/{id}',[PublicController::class,'detail'])->whereNumber('id');
-Route::get('/explore/posts',fn()=>redirect('/posts',301));
-Route::get('/explore/posts/{id}',fn(string $id)=>redirect('/posts/'.$id,301))->whereNumber('id');
+foreach (['programs','courses','opportunities','events','posts'] as $publicType) {
+    Route::get('/'.$publicType,[PublicController::class,'listing'])->defaults('type',$publicType);
+    Route::get('/'.$publicType.'/{id}',[PublicController::class,'detail'])->whereNumber('id');
+}
 Route::get('/search',[PublicController::class,'search']);
 Route::post('/help/chat',[PublicController::class,'chat'])->middleware('throttle:30,1');
 Route::get('/faq', [PublicController::class,'help'])->defaults('page','faq');
 Route::get('/user-guide', [PublicController::class,'help'])->defaults('page','guide');
 Route::get('/contact',[PublicController::class,'contact']);
 Route::post('/contact',[PublicController::class,'sendContact'])->middleware('throttle:5,1');
-Route::get('/explore/{type}',[PublicController::class,'listing']);
-Route::get('/explore/{type}/{id}',[PublicController::class,'detail']);
+Route::get('/explore/{type}',function(string $type){abort_unless(in_array($type,['programs','courses','opportunities','events','posts'],true),404);return redirect('/'.$type,301);});
+Route::get('/explore/{type}/{id}',function(string $type,string $id){abort_unless(in_array($type,['programs','courses','opportunities','events','posts'],true),404);return redirect('/'.$type.'/'.$id,301);});
 Route::get('/verify-email/{id}/{hash}',[AuthController::class,'verifyEmail'])->middleware('signed')->name('verification.verify');
 Route::middleware('guest')->group(function(){
  Route::get('/login',[AuthController::class,'form'])->name('login');Route::post('/login',[AuthController::class,'login'])->middleware('throttle:login');

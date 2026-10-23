@@ -55,7 +55,7 @@ class AiLearningMediaTest extends TestCase
         Http::assertSent(fn($request)=>$request->url()==='https://api.example.test/v1/chat/completions'&&$request->hasHeader('Authorization','Bearer test-secret')&&$request['model']==='sample-model');
 
         DB::table('settings')->where('key','ai_api_key')->delete();
-        $this->postJson('/help/chat',['message'=>'How do I find a course?'])->assertOk()->assertJsonPath('ai',false)->assertJsonPath('reply','Browse courses at /explore/courses or programmes at /explore/programs. Open an item to read the details and next steps.');
+        $this->postJson('/help/chat',['message'=>'How do I find a course?'])->assertOk()->assertJsonPath('ai',false)->assertJsonPath('reply','Browse courses at /courses or programmes at /programs. Open an item to read the details and next steps.');
     }
 
     public function test_mentor_matching_uses_ai_recommendations_and_only_returns_known_mentor_ids(): void

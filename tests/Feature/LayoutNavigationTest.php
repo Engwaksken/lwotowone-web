@@ -19,10 +19,10 @@ class LayoutNavigationTest extends TestCase
     {
         foreach (['participant', 'admin'] as $role) {
             $this->actingAs($this->user($role));
-            foreach (['/', '/explore/programs', '/contact', '/calls'] as $path) {
+            foreach (['/', '/programs', '/contact', '/calls'] as $path) {
                 $this->get($path)->assertOk()
                     ->assertDontSee('id="account-navigation"', false)
-                    ->assertSee('href="/explore/programs"', false)
+                    ->assertSee('href="/programs"', false)
                     ->assertSee('class="site-footer"', false)
                     ->assertSee('href="/dashboard"', false)
                     ->assertDontSee('class="button small" href="/register"', false);

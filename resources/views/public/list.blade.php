@@ -8,7 +8,7 @@
             <h3>{{ $row->title }}</h3>
             <p>{{ \Illuminate\Support\Str::limit($row->summary??$row->description??$row->body??'',200) }}</p>
             @if(isset($row->location))<small>{{ $row->location }}</small>@endif
-            <a href="{{ $type==='posts'?'/posts/'.$row->id:'/explore/'.$type.'/'.$row->id }}">View details</a>
+            <a href="/{{ $type }}/{{ $row->id }}">View details</a>
         </article>
     @empty
         <div class="empty">No published items available.</div>
