@@ -31,7 +31,7 @@ class LearningContent
     }
 
     /** Explicit format submissions replace the old source, never retain hidden content. */
-    public static function validate(Request $request, string $module, ?object $record): array
+    public static function validate(Request $request, string $module, ?object $record, string $language = 'en'): array
     {
         $choice = $request->validate(['content_format' => 'required|in:text,file,video,audio', 'content_source' => 'required|in:write,upload,url']);
         $format = $choice['content_format']; $source = $choice['content_source'];
@@ -40,15 +40,17 @@ class LearningContent
         }
         $retainFile = $record?->file_path && self::format($record, $module) === $format && self::source($record, $module) === 'upload';
         $rules = match ($source) {
-            'write' => ['content_body' => 'required|string|max:50000'],
+            'write' => [($module === 'lessons' && $language === 'lg' ? 'content_body_lg' : 'content_body') => 'required|string|max:50000'],
             'url' => ['content_url' => 'required|url:http,https|max:1000'],
             'upload' => ['file' => [$retainFile ? 'nullable' : 'required', 'file', 'mimes:'.self::EXTENSIONS[$format], 'extensions:'.self::EXTENSIONS[$format], 'max:102400']],
         };
         $data = $request->validate($rules);
         $out = $choice + ['content_body' => $data['content_body'] ?? null, 'content_url' => $data['content_url'] ?? null, 'file_path' => $source === 'upload' && $retainFile ? $record->file_path : null];
+        if (array_key_exists('content_body_lg', $data)) $out['content_body_lg'] = $data['content_body_lg'];
         if (isset($data['file'])) $out['file'] = $data['file'];
         if ($module === 'lessons') {
-            $out['body'] = $source === 'write' ? $out['content_body'] : '';
+            $out['body'] = $language === 'lg' ? null : ($source === 'write' ? $out['content_body'] : '');
+            if ($language === 'lg' && $source === 'write') $out['body_lg'] = $out['content_body_lg'];
             $out['video_url'] = $format === 'video' && $source === 'url' ? $out['content_url'] : null;
         }
         return $out;

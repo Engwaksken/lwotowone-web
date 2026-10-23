@@ -129,6 +129,20 @@ document.querySelectorAll('[data-certificate-create]').forEach(form=>{
     });
     type.addEventListener('change',update);update();
 });
+const updateLessonLanguage=form=>form.querySelectorAll('[data-lesson-language]').forEach(select=>{
+    const language=select.value;
+    select.form.querySelectorAll('[data-lesson-language-field]').forEach(field=>{
+        const active=field.dataset.lessonLanguageField===language;field.dataset.languageHidden=active?'false':'true';
+        field.querySelectorAll('input,textarea,select').forEach(control=>{
+            const contentPanel=control.closest('[data-content-panel]');
+            const visible=active&&(!contentPanel||!contentPanel.hidden);
+            control.disabled=!visible;
+            if(['title','title_lg'].includes(control.name))control.required=visible;
+            if(['content_body','content_body_lg'].includes(control.name))control.required=visible&&select.form.querySelector('[data-content-source]')?.value==='write';
+        });
+    });
+});
+document.querySelectorAll('[data-lesson-language]').forEach(select=>select.addEventListener('change',()=>updateLessonLanguage(select.form)));
 document.querySelectorAll('[data-content-fields]').forEach(fields=>{
     const format=fields.querySelector('[data-content-format]'),source=fields.querySelector('[data-content-source]');
     const extensions={text:'.txt',file:'.pdf,.txt,.jpg,.jpeg,.png,.webp',video:'.mp4,.webm,.ogg',audio:'.mp3,.wav,.ogg,.m4a,.aac,.flac'};
@@ -142,6 +156,7 @@ document.querySelectorAll('[data-content-fields]').forEach(fields=>{
         const file=fields.querySelector('[type="file"]');file.accept=extensions[format.value];
         fields.querySelector('[data-content-panel="upload"] label').textContent=`Upload ${format.options[format.selectedIndex].text.toLowerCase()}`;
         fields.querySelector('[data-content-file-help]').textContent=`Accepted: ${extensions[format.value]}. Maximum 100 MB.`+(fields.dataset.hasFile==='1'&&fields.dataset.originalFormat===format.value?' Leave empty to keep the attached file.':'');
+        if(fields.closest('form')?.querySelector('[data-lesson-language]'))updateLessonLanguage(fields.closest('form'));
     };
     format.addEventListener('change',update);source.addEventListener('change',update);update();
 });

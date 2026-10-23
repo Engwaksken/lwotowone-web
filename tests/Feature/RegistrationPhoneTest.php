@@ -37,10 +37,11 @@ class RegistrationPhoneTest extends TestCase
     public function test_web_registration_with_phone_creates_a_participant(): void
     {
         Notification::fake();
-        $this->post('/register', $this->payload(['phone' => '+256700000123']))
+        $this->post('/register', $this->payload(['phone' => '+256700000123', 'preferred_language' => 'lg']))
             ->assertRedirect('/login');
 
         $user = User::where('phone', '+256700000123')->firstOrFail();
+        $this->assertSame('lg', $user->preferred_language);
         $this->assertTrue($user->requires_email_verification);
         Notification::assertSentTo($user, AccountSetup::class);
         $this->post('/login', ['email' => $user->email, 'password' => 'A-long-test-password'])
@@ -65,6 +66,8 @@ class RegistrationPhoneTest extends TestCase
         $this->get('/register')
             ->assertOk()
             ->assertSee('name="phone"', false)
+            ->assertSee('name="preferred_language"', false)
+            ->assertSee('Luganda')
             ->assertSee('required', false);
     }
 }

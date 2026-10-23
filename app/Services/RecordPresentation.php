@@ -10,6 +10,9 @@ class RecordPresentation
     public static function label(string $field): string
     {
         return match ($field) {
+            'title_lg' => 'Title (Luganda)', 'summary_lg' => 'Summary (Luganda)', 'body_lg' => 'Body (Luganda)',
+            'content_body_lg' => 'Text content (Luganda)', 'instructions_lg' => 'Instructions (Luganda)',
+            'description_lg' => 'Description (Luganda)',
             'course_id' => 'Course Name', 'selected_course_id' => 'Selected Course Name',
             'prerequisite_course_id' => 'Prerequisite Course Name', 'program_id' => 'Program Name',
             'instructor_id' => 'Instructor Name', 'lead_instructor_id' => 'Lead Instructor Name',

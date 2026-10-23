@@ -17,6 +17,16 @@
     $fieldCount=array_sum(array_map('count',$groups))+($hasContentFormats?3:0)+($hasTeam?2:0);
     $tabbed=count($tabs)>1&&$fieldCount>=6;
 @endphp
+@if($module==='lessons')
+<div class="field">
+    <label for="{{ $formId }}-lesson-language">Lesson content language</label>
+    <select id="{{ $formId }}-lesson-language" name="lesson_language" data-lesson-language required>
+        <option value="en" @selected(old('lesson_language',$record?->content_language??'en')==='en')>English</option>
+        <option value="lg" @selected(old('lesson_language',$record?->content_language??'en')==='lg')>Luganda</option>
+    </select>
+    <small>Choose which language you are entering for this lesson. Add the other language by editing the lesson later.</small>
+</div>
+@endif
 @if($tabbed)
 <div class="tabs form-tabs" data-tabs>
     <div class="tab-list" role="tablist" aria-label="Form sections">

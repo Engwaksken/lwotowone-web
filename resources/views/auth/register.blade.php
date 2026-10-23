@@ -10,6 +10,15 @@
         <p class="form-note"><span class="required-marker" aria-hidden="true">*</span> Required</p>
         <div class="auth-fields-grid">
             <div class="field">
+                <label for="preferred_language">Learning language</label>
+                <select id="preferred_language" name="preferred_language" required>
+                    <option value="en" @selected(old('preferred_language','en')==='en')>English</option>
+                    <option value="lg" @selected(old('preferred_language')==='lg')>Luganda</option>
+                </select>
+                <small>Choose the language you prefer for course materials.</small>
+                @error('preferred_language')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+            </div>
+            <div class="field">
                 <label for="name">Full name <span class="required-marker" aria-hidden="true">*</span></label>
                 <input id="name" name="name" type="text" value="{{ old('name') }}" autocomplete="name" required aria-required="true" @error('name') aria-invalid="true" aria-describedby="name-error" @enderror>
                 @error('name')<p class="field-error" id="name-error" role="alert">{{ $message }}</p>@enderror

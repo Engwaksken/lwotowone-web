@@ -27,7 +27,7 @@ class PortalController extends Controller {
   public function section(Request $r,string $section){
      abort_unless(in_array($section,['learn','practice','mentorship','opportunities','enterprise','events','notifications','profile','payment']),404);
      abort_unless($r->user()->role==='participant'||$section==='profile',403);
-     if($section==='profile')return view('portal.profile',['user'=>$r->user(),'courses'=>DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title']),'settlements'=>DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name'])]);
+      if($section==='profile'){$courses=DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title','title_lg']);if($r->user()->preferred_language==='lg')$courses->each(fn($course)=>\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg']));return view('portal.profile',['user'=>$r->user(),'courses'=>$courses,'settlements'=>DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name'])]);}
     if($section==='payment')return view('portal.payment',['user'=>$r->user(),'gateways'=>DB::table('payment_gateways')->where('active',true)->orderBy('name')->get()]);
     abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');
      if($section==='learn'&&!$r->user()->learningAccessOpen()&&!DB::table('enrolments')->where('user_id',$r->user()->id)->exists())return redirect('/portal/payment');
@@ -71,7 +71,7 @@ class PortalController extends Controller {
     return view('portal.section',['section'=>$section,'data'=>$snapshot,'earnings'=>$earnings,
       'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters]);
   }
-  public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);return view('portal.course',compact('data','course'));}
+  public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);return view('portal.course',compact('data','course'));}
  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}
   public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);return Snapshot::get($r->user());}
   public function registerDeviceToken(Request $r){

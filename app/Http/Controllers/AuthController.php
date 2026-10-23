@@ -10,8 +10,8 @@ class AuthController extends Controller {
  public function registerForm(){return view('auth.register');}
  public function register(Request $r){
      $phone=$r->is('api/*')?'nullable':'required';
-   $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>$phone.'|string|max:40','district'=>'nullable|string|max:100','consent'=>'accepted']+($r->is('api/*')?[]:['terms_read'=>'accepted','privacy_read'=>'accepted']),['terms_read.accepted'=>'Open and read the terms of use before creating your account.','privacy_read.accepted'=>'Open and read the privacy notice before creating your account.']);unset($d['consent'],$d['password_confirmation'],$d['terms_read'],$d['privacy_read']);
-   $u=User::create($d+['role'=>'participant','status'=>'active','requires_email_verification'=>true]);$u->forceFill(['terms_accepted_at'=>now()])->save();
+    $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>$phone.'|string|max:40','district'=>'nullable|string|max:100','preferred_language'=>'sometimes|in:en,lg','consent'=>'accepted']+($r->is('api/*')?[]:['terms_read'=>'accepted','privacy_read'=>'accepted']),['terms_read.accepted'=>'Open and read the terms of use before creating your account.','privacy_read.accepted'=>'Open and read the privacy notice before creating your account.']);unset($d['consent'],$d['password_confirmation'],$d['terms_read'],$d['privacy_read']);
+    $u=User::create($d+['preferred_language'=>'en','role'=>'participant','status'=>'active','requires_email_verification'=>true]);$u->forceFill(['terms_accepted_at'=>now()])->save();
    $u->notify(new \App\Notifications\AccountSetup());
    if($r->is('api/*'))return response()->json(['message'=>'Verify your email address before signing in.'],201);
    return redirect('/login')->with('success','Account created. Check your email to verify your address before signing in.');

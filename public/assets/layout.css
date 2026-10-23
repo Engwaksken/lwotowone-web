@@ -119,6 +119,7 @@ aside i{width:18px;text-align:center}
 .course-tabs{margin-top:28px}
 .course-item{margin:0 0 12px;padding:0 18px;border:1px solid var(--line);border-radius:12px;background:#fff}
 .course-item summary{display:flex;align-items:center;gap:12px;min-height:58px;padding:12px 0;font-weight:700}
+[data-language-hidden=true]{display:none!important}
 .course-item summary>span:first-child:not(.course-item-number){flex:1}
 .course-item summary>span:nth-child(2){flex:1}
 .course-item summary>.tag{flex:0 0 auto;margin-left:auto}

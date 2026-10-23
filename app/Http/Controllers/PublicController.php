@@ -39,7 +39,7 @@ class PublicController extends Controller {
   }
   return view('public.search',['query'=>$data['q'],'results'=>$results]);
  }
- public function home(){return view('public.home',['programs'=>DB::table('programs')->where('status','published')->get(),'courses'=>DB::table('courses')->where('status','published')->latest()->limit(6)->get(),'posts'=>DB::table('posts')->where('status','published')->latest()->limit(3)->get()]);}
+  public function home(){$programs=DB::table('programs')->where('status','published')->get();$courses=DB::table('courses')->where('status','published')->latest()->limit(6)->get();if(auth()->user()?->preferred_language==='lg'){$programs->each(fn($row)=>\App\Services\LearnerContent::useLuganda($row,['title'=>'title_lg','summary'=>'summary_lg','body'=>'body_lg']));$courses->each(fn($row)=>\App\Services\LearnerContent::useLuganda($row,['title'=>'title_lg','summary'=>'summary_lg']));}return view('public.home',['programs'=>$programs,'courses'=>$courses,'posts'=>DB::table('posts')->where('status','published')->latest()->limit(3)->get()]);}
  public function page(string $slug){
   $page=DB::table('pages')->where('slug',$slug)->where('status','published')->first();
   if(!$page&&$slug==='about')$page=(object)[
@@ -48,8 +48,8 @@ class PublicController extends Controller {
   ];
   abort_unless($page,404);return view('public.page',compact('page'));
  }
- public function listing(Request $r,string $type){abort_unless(in_array($type,['programs','courses','opportunities','events','posts']),404);$q=DB::table($type)->where('status','published');if($type==='opportunities')$q->whereDate('deadline','>=',today());$rows=$q->latest()->paginate(12)->withQueryString();return view('public.list',compact('rows','type'));}
- public function detail(string $type,string $id){abort_unless(in_array($type,['programs','courses','opportunities','events','posts']),404);$record=DB::table($type)->where('id',$id)->where('status','published')->first();abort_unless($record,404);return view('public.detail',compact('record','type'));}
+  public function listing(Request $r,string $type){abort_unless(in_array($type,['programs','courses','opportunities','events','posts']),404);$q=DB::table($type)->where('status','published');if($type==='opportunities')$q->whereDate('deadline','>=',today());$rows=$q->latest()->paginate(12)->withQueryString();if($r->user()?->preferred_language==='lg'){$translations=match($type){'programs'=>['title'=>'title_lg','summary'=>'summary_lg','body'=>'body_lg'],'courses'=>['title'=>'title_lg','summary'=>'summary_lg'],default=>[]};$rows->getCollection()->each(fn($row)=>\App\Services\LearnerContent::useLuganda($row,$translations));}return view('public.list',compact('rows','type'));}
+  public function detail(string $type,string $id){abort_unless(in_array($type,['programs','courses','opportunities','events','posts']),404);$record=DB::table($type)->where('id',$id)->where('status','published')->first();abort_unless($record,404);if(auth()->user()?->preferred_language==='lg'){$translations=match($type){'programs'=>['title'=>'title_lg','summary'=>'summary_lg','body'=>'body_lg'],'courses'=>['title'=>'title_lg','summary'=>'summary_lg'],default=>[]};\App\Services\LearnerContent::useLuganda($record,$translations);}return view('public.detail',compact('record','type'));}
  public function contact(){return view('public.contact');}
  public function sendContact(Request $r){$d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190','message'=>'required|string|max:5000']);DB::table('contacts')->insert($d+['created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Thank you. Your enquiry has been received.');}
 }

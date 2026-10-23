@@ -38,7 +38,8 @@ class LearningContentFormatsTest extends TestCase
         $this->actingAs($admin)->get('/admin/courses')->assertOk()->assertSee('Program Name')->assertSee('Instructor Name')->assertSee('Practical programme')->assertSee($teacher->name)->assertDontSee('Program Id')->assertDontSee('Instructor Id');
         $this->get('/admin/lessons')->assertOk()->assertSee('Course Name')->assertSee('Named course')->assertSee('column-primary', false)->assertDontSee('Course Id');
         foreach (['lessons', 'resources'] as $module) {
-            $this->get('/admin/'.$module.'/create')->assertOk()->assertSee('Course Name')->assertSee('Content format and source')->assertSee('Audio')->assertSee('Use a URL')->assertDontSee('Course Id');
+            $form=$this->get('/admin/'.$module.'/create')->assertOk()->assertSee('Course Name')->assertSee('Content format and source')->assertSee('Audio')->assertSee('Use a URL')->assertDontSee('Course Id');
+            if($module==='lessons')$form->assertSee('Lesson content language')->assertSee('Luganda');
         }
     }
 
@@ -59,6 +60,29 @@ class LearningContentFormatsTest extends TestCase
                 $this->assertSame($format, $item->content_format); Storage::disk('local')->assertExists($item->file_path);
             }
         }
+    }
+
+    public function test_luganda_lesson_can_be_created_without_english_title_or_text(): void
+    {
+        $teacher = $this->user('instructor'); $course = $this->course($teacher); $learner = $this->user('participant');
+        $payload = $this->payload($course, 'lessons'); unset($payload['title']);
+        $this->actingAs($teacher)->post('/admin/lessons', $payload + [
+            'lesson_language' => 'lg', 'title_lg' => 'Essomo ly’okulima',
+            'content_format' => 'text', 'content_source' => 'write', 'content_body_lg' => 'Ebirimu mu Luganda.',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $lesson = DB::table('lessons')->latest('id')->first();
+        $this->assertSame('lg', $lesson->content_language);
+        $this->assertNull($lesson->title);
+        $this->assertSame('Essomo ly’okulima', $lesson->title_lg);
+        $this->assertNull($lesson->body);
+        $this->assertSame('Ebirimu mu Luganda.', $lesson->body_lg);
+
+        $learner->preferred_language = 'lg'; $learner->save();
+        LearningAccess::trial($learner->id, $course);
+        $localized = Snapshot::get($learner)['lessons']->firstWhere('id', $lesson->id);
+        $this->assertSame('Essomo ly’okulima', $localized->title);
+        $this->assertSame('Ebirimu mu Luganda.', $localized->body);
     }
 
     public function test_wrong_file_type_missing_source_and_unsafe_url_are_rejected_without_writes(): void

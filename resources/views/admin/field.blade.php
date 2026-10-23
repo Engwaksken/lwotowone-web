@@ -3,8 +3,8 @@
     $type=$optional?substr($raw,9):$raw;
     $value=old($field,$record?->{$field});
 @endphp
-<div class="field">
-    <label for="{{ $formId }}-{{ $field }}">{{ \App\Services\RecordPresentation::label($field) }} {{ $optional?'(optional)':'' }}</label>
+<div class="field" @if($module==='lessons'&&in_array($field,['title','title_lg','body_lg','content_body_lg'],true)) data-lesson-language-field="{{ in_array($field,['title_lg','body_lg','content_body_lg'],true)?'lg':'en' }}" @endif>
+    <label for="{{ $formId }}-{{ $field }}">{{ $module==='lessons'&&$field==='title'?'Title (English)':\App\Services\RecordPresentation::label($field) }} {{ $optional?'(optional)':'' }}</label>
     @if(isset($options[$field]))
         <select id="{{ $formId }}-{{ $field }}" name="{{ $field }}" @required(!$optional)>
             <option value="">Select</option>

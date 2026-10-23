@@ -20,7 +20,7 @@ class LearningAccess
     public static function lessons(int $courseId) {
         return DB::table('lessons')->leftJoin('course_modules','course_modules.id','=','lessons.module_id')->where('lessons.course_id',$courseId)->where('lessons.status','published')
             ->where(fn($q)=>$q->whereNull('lessons.module_id')->orWhere(fn($q)=>$q->where('course_modules.status','published')->where('course_modules.course_id',$courseId)))
-            ->select('lessons.*','course_modules.title as module_title')->orderByRaw('COALESCE(course_modules.position, 0)')->orderBy('course_modules.id')->orderBy('lessons.position')->orderBy('lessons.id')->get();
+            ->select('lessons.*','course_modules.title as module_title','course_modules.title_lg as module_title_lg')->orderByRaw('COALESCE(course_modules.position, 0)')->orderBy('course_modules.id')->orderBy('lessons.position')->orderBy('lessons.id')->get();
     }
     public static function lessonAllowed(User $user,object $lesson): bool {
         if(!self::allowed($user,(int)$lesson->course_id))return false;

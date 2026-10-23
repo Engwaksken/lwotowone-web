@@ -78,14 +78,17 @@ class CmsController extends Controller {
    $assignmentChange=$assignable&&($r->exists('instructor_ids')||$r->exists('assignments_present')||$r->exists('lead_instructor_id')||$r->exists('instructor_id'));
    if($assignmentChange)abort_unless($r->user()->role==='admin',403);
    if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);
-    $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
-   $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
-   if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
-    $d=$r->validate($rules);
+     $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
+    $lessonLanguage='en';
+    if($module==='lessons'){$lessonLanguage=$r->validate(['lesson_language'=>'sometimes|in:en,lg'])['lesson_language']??$record->content_language??'en';$rules['title_lg']=['nullable','string','max:255'];if($lessonLanguage==='lg'){$rules['title']=['nullable','string','max:255'];$rules['title_lg']=['required','string','max:255'];}}
+    $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
+    if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
+     $d=$r->validate($rules);
+    if($module==='lessons')$d['content_language']=$lessonLanguage;
     $temporaryPassword=null;
     if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(8);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
    if($module==='events'&&!$id)$d['registration_token']=(string)\Illuminate\Support\Str::uuid();
-   if($formattedContent)$d=array_merge($d,\App\Services\LearningContent::validate($r,$module,$id?$record:null));
+    if($formattedContent)$d=array_merge($d,\App\Services\LearningContent::validate($r,$module,$id?$record:null,$lessonLanguage));
    $assignmentIds=[];$leadId=null;
    if($assignmentChange){
     $assignment=$r->validate(['instructor_ids'=>'sometimes|array','instructor_ids.*'=>'required|integer|min:1|distinct','lead_instructor_id'=>'nullable|integer|min:1','instructor_id'=>'nullable|integer|min:1']);
