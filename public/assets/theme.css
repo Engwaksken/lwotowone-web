@@ -136,6 +136,7 @@ header nav .button.small{display:inline-flex;align-items:center;min-height:38px;
 
 /* ---------- Surfaces ---------- */
 .panel,.card,.empty,.review-item,.course-item,.faq-item,.guide-card,.mel-chart,.settings-modal-card,.survey-question-card,.dash-manage,.management-list,.about-work-grid article{border-color:var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow)}
+.card{border-radius:10px}
 .panel{padding:clamp(18px,2.4vw,28px)}
 .card{transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
 a.card{color:var(--ink)}
