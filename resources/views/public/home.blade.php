@@ -7,7 +7,7 @@
         <span class="eyebrow">{{ $site['hero_eyebrow']??'Learning that leads somewhere' }}</span>
         <h1>{{ $site['hero_title']??'Learn something useful. Build something of your own.' }}</h1>
         <p class="home-lead">{{ $site['hero_summary']??'At Lwotowone, young people learn by doing. We bring practical training, mentorship and enterprise support together so a skill can grow into a livelihood.' }}</p>
-        <div class="actions home-actions"><a class="button" href="/explore/programs">Explore our programmes</a><a class="button secondary" href="/pages/about">Get to know us</a></div>
+        <div class="actions home-actions"><a class="button" href="/explore/programs">Explore our programmes</a><a class="button secondary" href="/about">Get to know us</a></div>
         <p class="home-note">Based in Uganda. Focused on practical skills, enterprise and opportunity.</p>
     </div>
     <aside class="home-journey" aria-label="How learning can grow into opportunity">
@@ -30,7 +30,7 @@
 
 <section class="home-pillars" aria-label="Ways to take your next step">
     <article><span class="pillar-number">01</span><h3>Build a useful skill</h3><p>Explore hands-on learning shaped around work, business and community life.</p><a href="/explore/courses">Browse courses</a></article>
-    <article><span class="pillar-number">02</span><h3>Learn with people</h3><p>Get guidance, practise together and build confidence from experience.</p><a href="/pages/approach">Our approach</a></article>
+    <article><span class="pillar-number">02</span><h3>Learn with people</h3><p>Get guidance, practise together and build confidence from experience.</p><a href="/approach">Our approach</a></article>
     <article><span class="pillar-number">03</span><h3>Make an idea real</h3><p>Take the next step towards an enterprise, a job or a new opportunity.</p><a href="/explore/opportunities">See opportunities</a></article>
 </section>
 

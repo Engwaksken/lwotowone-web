@@ -8,6 +8,9 @@ Route::get('/events/{token}',[\App\Http\Controllers\EventController::class,'show
 Route::post('/events/{token}/register',[\App\Http\Controllers\EventController::class,'register'])->middleware('throttle:10,1');
 Route::get('/surveys/{token}',[\App\Http\Controllers\SurveyController::class,'show']);
 Route::post('/surveys/{token}',[\App\Http\Controllers\SurveyController::class,'submit'])->middleware('throttle:20,1');
+Route::get('/about',[PublicController::class,'page'])->defaults('slug','about');
+Route::get('/approach',[PublicController::class,'page'])->defaults('slug','approach');
+Route::get('/pages/about',fn()=>redirect('/about',301));
 Route::get('/pages/{slug}',[PublicController::class,'page']);
 Route::get('/search',[PublicController::class,'search']);
 Route::post('/help/chat',[PublicController::class,'chat'])->middleware('throttle:30,1');
