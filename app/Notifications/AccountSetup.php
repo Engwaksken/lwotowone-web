@@ -40,7 +40,7 @@ class AccountSetup extends Notification
             'verificationUrl' => $verificationUrl,
             'brandName' => $brandName,
             'logoUrl' => $logo ? (str_starts_with($logo, 'http') ? $logo : url($logo)) : null,
-            'primaryColor' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $primary) ? $primary : '#175742',
+            'primaryColor' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) $primary) ? $primary : '#076406',
         ];
 
         return $mail->view('emails.account-setup', $data)

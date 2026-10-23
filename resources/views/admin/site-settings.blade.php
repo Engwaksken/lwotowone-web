@@ -30,8 +30,8 @@
         @csrf @method('PUT')
         <section class="settings-group" data-tab-label="Colours"><h2>Colours</h2><p>Pick accessible colours for buttons, links and highlights.</p>
             <div class="settings-fields">
-                <div class="field"><label for="primary_color">Primary brand colour</label><input id="primary_color" type="color" name="primary_color" value="{{ old('primary_color',$settings['primary_color']??'#175742') }}" required><small>Used for primary actions and links.</small></div>
-                <div class="field"><label for="accent_color">Accent colour</label><input id="accent_color" type="color" name="accent_color" value="{{ old('accent_color',$settings['accent_color']??'#dfb452') }}" required><small>Used for focus rings and supporting details.</small></div>
+                <div class="field"><label for="primary_color">Primary brand colour</label><input id="primary_color" type="color" name="primary_color" value="{{ old('primary_color',$settings['primary_color']??'#076406') }}" required><small>Used for primary actions and links.</small></div>
+                <div class="field"><label for="accent_color">Accent colour</label><input id="accent_color" type="color" name="accent_color" value="{{ old('accent_color',$settings['accent_color']??'#79a879') }}" required><small>Used for focus rings and supporting details.</small></div>
             </div>
         </section>
         <section class="settings-group" data-tab-label="Typography"><h2>Typography</h2><p>Choose a clear typeface and comfortable base text size.</p>

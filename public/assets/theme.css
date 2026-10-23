@@ -4,16 +4,26 @@
  * derived from the admin-configured --green (primary) and --gold (accent) settings.
  */
 :root{
+    /* Lwotowone platform palette */
+    --palette-forest:#076406;
+    --palette-burgundy:#6d0e0f;
+    --palette-cream:#f8f2f0;
+    --palette-muted-rose:#ab7f7f;
+    --palette-sage:#79a879;
+    --palette-leaf:#336231;
+    --palette-wine:#5e1d1e;
+    --palette-mint:#d6f4d5;
+    --palette-bright-green:#067b03;
     --brand:var(--green);
     --accent:var(--gold);
     /* Deep brand tint that always keeps white text above WCAG AA, whatever primary colour is chosen. */
     --brand-dark:color-mix(in srgb,var(--green) 40%,#0b1712);
     --brand-deep:color-mix(in srgb,var(--green) 60%,#0b1712);
     --brand-hover:color-mix(in srgb,var(--green) 82%,#000);
-    --brand-soft:color-mix(in srgb,var(--green) 10%,#fff);
-    --brand-softer:color-mix(in srgb,var(--green) 5%,#fff);
-    --accent-soft:color-mix(in srgb,var(--gold) 18%,#fff);
-    --app-bg:color-mix(in srgb,var(--green) 6%,#f2f4f3);
+    --brand-soft:color-mix(in srgb,var(--green) 10%,var(--palette-mint));
+    --brand-softer:color-mix(in srgb,var(--green) 5%,var(--palette-cream));
+    --accent-soft:color-mix(in srgb,var(--gold) 18%,var(--palette-cream));
+    --app-bg:var(--palette-cream);
     --surface:#fff;
     --surface-muted:color-mix(in srgb,var(--green) 3%,#f8faf9);
     --border:color-mix(in srgb,var(--green) 12%,#e2e7e4);
@@ -39,7 +49,7 @@
     --sidebar-width:264px;
 }
 @supports not (color:color-mix(in srgb,red 50%,blue)){
-    :root{--brand-dark:#123a2d;--brand-deep:#134636;--brand-hover:#0f4734;--brand-soft:#e8f0eb;--brand-softer:#f3f7f4;--accent-soft:#faf2df;--app-bg:#eef2ef;--surface-muted:#f6f9f7;--border:#dbe3de;--border-strong:#c3cfc8;--sidebar-icon:#ecd18f;--ring:0 0 0 3px #17574238}
+    :root{--brand-dark:#336231;--brand-deep:#076406;--brand-hover:#067b03;--brand-soft:#d6f4d5;--brand-softer:#f8f2f0;--accent-soft:#f8f2f0;--app-bg:#f8f2f0;--surface-muted:#f8f2f0;--border:#d6f4d5;--border-strong:#79a879;--sidebar-icon:#d6f4d5;--ring:0 0 0 3px #07640638}
 }
 
 /* ---------- Base ---------- */
