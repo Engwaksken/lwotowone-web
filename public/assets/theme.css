@@ -138,6 +138,8 @@ details{border-color:var(--border);border-radius:var(--radius)}
 
 /* ---------- Buttons ---------- */
 .button,button{border-radius:10px;background:var(--brand);transition:background-color .15s ease,box-shadow .15s ease,transform .15s ease,color .15s ease}
+.button,button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 16px;font-size:14px;line-height:1.35}
+.button.small,.small{min-height:34px;padding:7px 12px;font-size:13px}
 .button:hover,:where(button:not([class]),button[type=submit]:not(.secondary):not(.danger)):hover{background:var(--brand-hover);text-decoration:none}
 .button:active,:where(button:not([class]),button[type=submit]):active{transform:translateY(1px)}
 :where(.button:not(.secondary):not(.danger),button:not([class]),button[type=submit]:not(.secondary):not(.danger)){box-shadow:0 1px 2px #10201a26}
@@ -149,6 +151,8 @@ button:disabled,.button[aria-disabled=true]{opacity:.55;cursor:not-allowed;trans
 
 /* ---------- Forms ---------- */
 input,textarea,select{border-color:var(--border-strong);border-radius:10px;transition:border-color .15s ease,box-shadow .15s ease}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),select{height:40px;min-height:40px;padding:8px 11px;font-size:14px;line-height:1.35}
+textarea{min-height:100px;padding:9px 11px;font-size:14px;line-height:1.45}
 input:hover,textarea:hover,select:hover{border-color:color-mix(in srgb,var(--green) 35%,#b9c4be)}
 input:focus,textarea:focus,select:focus{border-color:var(--brand);box-shadow:var(--ring);outline:none}
 input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
@@ -245,8 +249,8 @@ input[type=checkbox]:focus,input[type=radio]:focus{box-shadow:none}
 .auth-heading{text-align:center}
 .auth-heading h1{font-size:clamp(26px,4.4vw,32px);letter-spacing:-.6px}
 .auth-heading .eyebrow{display:inline-flex;padding:4px 11px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-size:11px;letter-spacing:1.2px}
-.auth-form .field input:not([type=checkbox]){height:46px;min-height:46px}
-.auth-submit{border-radius:12px;font-size:16px}
+.auth-form .field input:not([type=checkbox]){height:40px;min-height:40px}
+.auth-submit{min-height:42px;border-radius:12px;font-size:15px}
 .auth-footer .auth-copyright{color:#ffffffc2}
 .auth-home-link{border:1px solid #ffffff40;background:#ffffff1a!important;color:#fff!important;box-shadow:none!important}
 .auth-home-link:hover{background:#ffffff2e!important}
