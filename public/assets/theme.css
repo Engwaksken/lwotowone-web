@@ -244,16 +244,16 @@ input[type=checkbox]:focus,input[type=radio]:focus{box-shadow:none}
 .footer-bottom{background:color-mix(in srgb,var(--brand-dark) 85%,#000)}
 
 /* ---------- Auth pages ---------- */
-.auth-page{background:radial-gradient(60% 50% at 8% 0%,color-mix(in srgb,var(--gold) 20%,transparent),transparent 62%),radial-gradient(60% 50% at 100% 100%,color-mix(in srgb,var(--green) 45%,transparent),transparent 65%),linear-gradient(150deg,var(--brand-deep),var(--brand-dark));background-attachment:fixed}
-.auth-card{position:relative;border:0;border-radius:24px;box-shadow:0 30px 80px #0007,0 0 0 1px #ffffff14}
+.auth-page{background:radial-gradient(60% 50% at 8% 0%,color-mix(in srgb,var(--gold) 12%,transparent),transparent 62%),radial-gradient(60% 50% at 100% 100%,color-mix(in srgb,var(--green) 9%,transparent),transparent 65%),#f5f7f5;background-attachment:fixed}
+.auth-card{position:relative;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-lg)}
 .auth-heading{text-align:center}
 .auth-heading h1{font-size:clamp(26px,4.4vw,32px);letter-spacing:-.6px}
 .auth-heading .eyebrow{display:inline-flex;padding:4px 11px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-size:11px;letter-spacing:1.2px}
 .auth-form .field input:not([type=checkbox]){height:40px;min-height:40px}
 .auth-submit{min-height:42px;border-radius:12px;font-size:15px}
-.auth-footer .auth-copyright{color:#ffffffc2}
-.auth-home-link{border:1px solid #ffffff40;background:#ffffff1a!important;color:#fff!important;box-shadow:none!important}
-.auth-home-link:hover{background:#ffffff2e!important}
+.auth-footer .auth-copyright{color:var(--muted)}
+.auth-home-link{border:1px solid var(--border);background:var(--surface)!important;color:var(--brand)!important;box-shadow:var(--shadow-sm)!important}
+.auth-home-link:hover{background:var(--brand-soft)!important}
 .auth-notice{border-radius:var(--radius)}
 .auth-page .public-stat-strip article{box-shadow:var(--shadow)}
 
