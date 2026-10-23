@@ -34,7 +34,7 @@ class PublicController extends Controller {
    $query=DB::table($table)->where('status','published')->where(function($q)use($fields,$pattern){foreach($fields as $i=>$field){$method=$i===0?'whereRaw':'orWhereRaw';$q->{$method}("{$field} LIKE ? ESCAPE '!'",[$pattern]);}});
    if($table==='opportunities')$query->whereDate('deadline','>=',today());
    $query->orderByDesc('id')->limit(10)->get()->each(function($record)use($results,$table,$label){
-    $results->push(['type'=>$label,'title'=>$record->title,'summary'=>$record->summary??$record->description??$record->meta_description??$record->body??'','url'=>$table==='pages'?'/pages/'.$record->slug:'/explore/'.$table.'/'.$record->id]);
+     $results->push(['type'=>$label,'title'=>$record->title,'summary'=>$record->summary??$record->description??$record->meta_description??$record->body??'','url'=>$table==='pages'?'/pages/'.$record->slug:($table==='posts'?'/posts/'.$record->id:'/explore/'.$table.'/'.$record->id)]);
    });
   }
   return view('public.search',['query'=>$data['q'],'results'=>$results]);

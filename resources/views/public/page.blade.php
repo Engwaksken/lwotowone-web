@@ -13,12 +13,12 @@
             <span class="eyebrow">Who we are</span>
             <div class="prose">{{ $page->body }}</div>
         </article>
+        <section class="about-belief">
+            <span class="belief-mark">Our belief</span>
+            <p>People learn best when knowledge meets practice, encouragement and the chance to try something for themselves.</p>
+            <a href="/approach">Read about our approach</a>
+        </section>
     </div>
-    <section class="about-belief">
-        <span class="belief-mark">Our belief</span>
-        <p>People learn best when knowledge meets practice, encouragement and the chance to try something for themselves.</p>
-        <a href="/approach">Read about our approach</a>
-    </section>
     <section class="about-work">
         <span class="eyebrow">What brings us together</span>
         <h2>Learning, enterprise and opportunity belong in the same conversation.</h2>

@@ -190,6 +190,12 @@ aside i{width:18px;text-align:center}
 .home-section-heading p{max-width:380px;margin:0 0 12px;color:var(--muted)}
 .home-card{display:flex;flex-direction:column;align-items:flex-start;min-height:250px}
 .home-card p{flex:1}
+.public-list-grid{grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch}
+.public-list-grid .card{display:flex;flex-direction:column;align-items:flex-start}
+.public-list-grid .card p{flex:1}
+@media(max-width:1100px){.public-list-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:820px){.public-list-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.public-list-grid{grid-template-columns:1fr}}
 .home-closing{display:flex;align-items:center;justify-content:space-between;gap:35px;margin:70px 0 20px;padding:36px clamp(22px,4vw,48px);border-radius:20px;background:#174f3d;color:#fff}
 .home-closing .eyebrow{color:#e6c36d}
 .home-closing h2{max-width:720px;margin:8px 0;font-size:clamp(26px,4vw,40px);letter-spacing:-.7px}
@@ -198,10 +204,10 @@ aside i{width:18px;text-align:center}
 .about-hero{max-width:970px;padding:24px 0 42px}
 .about-hero h1{max-width:880px;margin:13px 0 17px;font-size:clamp(40px,6vw,70px);letter-spacing:-2.3px}
 .about-lead{max-width:780px;color:#405d51;font-size:clamp(18px,2.1vw,22px);line-height:1.65}
-.about-story-layout{display:block}
+.about-story-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:24px;align-items:stretch}
 .about-story{padding:clamp(22px,4vw,38px)}
 .about-story .prose{white-space:pre-line;line-height:1.85}
-.about-belief{width:100%;margin:20px 0 0;padding:clamp(24px,4vw,40px);border:1px solid var(--border);border-radius:18px;background:linear-gradient(120deg,var(--brand-soft),var(--surface));box-shadow:var(--shadow)}
+.about-belief{width:100%;margin:0;padding:clamp(24px,4vw,40px);border:1px solid var(--border);border-radius:18px;background:linear-gradient(120deg,var(--brand-soft),var(--surface));box-shadow:var(--shadow)}
 .about-belief p{margin:13px 0 20px;font-size:18px;line-height:1.6}
 .about-work{margin:66px 0}
 .about-work>h2{max-width:800px;margin:10px 0 25px;font-size:clamp(28px,4vw,42px);letter-spacing:-1px}
@@ -218,7 +224,7 @@ main .field textarea{min-height:100px;padding:10px 11px;font-size:15px;line-heig
 main .field input[type=file]{height:auto;min-height:0;padding:7px 0;font-size:14px}
 main .field input::placeholder,main .field textarea::placeholder{color:#78897f;opacity:1}
 .practice-description textarea{min-height:110px}
-@media(max-width:900px){.footer-main{grid-template-columns:repeat(2,minmax(0,1fr));gap:30px}.home-hero{grid-template-columns:minmax(0,1fr) minmax(420px,1.05fr);gap:26px}}
+@media(max-width:900px){.footer-main{grid-template-columns:repeat(2,minmax(0,1fr));gap:30px}.home-hero{grid-template-columns:minmax(0,1fr) minmax(420px,1.05fr);gap:26px}.about-story-layout{grid-template-columns:1fr}}
 @media(max-width:900px){header{align-items:flex-start;flex-wrap:wrap}header nav{justify-content:flex-end;flex:1}}
 @media(max-width:700px){.footer-main{grid-template-columns:1fr 1fr;padding:38px 6% 30px;gap:27px 20px}.home-hero{grid-template-columns:1fr;padding:16px 0 54px}.home-hero-copy h1{font-size:clamp(40px,12vw,58px);letter-spacing:-1.8px}.home-pillars,.about-work-grid{grid-template-columns:1fr}.home-pillars p{min-height:0}.home-section-heading{display:block}.home-section-heading p{margin-top:9px}.home-explore{padding:32px 17px}.home-closing,.about-cta{align-items:flex-start;flex-direction:column}.home-closing .button{width:100%;text-align:center}.about-story-layout{grid-template-columns:1fr}.about-work{margin:48px 0}.about-hero h1{font-size:clamp(38px,11vw,54px);letter-spacing:-1.5px}}
 @media(max-width:460px){.auth-shell{justify-content:flex-start;padding:22px 12px}.auth-card{padding:25px 20px;border-radius:17px}.auth-fields-grid{grid-template-columns:1fr}.auth-options{font-size:13px}.footer-main{grid-template-columns:1fr}.footer-column h2{margin-bottom:10px}}
