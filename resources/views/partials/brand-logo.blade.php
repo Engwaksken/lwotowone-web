@@ -1,5 +1,7 @@
 @php
-    $customLogo=$siteSettings['site_logo']??null;
+    $logoSettings=$siteSettings??[];
+    if(!array_key_exists('site_logo',$logoSettings))$logoSettings=\Illuminate\Support\Facades\DB::table('settings')->pluck('value','key')->all();
+    $customLogo=$logoSettings['site_logo']??null;
     $logoPath=$customLogo?:collect(['assets/logo.svg','assets/logo.png','assets/logo.webp','assets/logo.jpg'])
         ->first(fn($path)=>file_exists(public_path($path)));
     $logoClass=$logoClass??'brand-logo-image';
