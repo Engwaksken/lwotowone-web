@@ -2,7 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{AuthController,PublicController,CmsController,PortalController,ReviewController};
 Route::get('/',[PublicController::class,'home']);
-Route::get('/events/{id}',[PublicController::class,'detail'])->whereNumber('id');
+Route::get('/events/{id}',fn(string $id)=>app(PublicController::class)->detail('events',$id))->whereNumber('id');
 Route::get('/calls',[\App\Http\Controllers\CallController::class,'listing']);
 Route::get('/calls/{token}',[\App\Http\Controllers\CallController::class,'show']);
 Route::get('/events/{token}',[\App\Http\Controllers\EventController::class,'show']);
@@ -15,7 +15,7 @@ Route::get('/pages/about',fn()=>redirect('/about',301));
 Route::get('/pages/{slug}',[PublicController::class,'page']);
 foreach (['programs','courses','opportunities','events','posts'] as $publicType) {
     Route::get('/'.$publicType,[PublicController::class,'listing'])->defaults('type',$publicType);
-    Route::get('/'.$publicType.'/{id}',[PublicController::class,'detail'])->whereNumber('id');
+    Route::get('/'.$publicType.'/{id}',fn(string $id)=>app(PublicController::class)->detail($publicType,$id))->whereNumber('id');
 }
 Route::get('/search',[PublicController::class,'search']);
 Route::post('/help/chat',[PublicController::class,'chat'])->middleware('throttle:30,1');
