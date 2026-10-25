@@ -179,6 +179,7 @@
                     <ul class="management-list dash-links">
                         @if($label==='Settings')
                             @if(auth()->user()->role==='admin')<li><a class="management-row" href="/admin/site-settings#settings-panel-appearance"><i class="fas fa-palette" aria-hidden="true"></i><span><strong>Website appearance</strong><small>Brand colours, typography, logo and favicon.</small></span></a></li>@endif
+                            @if(auth()->user()->role==='admin')<li><a class="management-row" href="/admin/site-settings#settings-panel-video"><i class="fas fa-video" aria-hidden="true"></i><span><strong>Introduction video</strong><small>Welcome video shown on the home page.</small></span></a></li>@endif
                             <li><a class="management-row" href="/admin/site-settings#payment-methods"><i class="fas fa-credit-card" aria-hidden="true"></i><span><strong>Payment gateway settings</strong><small>Payment options and learner instructions.</small></span></a></li>
                             @if(auth()->user()->role==='admin')<li><a class="management-row" href="/admin/site-settings#settings-panel-ai"><i class="fas fa-robot" aria-hidden="true"></i><span><strong>AI API settings</strong><small>Chatbot replies and mentor suggestions.</small></span></a></li>@endif
                         @else

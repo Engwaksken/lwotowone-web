@@ -90,6 +90,7 @@
                         <summary><h2 class="sidebar-heading">Settings</h2></summary>
                         <ul class="sidebar-links">
                             @if(auth()->user()->role==='admin')<li><a href="/admin/site-settings#settings-panel-appearance"><i class="fas fa-palette" aria-hidden="true"></i> Website appearance</a></li>@endif
+                            @if(auth()->user()->role==='admin')<li><a href="/admin/site-settings#settings-panel-video"><i class="fas fa-video" aria-hidden="true"></i> Introduction video</a></li>@endif
                             <li><a href="/admin/site-settings#payment-methods"><i class="fas fa-credit-card" aria-hidden="true"></i> Payment gateways</a></li>
                             @if(auth()->user()->role==='admin')<li><a href="/admin/site-settings#settings-panel-ai"><i class="fas fa-robot" aria-hidden="true"></i> AI API settings</a></li>@endif
                         </ul>
