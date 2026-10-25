@@ -22,6 +22,41 @@ class CmsController extends Controller {
   DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
   return back()->with('success','Website appearance updated.');
  }
+ public static function introVideoMaxKilobytes(): int {
+  $toBytes=function(string $value){$value=trim($value);$number=(float)$value;return match(strtolower(substr($value,-1))){'g'=>$number*1024**3,'m'=>$number*1024**2,'k'=>$number*1024,default=>$number};};
+  // The upload limit is the smaller of PHP's per-file and per-request limits, capped at 200 MB and leaving headroom for the other fields.
+  $limits=array_filter([$toBytes((string)ini_get('upload_max_filesize')),$toBytes((string)ini_get('post_max_size'))-1024*1024,200*1024**2],fn($bytes)=>$bytes>0);
+  return max(1024,(int)floor(min($limits)/1024));
+ }
+ public function saveIntroVideo(Request $r){
+  abort_unless($r->user()->role==='admin',403);
+  $data=$r->validate([
+   'intro_video_title'=>['nullable','string','max:150'],'intro_video_summary'=>['nullable','string','max:500'],'intro_video_enabled'=>['nullable','boolean'],
+   'intro_video'=>['nullable','file','mimetypes:video/mp4,application/mp4,video/webm','extensions:mp4,webm','max:'.self::introVideoMaxKilobytes()],
+   'intro_video_poster'=>['nullable','file','mimetypes:image/png,image/jpeg,image/webp','extensions:png,jpg,jpeg,webp','max:4096'],
+   'intro_video_captions'=>['nullable','file','mimetypes:text/vtt,text/plain','extensions:vtt','max:512'],
+   'remove_intro_video'=>['nullable','boolean'],
+  ]);
+  $saved=DB::table('settings')->pluck('value','key');
+  $deleteMedia=function(?string $path){if($path&&str_starts_with($path,'/site-media/')&&is_file($file=public_path(ltrim($path,'/'))))@unlink($file);};
+  $values=['intro_video_title'=>trim((string)($data['intro_video_title']??'')),'intro_video_summary'=>trim((string)($data['intro_video_summary']??'')),'intro_video_enabled'=>$r->boolean('intro_video_enabled')?'1':'0'];
+  if($r->boolean('remove_intro_video')){
+   foreach(['intro_video','intro_video_poster','intro_video_captions'] as $key){$deleteMedia($saved->get($key));$values[$key]='';}
+  }else{
+   foreach(['intro_video','intro_video_poster','intro_video_captions'] as $key){
+    if(!$r->hasFile($key))continue;
+    $directory=public_path('site-media');if(!is_dir($directory)&&!mkdir($directory,0755,true)&&!is_dir($directory))throw new \RuntimeException('The site media upload directory could not be created.');
+    $file=$r->file($key);$name=$key.'-'.bin2hex(random_bytes(8)).'.'.strtolower($file->getClientOriginalExtension());
+    if(!$file->move($directory,$name))throw new \RuntimeException('The uploaded video file could not be saved.');
+    $deleteMedia($saved->get($key));$values[$key]='/site-media/'.$name;
+   }
+  }
+  if($values['intro_video_enabled']==='1'&&empty($values['intro_video']??$saved->get('intro_video')))$values['intro_video_enabled']='0';
+  foreach($values as $key=>$value){$exists=DB::table('settings')->where('key',$key)->exists();if($exists)DB::table('settings')->where('key',$key)->update(['value'=>$value,'updated_at'=>now()]);else DB::table('settings')->insert(['key'=>$key,'value'=>$value,'created_at'=>now(),'updated_at'=>now()]);}
+  DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+  session()->flash('success',$r->boolean('remove_intro_video')?'Introduction video removed.':'Introduction video updated.');
+  return $r->expectsJson()?['ok'=>true,'redirect'=>'/admin/site-settings#settings-panel-video']:redirect('/admin/site-settings#settings-panel-video');
+ }
  public function saveAiSettings(Request $r){
   abort_unless($r->user()->role==='admin',403);
    $data=$this->aiSettingsData($r);

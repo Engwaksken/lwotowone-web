@@ -11,3 +11,4 @@
 /storage/framework/cache/data/*
 /storage/framework/sessions/*
 /build/
+/public/site-media/
