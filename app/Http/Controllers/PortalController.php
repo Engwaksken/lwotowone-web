@@ -74,6 +74,32 @@ class PortalController extends Controller {
   public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);return view('portal.course',compact('data','course'));}
  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}
   public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);return Snapshot::get($r->user());}
+  public function profilePhoto(Request $r){
+    abort_unless($r->user()->role==='participant',403);
+    $path=$r->user()->profile_photo_path;
+    abort_unless($path&&\Illuminate\Support\Facades\Storage::disk('local')->exists($path),404);
+    $file=\Illuminate\Support\Facades\Storage::disk('local')->path($path);
+    $response=response()->file($file,['Content-Type'=>mime_content_type($file)?:'application/octet-stream','X-Content-Type-Options'=>'nosniff']);
+    $response->headers->set('Cache-Control','private, no-store');
+    return $response;
+  }
+  public function uploadProfilePhoto(Request $r){
+    abort_unless($r->user()->role==='participant',403);
+    $data=$r->validate(['photo'=>'required|image|mimes:jpg,jpeg,png,webp|max:5120']);
+    $user=$r->user();
+    $path=$data['photo']->store('profile-photos/'.$user->id,'local');
+    $old=$user->profile_photo_path;
+    $user->forceFill(['profile_photo_path'=>$path])->save();
+    if($old&&$old!==$path)\Illuminate\Support\Facades\Storage::disk('local')->delete($old);
+    return response()->json(['ok'=>true,'profile_photo_url'=>url('/api/profile/photo?version='.$user->updated_at?->timestamp)]);
+  }
+  public function deleteProfilePhoto(Request $r){
+    abort_unless($r->user()->role==='participant',403);
+    $path=$r->user()->profile_photo_path;
+    $r->user()->forceFill(['profile_photo_path'=>null])->save();
+    if($path)\Illuminate\Support\Facades\Storage::disk('local')->delete($path);
+    return response()->json(['ok'=>true]);
+  }
   public function registerDeviceToken(Request $r){
     abort_unless($r->user()->role==='participant',403);
     $data=$r->validate(['token'=>'required|string|max:4096']);

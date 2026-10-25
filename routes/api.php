@@ -13,6 +13,9 @@ Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
     Route::get('/lessons/{id}/download',[PortalController::class,'lessonMedia']);
   });
   Route::post('/profile',[PortalController::class,'profile']);
+  Route::get('/profile/photo',[PortalController::class,'profilePhoto']);
+  Route::post('/profile/photo',[PortalController::class,'uploadProfilePhoto']);
+  Route::delete('/profile/photo',[PortalController::class,'deleteProfilePhoto']);
   Route::post('/notifications/{id}/read',[PortalController::class,'readNotice']);
 
 Route::post('/notifications/push',[PortalController::class,'pushNotice']);
