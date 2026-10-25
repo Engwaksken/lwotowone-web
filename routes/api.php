@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{AuthController,PortalController};
+use App\Http\Controllers\{AuthController,KnowledgeGameController,PortalController};
 Route::post('/stripe/webhook',[PortalController::class,'stripeWebhook'])->middleware('throttle:api');
 Route::get('/policies',fn()=>['policies'=>\App\Services\Policies::all()])->middleware('throttle:api');
 Route::middleware('throttle:login')->group(function(){Route::post('/login',[AuthController::class,'login']);Route::post('/register',[AuthController::class,'register']);});
@@ -13,6 +13,10 @@ Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
     Route::get('/lessons/{id}/download',[PortalController::class,'lessonMedia']);
   });
   Route::post('/profile',[PortalController::class,'profile']);
+  Route::get('/knowledge-game/topics',[KnowledgeGameController::class,'topics']);
+  Route::get('/knowledge-game/history',[KnowledgeGameController::class,'history']);
+  Route::post('/knowledge-game/attempts',[KnowledgeGameController::class,'start']);
+  Route::post('/knowledge-game/attempts/{attemptId}/submit',[KnowledgeGameController::class,'submit']);
   Route::get('/profile/photo',[PortalController::class,'profilePhoto']);
   Route::post('/profile/photo',[PortalController::class,'uploadProfilePhoto']);
   Route::delete('/profile/photo',[PortalController::class,'deleteProfilePhoto']);

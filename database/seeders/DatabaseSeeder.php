@@ -18,7 +18,8 @@ class DatabaseSeeder extends Seeder {
    ['Entrepreneurship and enterprise development','entrepreneurship','Entrepreneurship','Start small, build progressively and create value.','Explore business opportunities, business ideas, financial management, record keeping, marketing, business planning, value addition, saving, reinvestment and enterprise management.'],
    ['Youth empowerment','youth-empowerment','Youth empowerment','Transform potential into practical capability.','We encourage young people to become problem solvers, entrepreneurs, skilled workers, farmers, innovators and job creators.']
   ] as [$title,$slug,$category,$summary,$body])\App\Models\Record::for('programs')->newQuery()->firstOrCreate(['slug'=>$slug],compact('title','category','summary','body')+['status'=>'published','created_at'=>now(),'updated_at'=>now()]);
-  foreach(['Poultry management','Agribusiness record keeping','Customer service','Business planning','Repair and maintenance','Construction skills'] as $title)\App\Models\Record::for('skills')->newQuery()->firstOrCreate(['title'=>$title],['category'=>'Practical skills','description'=>'Build practical competence through supervised activity and reflective learning.','status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+   foreach(['Poultry management','Agribusiness record keeping','Customer service','Business planning','Repair and maintenance','Construction skills'] as $title)\App\Models\Record::for('skills')->newQuery()->firstOrCreate(['title'=>$title],['category'=>'Practical skills','description'=>'Build practical competence through supervised activity and reflective learning.','status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+   $this->call(KnowledgeGameSeeder::class);
   if(filter_var(env('SEED_DEMO',false),FILTER_VALIDATE_BOOLEAN))$this->demo();
  }
  private function demo(): void {
