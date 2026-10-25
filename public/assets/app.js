@@ -625,3 +625,41 @@ if(profileProgress&&learnerProfileForm&&!profileProgress.classList.contains('is-
     };
     learnerProfileForm.addEventListener('input',update);learnerProfileForm.addEventListener('change',()=>requestAnimationFrame(update));update();
 }
+
+document.querySelectorAll('form[data-upload-progress]').forEach(form=>{
+    const status=form.querySelector('[data-upload-progress-status]');
+    if(!status||!window.XMLHttpRequest||!window.FormData)return;
+    const bar=status.querySelector('progress');
+    const message=status.querySelector('span');
+    form.addEventListener('submit',event=>{
+        const hasFile=[...form.querySelectorAll('input[type="file"]')].some(input=>input.files?.length);
+        if(!hasFile)return;
+        event.preventDefault();
+        const button=form.querySelector('button[type="submit"]');
+        if(button)button.disabled=true;
+        status.hidden=false;bar.value=0;message.textContent='Uploading… 0%';
+        const request=new XMLHttpRequest();
+        request.open((form.getAttribute('method')||'post').toUpperCase(),form.action);
+        request.setRequestHeader('Accept','application/json');
+        request.setRequestHeader('X-Requested-With','XMLHttpRequest');
+        request.upload.addEventListener('progress',progress=>{
+            if(!progress.lengthComputable)return;
+            const percent=Math.round(progress.loaded/progress.total*100);
+            bar.value=percent;message.textContent=percent<100?`Uploading… ${percent}%`:'Processing upload…';
+        });
+        const fail=text=>{bar.value=0;message.textContent=text;if(button)button.disabled=false;};
+        request.addEventListener('load',()=>{
+            let body={};try{body=JSON.parse(request.responseText||'{}');}catch(error){}
+            if(request.status>=200&&request.status<300){
+                const target=new URL(body.redirect||location.href,location.href);
+                if(target.pathname===location.pathname&&target.search===location.search){history.replaceState(null,'',target);location.reload();}else location.assign(target);
+                return;
+            }
+            if(request.status===413)return fail('This file is larger than the server allows. Choose a smaller file and try again.');
+            if(request.status===419)return fail('Your session has expired. Refresh the page and try again.');
+            fail(Object.values(body.errors||{}).flat()[0]||body.message||'The upload could not be saved. Please try again.');
+        });
+        request.addEventListener('error',()=>fail('The upload was interrupted. Check your connection and try again.'));
+        request.send(new FormData(form));
+    });
+});

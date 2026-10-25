@@ -60,4 +60,35 @@ class HelpAndBrandingTest extends TestCase
         @unlink(public_path(ltrim($favicon,'/')));
         @rmdir(public_path('site-branding'));
     }
+
+    public function test_admin_can_upload_intro_video_shown_on_home_page(): void
+    {
+        $admin = User::create(['name'=>'Admin','email'=>'admin-video@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'admin','status'=>'active']);
+        $manager = User::create(['name'=>'Manager','email'=>'manager-video@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'manager','status'=>'active']);
+        $video = fn () => UploadedFile::fake()->createWithContent('intro.mp4', "\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom".str_repeat("\x00", 64));
+
+        $this->get('/')->assertOk()->assertDontSee('class="home-video"',false);
+        $this->actingAs($manager)->put('/admin/site-settings/intro-video',['intro_video'=>$video(),'intro_video_enabled'=>1])->assertForbidden();
+        $this->actingAs($admin)->get('/admin/site-settings')->assertOk()->assertSee('Introduction video')->assertSee('action="/admin/site-settings/intro-video"',false);
+        $this->actingAs($admin)->put('/admin/site-settings/intro-video',['intro_video'=>UploadedFile::fake()->create('intro.mov',10,'video/quicktime')])->assertSessionHasErrors('intro_video');
+
+        $this->actingAs($admin)->put('/admin/site-settings/intro-video',[
+            'intro_video'=>$video(),'intro_video_title'=>'Meet our team','intro_video_summary'=>'See how we work.','intro_video_enabled'=>1,
+        ])->assertRedirect('/admin/site-settings#settings-panel-video')->assertSessionHasNoErrors();
+
+        $path = \Illuminate\Support\Facades\DB::table('settings')->where('key','intro_video')->value('value');
+        $this->assertStringStartsWith('/site-media/intro_video-', $path);
+        $this->assertFileExists(public_path(ltrim($path,'/')));
+        auth()->logout();
+        $this->get('/')->assertOk()->assertSee('class="home-video"',false)->assertSee('Meet our team')->assertSee('See how we work.')->assertSee($path);
+
+        $this->actingAs($admin)->put('/admin/site-settings/intro-video',['intro_video_enabled'=>0])->assertSessionHasNoErrors();
+        auth()->logout();
+        $this->get('/')->assertDontSee('class="home-video"',false);
+
+        $this->actingAs($admin)->putJson('/admin/site-settings/intro-video',['remove_intro_video'=>1,'intro_video_enabled'=>1])->assertOk()->assertJson(['ok'=>true]);
+        $this->assertFileDoesNotExist(public_path(ltrim($path,'/')));
+        $this->assertSame('0', \Illuminate\Support\Facades\DB::table('settings')->where('key','intro_video_enabled')->value('value'));
+        @rmdir(public_path('site-media'));
+    }
 }

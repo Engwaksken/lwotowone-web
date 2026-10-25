@@ -22,6 +22,23 @@
     </aside>
 </section>
 
+@if(($site['intro_video_enabled']??'0')==='1'&&!empty($site['intro_video']))
+<section class="home-video" aria-labelledby="home-video-title">
+    <div class="home-video-copy">
+        <span class="eyebrow">Watch our story</span>
+        <h2 id="home-video-title">{{ ($site['intro_video_title']??'')!==''?$site['intro_video_title']:'Meet Lwotowone' }}</h2>
+        @if(($site['intro_video_summary']??'')!=='')<p>{{ $site['intro_video_summary'] }}</p>@endif
+    </div>
+    <div class="home-video-frame">
+        <video controls preload="metadata" playsinline @if(!empty($site['intro_video_poster']))poster="{{ $site['intro_video_poster'] }}"@endif aria-describedby="home-video-title">
+            <source src="{{ $site['intro_video'] }}" type="{{ str_ends_with($site['intro_video'],'.webm')?'video/webm':'video/mp4' }}">
+            @if(!empty($site['intro_video_captions']))<track kind="captions" src="{{ $site['intro_video_captions'] }}" srclang="en" label="English">@endif
+            Your browser cannot play this video. <a href="{{ $site['intro_video'] }}">Download the introduction video</a>.
+        </video>
+    </div>
+</section>
+@endif
+
 <section class="home-intro">
     <span class="eyebrow">Skills for everyday life</span>
     <h2>Learning should feel connected to the real world.</h2>

@@ -19,7 +19,7 @@
     <h1 class="page-title">{{ auth()->user()->role==='admin'?'Website appearance':'Payment settings' }}</h1>
     <p class="page-intro">Manage how the site looks and how learners pay.</p>
     <div class="tabs settings-tabs" data-tabs><div class="tab-list" role="tablist" aria-label="Site settings">
-        @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-appearance" aria-controls="settings-panel-appearance" aria-selected="true">Website appearance</button>@endif
+        @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-appearance" aria-controls="settings-panel-appearance" aria-selected="true">Website appearance</button><button type="button" role="tab" id="settings-tab-video" aria-controls="settings-panel-video" aria-selected="false" tabindex="-1">Introduction video</button>@endif
         <button type="button" role="tab" id="settings-tab-payments" aria-controls="settings-panel-payments" aria-selected="{{ auth()->user()->role==='admin'?'false':'true' }}" @if(auth()->user()->role==='admin')tabindex="-1"@endif>Payment gateway settings</button>
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-ai" aria-controls="settings-panel-ai" aria-selected="false" tabindex="-1">AI API settings</button>@endif
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-email" aria-controls="settings-panel-email" aria-selected="false" tabindex="-1">Email settings</button><button type="button" role="tab" id="settings-tab-backups" aria-controls="settings-panel-backups" aria-selected="false" tabindex="-1">Backups</button>@endif
@@ -48,6 +48,31 @@
             </div>
         </section>
         <div class="settings-save"><button type="submit"><i class="fas fa-check" aria-hidden="true"></i> Save appearance</button></div>
+    </form>
+    </section>
+    <section class="tab-panel" role="tabpanel" id="settings-panel-video" aria-labelledby="settings-tab-video" hidden>
+    @php $introVideoMaxMb = max(1, floor(\App\Http\Controllers\CmsController::introVideoMaxKilobytes() / 1024)); @endphp
+    <form class="panel settings-form intro-video-form" id="intro-video-form" method="post" action="/admin/site-settings/intro-video" enctype="multipart/form-data" data-upload-progress>
+        @csrf @method('PUT')
+        <section class="settings-group"><h2>Home page introduction video</h2><p>Show a short welcome video on the public home page, just below the opening section. Use an MP4 (H.264) or WebM file up to {{ $introVideoMaxMb }} MB. A 1–3 minute video at 720p or 1080p works well for most visitors.</p>
+            @if(!empty($settings['intro_video']))
+                <div class="intro-video-current">
+                    <video controls preload="metadata" playsinline @if(!empty($settings['intro_video_poster']))poster="{{ $settings['intro_video_poster'] }}"@endif><source src="{{ $settings['intro_video'] }}" type="{{ str_ends_with($settings['intro_video'],'.webm')?'video/webm':'video/mp4' }}">@if(!empty($settings['intro_video_captions']))<track kind="captions" src="{{ $settings['intro_video_captions'] }}" srclang="en" label="English" default>@endif</video>
+                    <p><span class="status-badge">{{ ($settings['intro_video_enabled']??'0')==='1'?'Showing on home page':'Hidden from home page' }}</span> Upload a new file below to replace the current video.</p>
+                </div>
+            @endif
+            <div class="settings-fields">
+                <div class="field"><label for="intro_video_title">Section heading <span class="optional">(optional)</span></label><input id="intro_video_title" name="intro_video_title" maxlength="150" value="{{ old('intro_video_title',$settings['intro_video_title']??'') }}" placeholder="Meet Lwotowone"></div>
+                <div class="field"><label for="intro_video_summary">Short description <span class="optional">(optional)</span></label><textarea id="intro_video_summary" name="intro_video_summary" maxlength="500" rows="3" placeholder="A quick look at who we are and how we work with young people.">{{ old('intro_video_summary',$settings['intro_video_summary']??'') }}</textarea></div>
+                <div class="field"><label for="intro_video">Video file{!! empty($settings['intro_video'])?'':' <span class="optional">(optional)</span>' !!}</label><input id="intro_video" type="file" name="intro_video" accept="video/mp4,video/webm"><small>MP4 or WebM, up to {{ $introVideoMaxMb }} MB.</small></div>
+                <div class="field"><label for="intro_video_poster">Cover image <span class="optional">(optional)</span></label><input id="intro_video_poster" type="file" name="intro_video_poster" accept="image/png,image/jpeg,image/webp">@if(!empty($settings['intro_video_poster']))<img class="settings-preview-logo" src="{{ $settings['intro_video_poster'] }}" alt="Current video cover image">@endif<small>Shown before the video plays. PNG, JPG or WebP, 16:9, up to 4 MB.</small></div>
+                <div class="field"><label for="intro_video_captions">Captions file <span class="optional">(optional)</span></label><input id="intro_video_captions" type="file" name="intro_video_captions" accept=".vtt,text/vtt"><small>WebVTT (.vtt) captions help deaf and hard-of-hearing visitors and anyone watching without sound.@if(!empty($settings['intro_video_captions'])) Captions are currently attached.@endif</small></div>
+                <div class="field"><label class="check-label"><input type="hidden" name="intro_video_enabled" value="0"><input type="checkbox" name="intro_video_enabled" value="1" @checked(old('intro_video_enabled',$settings['intro_video_enabled']??'1')==='1')> Show the video on the home page</label></div>
+                @if(!empty($settings['intro_video']))<div class="field"><label class="check-label"><input type="checkbox" name="remove_intro_video" value="1"> Remove the current video, cover image and captions</label></div>@endif
+            </div>
+            <div class="upload-progress" data-upload-progress-status hidden><progress max="100" value="0"></progress><span aria-live="polite">Uploading…</span></div>
+        </section>
+        <div class="settings-save"><button type="submit"><i class="fas fa-check" aria-hidden="true"></i> Save introduction video</button></div>
     </form>
     </section>
     @endif
