@@ -32,7 +32,7 @@ class CmsController extends Controller {
   abort_unless($r->user()->role==='admin',403);
   $data=$r->validate([
    'intro_video_title'=>['nullable','string','max:150'],'intro_video_summary'=>['nullable','string','max:500'],'intro_video_enabled'=>['nullable','boolean'],
-   'intro_video'=>['nullable','file','mimetypes:video/mp4,application/mp4,video/webm','extensions:mp4,webm','max:'.self::introVideoMaxKilobytes()],
+    'intro_video'=>['nullable','file','mimetypes:video/mp4,application/mp4,video/webm,video/ogg,application/ogg,video/quicktime,video/x-m4v','extensions:mp4,webm,ogg,ogv,mov,m4v','max:'.self::introVideoMaxKilobytes()],
    'intro_video_poster'=>['nullable','file','mimetypes:image/png,image/jpeg,image/webp','extensions:png,jpg,jpeg,webp','max:4096'],
    'intro_video_captions'=>['nullable','file','mimetypes:text/vtt,text/plain','extensions:vtt','max:512'],
    'remove_intro_video'=>['nullable','boolean'],
@@ -46,8 +46,8 @@ class CmsController extends Controller {
    foreach(['intro_video','intro_video_poster','intro_video_captions'] as $key){
     if(!$r->hasFile($key))continue;
     $directory=public_path('site-media');if(!is_dir($directory)&&!mkdir($directory,0755,true)&&!is_dir($directory))throw new \RuntimeException('The site media upload directory could not be created.');
-    $file=$r->file($key);$name=$key.'-'.bin2hex(random_bytes(8)).'.'.strtolower($file->getClientOriginalExtension());
-    if(!$file->move($directory,$name))throw new \RuntimeException('The uploaded video file could not be saved.');
+     $file=$r->file($key);$compressed=$key==='intro_video'?\App\Services\VideoUpload::compressedTemporaryPath($file):null;$extension=$compressed?'mp4':strtolower($file->getClientOriginalExtension());$name=$key.'-'.bin2hex(random_bytes(8)).'.'.$extension;
+     $source=$compressed??$file->getRealPath();if(!@rename($source,$directory.DIRECTORY_SEPARATOR.$name)){if($compressed)@unlink($compressed);throw new \RuntimeException('The uploaded media file could not be saved.');}
     $deleteMedia($saved->get($key));$values[$key]='/site-media/'.$name;
    }
   }
@@ -82,10 +82,10 @@ class CmsController extends Controller {
    $this->access($r,'lessons');
    if($r->isMethod('get'))return view('admin.lessons-batch',['courses'=>Catalog::options('lessons',$r->user())['course_id']??[]]);
    $input=$r->input('lessons',[]);$uploads=$r->file('lessons',[]);$kept=[];foreach($input as $key=>$lesson){if(trim((string)($lesson['title']??''))!==''||trim((string)($lesson['body']??''))!==''){$lesson['file']=$uploads[$key]['file']??null;$kept[]=$lesson;}}$r->merge(['lessons'=>$kept]);
-   $data=$r->validate(['course_id'=>'required|integer|exists:courses,id','status'=>'required|in:draft,published','lessons'=>'required|array|min:1|max:30','lessons.*.title'=>'required|string|max:255','lessons.*.body'=>'required|string|max:50000','lessons.*.file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,mp3,wav,m4a,aac,flac|max:102400']);
+    $data=$r->validate(['course_id'=>'required|integer|exists:courses,id','status'=>'required|in:draft,published','lessons'=>'required|array|min:1|max:30','lessons.*.title'=>'required|string|max:255','lessons.*.body'=>'required|string|max:50000','lessons.*.file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:102400']);
    abort_unless(Catalog::scope(Catalog::query('courses'),$r->user(),'courses')->whereKey($data['course_id'])->exists(),403);
    $position=(int)DB::table('lessons')->where('course_id',$data['course_id'])->max('position');
-   DB::transaction(function()use($data,$r,&$position){foreach($data['lessons'] as $lesson){$file=$lesson['file']??null;$path=$file?->store('lessons','local');$id=DB::table('lessons')->insertGetId(['course_id'=>$data['course_id'],'title'=>$lesson['title'],'body'=>$lesson['body'],'position'=>++$position,'status'=>$data['status'],'content_format'=>'text','content_source'=>'write','content_body'=>$lesson['body'],'file_path'=>null,'created_at'=>now(),'updated_at'=>now()]);if($file)DB::table('learning_attachments')->insert(['entity_type'=>'lesson','entity_id'=>$id,'file_path'=>$path,'original_name'=>mb_substr($file->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'lessons','action'=>'create','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);}});
+    DB::transaction(function()use($data,$r,&$position){foreach($data['lessons'] as $lesson){$file=$lesson['file']??null;$path=$file?\App\Services\VideoUpload::store($file,'lessons','local'):null;$id=DB::table('lessons')->insertGetId(['course_id'=>$data['course_id'],'title'=>$lesson['title'],'body'=>$lesson['body'],'position'=>++$position,'status'=>$data['status'],'content_format'=>'text','content_source'=>'write','content_body'=>$lesson['body'],'file_path'=>null,'created_at'=>now(),'updated_at'=>now()]);if($file)DB::table('learning_attachments')->insert(['entity_type'=>'lesson','entity_id'=>$id,'file_path'=>$path,'original_name'=>mb_substr($file->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'lessons','action'=>'create','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);}});
    return redirect('/admin/lessons')->with('success',count($data['lessons']).' lessons added.');
   }
  public function index(Request $r,string $module){
@@ -129,7 +129,7 @@ class CmsController extends Controller {
     $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
     if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
       $d=$r->validate($rules);
-     $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,mp3,wav,m4a,aac,flac|max:102400'])['attachments']??[];
+     $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:102400'])['attachments']??[];
     if($module==='lessons')$d['content_language']=$lessonLanguage;
     $temporaryPassword=null;
     if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(8);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
@@ -158,14 +158,14 @@ class CmsController extends Controller {
    if($id&&DB::table('bookings')->where('slot_id',$id)->exists())return back()->withErrors(['starts_at'=>'A booked session cannot be edited. Review the booking instead.']);
   }
   $oldFile=$record->file_path;$newFile=null;
-  if(isset($d['file'])){$d['file_path']=$newFile=$d['file']->store($module==='lessons'?'lessons':'resources','local');unset($d['file']);}
+   if(isset($d['file'])){$d['file_path']=$newFile=\App\Services\VideoUpload::store($d['file'],$module==='lessons'?'lessons':'resources','local');unset($d['file']);}
   try{DB::transaction(function()use($record,$d,$assignmentChange,$assignmentIds,$leadId,$r,$module,$id){
    $record->fill($d)->save();
    if($assignmentChange)\App\Models\InstructorAssignments::sync($record,$assignmentIds,$leadId);
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
   });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);throw $e;}
    if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
-   if(in_array($module,['lessons','assignments'],true))foreach($attachmentFiles as $attachment)DB::table('learning_attachments')->insert(['entity_type'=>$module==='lessons'?'lesson':'assignment','entity_id'=>$record->id,'file_path'=>$attachment->store($module,'local'),'original_name'=>mb_substr($attachment->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);
+    if(in_array($module,['lessons','assignments'],true))foreach($attachmentFiles as $attachment)DB::table('learning_attachments')->insert(['entity_type'=>$module==='lessons'?'lesson':'assignment','entity_id'=>$record->id,'file_path'=>\App\Services\VideoUpload::store($attachment,$module,'local'),'original_name'=>mb_substr($attachment->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);
     if($module==='users'&&$temporaryPassword!==null){
      try{$record->notify(new \App\Notifications\AccountSetup($temporaryPassword));}
      catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('New user setup email failed.', ['user_id'=>$record->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return redirect('/admin/users')->withErrors(['email'=>'The user was added, but the setup email failed: '.$detail.' Check Email settings, then use “Resend setup email”.']);}

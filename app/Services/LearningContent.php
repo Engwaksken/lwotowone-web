@@ -10,7 +10,7 @@ class LearningContent
     public const EXTENSIONS = [
         'text' => 'txt',
         'file' => 'pdf,txt,jpg,jpeg,png,webp',
-        'video' => 'mp4,webm,ogg',
+        'video' => 'mp4,webm,ogg,ogv,mov,m4v',
         'audio' => 'mp3,wav,ogg,m4a,aac,flac',
     ];
 
