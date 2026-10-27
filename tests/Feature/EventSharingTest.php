@@ -26,7 +26,7 @@ class EventSharingTest extends TestCase
     {
         $this->actingAs($this->user())->post('/admin/events', ['title' => 'New shared event', 'description' => 'Welcome', 'starts_at' => now()->addDay()->toDateTimeString(), 'ends_at' => now()->addDay()->addHours(2)->toDateTimeString(), 'location' => 'Kampala', 'capacity' => 30, 'status' => 'published'])->assertRedirect()->assertSessionHasNoErrors();
         $event = DB::table('events')->first(); $this->assertNotEmpty($event->registration_token);
-        $this->get('/admin/events')->assertOk()->assertSee('Registration link and QR')->assertSee('/admin/events/'.$event->id.'/attendance', false)->assertSee(url('/events/'.$event->registration_token));
+        $this->get('/admin/events')->assertOk()->assertSee('Registration link and QR')->assertSee('Total events')->assertSee('Upcoming events')->assertSee('Registrations')->assertSee('Attended')->assertSee('/admin/events/'.$event->id.'/attendance', false)->assertSee(url('/events/'.$event->registration_token));
         $svg = $this->get('/admin/events/'.$event->id.'/qr.svg')->assertOk()->assertHeader('Content-Type', 'image/svg+xml')->getContent();
         $this->assertSame(Sharing::qr(url('/events/'.$event->registration_token), 'unused')->getContent(), $svg);
         $this->put('/admin/events/'.$event->id, ['title' => 'Updated event', 'description' => 'Welcome', 'starts_at' => $event->starts_at, 'ends_at' => $event->ends_at, 'location' => 'Kampala', 'capacity' => 30, 'status' => 'published'])->assertSessionHasNoErrors();

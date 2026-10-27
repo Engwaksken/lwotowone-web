@@ -22,7 +22,13 @@ class EventController extends Controller
         }
         $events = $query->addSelect('events.*')->latest('events.id')->paginate(15)->withQueryString();
         foreach ($events as $event) $event->registration_token = EventParticipation::token((int)$event->id);
-        return view('admin.events', ['events' => $events, 'filters' => $filters, 'module' => 'events', 'meta' => config('modules.events'), 'options' => []]);
+        $statistics=[
+            'total'=>DB::table('events')->count(),
+            'upcoming'=>DB::table('events')->where('status','published')->where('starts_at','>=',now())->count(),
+            'registered'=>DB::table('event_registrations')->whereIn('status',['registered','attended','absent'])->count(),
+            'attended'=>DB::table('event_registrations')->where('status','attended')->count(),
+        ];
+        return view('admin.events', ['events' => $events, 'filters' => $filters, 'statistics'=>$statistics, 'module' => 'events', 'meta' => config('modules.events'), 'options' => []]);
     }
 
     public function qr(Request $request, string $id)
