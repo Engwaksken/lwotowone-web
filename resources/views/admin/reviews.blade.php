@@ -26,6 +26,14 @@
     <div class="field"><label for="review-start">From</label><input id="review-start" type="date" name="start_date" value="{{ $filters['start_date'] }}"></div>
     <div class="field"><label for="review-end">To</label><input id="review-end" type="date" name="end_date" value="{{ $filters['end_date'] }}"></div>
 </x-filter-bar>
+@if($type==='submissions')
+<div class="panel">
+    <h2>AI-assisted marking</h2>
+    <p class="muted">AI suggestions are provisional. Select submissions to generate suggestions, then review and explicitly approve the marks you want to record. Manual marking remains available below.</p>
+    <form id="ai-mark-form" method="post" action="/admin/reviews/submissions/ai-mark">@csrf<button type="submit">Generate AI suggestions for selected</button></form>
+    <form id="approve-ai-form" method="post" action="/admin/reviews/submissions/ai-approve">@csrf<button type="submit">Approve selected AI suggestions</button></form>
+</div>
+@endif
 @if(in_array($type,['contacts','audit_logs']))
 <div class="panel table-wrap review-table-wrap"><table class="data-table">
     <caption class="sr-only">{{ $type==='contacts'?'Enquiries':'Audit trail' }}</caption>
@@ -59,12 +67,18 @@
 @foreach($rows as $row)
     <details class="review-item">
         <summary><span>#{{ $row->id }}</span><span class="tag">{{ $row->status??$row->action??'' }}</span>@if(isset($row->user_id))<span>{{ \App\Models\User::find($row->user_id)?->name }}</span>@endif</summary>
+        @if($type==='submissions'&&$row->status==='submitted')<label><input type="checkbox" name="submission_ids[]" value="{{ $row->id }}" form="ai-mark-form"> Select for AI suggestion</label>@endif
         <div class="data">
             @foreach((array)$row as $key=>$value)
                 @if(!in_array($key,['file_path','updated_at']))@php $display=\App\Services\RecordPresentation::field(['label'=>\Illuminate\Support\Str::headline($key),'value'=>$value]); @endphp<p><strong>{{ $display['label'] }}:</strong> {{ $display['value']??'—' }}</p>@endif
             @endforeach
         </div>
         @if($type==='submissions'&&$row->file_path)<a href="/files/submissions/{{ $row->id }}"><i class="fas fa-paperclip" aria-hidden="true"></i> Download submitted evidence</a>@endif
+        @if($type==='submissions')@foreach($row->attachments as $attachment)<p><a href="/files/attachments/{{ $attachment->id }}"><i class="fas fa-paperclip" aria-hidden="true"></i> Download {{ $attachment->original_name }}</a></p>@endforeach @endif
+        @if($type==='submissions'&&isset($aiMarkSuggestions[$row->id]))
+            @php($suggestion=$aiMarkSuggestions[$row->id])
+            <div class="panel"><strong>AI suggestion (not yet recorded)</strong><p>Score: {{ $suggestion['score'] }}% · Pass mark: {{ $suggestion['pass_mark'] }}%</p><p>{{ $suggestion['feedback'] }}</p><label><input type="checkbox" name="marks[{{ $row->id }}]" value="1" form="approve-ai-form"> Approve this suggestion</label></div>
+        @endif
         @if($type!=='audit_logs')
             <form method="post" action="/admin/reviews/{{ $type }}/{{ $row->id }}">@csrf
                 <div class="field"><label>Status</label><select name="status">@foreach(match($type){'submissions'=>['passed','returned','failed'],'practice_logs'=>['verified','returned'],'bookings'=>['confirmed','completed','cancelled'],'applications'=>['reviewing','shortlisted','accepted','rejected'],'event_registrations'=>['registered','attended','absent','cancelled'],default=>['new','in_progress','resolved']} as $status)<option value="{{ $status }}">{{ ucfirst($status) }}</option>@endforeach</select></div>

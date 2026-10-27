@@ -28,7 +28,7 @@ class Workflow {
   $rules=match($action){
    'enrol'=>['course_id'=>'required|integer|exists:courses,id'],
    'complete'=>['lesson_id'=>'required|integer|exists:lessons,id'],
-   'submit'=>['assignment_id'=>'required|integer|exists:assignments,id','body'=>'required|string|max:20000','file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png|max:10240'],
+    'submit'=>['assignment_id'=>'required|integer|exists:assignments,id','body'=>'required|string|max:20000','files'=>'nullable|array|max:10','files.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp|max:10240','file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png,webp|max:10240'],
    'practice'=>['skill_id'=>'required|integer|exists:skills,id','title'=>'required|string|max:255','body'=>'required|string|max:20000','minutes'=>'required|integer|min:1|max:1440','practised_on'=>'required|date|before_or_equal:today'],
    'book'=>['slot_id'=>'required|integer|exists:slots,id','goal'=>'required|string|max:5000'],
    'cancel-booking'=>['booking_id'=>'required|integer|exists:bookings,id'],
@@ -52,9 +52,13 @@ class Workflow {
     if($a->due_at && now()->gt($a->due_at))self::invalid('assignment_id','This assignment deadline has passed.');
     $previous=DB::table('submissions')->where('user_id',$u->id)->where('assignment_id',$a->id)->first();
     if($previous && $previous->status!=='returned')self::invalid('assignment_id','This work has already been submitted. A reviewer must return it before resubmission.');
-    $file=$d['file']??null;unset($d['file']);
-    if($file)$d['file_path']=$file->store('submissions','local');
-    DB::table('submissions')->updateOrInsert(['user_id'=>$u->id,'assignment_id'=>$a->id],$d+['status'=>'submitted','score'=>null,'feedback'=>null,'reviewer_id'=>null,'created_at'=>$previous?->created_at??now(),'updated_at'=>now()]);
+     $files=$d['files']??[];unset($d['files']);
+     $file=$d['file']??null;unset($d['file']);
+     if($file)$files[]=$file;
+     if($file)$d['file_path']=$file->store('submissions','local');
+     DB::table('submissions')->updateOrInsert(['user_id'=>$u->id,'assignment_id'=>$a->id],$d+['status'=>'submitted','score'=>null,'feedback'=>null,'reviewer_id'=>null,'created_at'=>$previous?->created_at??now(),'updated_at'=>now()]);
+     $submissionId=DB::table('submissions')->where('user_id',$u->id)->where('assignment_id',$a->id)->value('id');
+     foreach($files as $attachment)DB::table('learning_attachments')->insert(['entity_type'=>'submission','entity_id'=>$submissionId,'file_path'=>$attachment->store('submissions','local'),'original_name'=>mb_substr($attachment->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);
     $course=Catalog::query('courses')->findOrFail($a->course_id);foreach($course->instructors()->where('role','instructor')->where('status','active')->pluck('users.id') as $teacherId)self::notify($teacherId,'Practical work submitted',$u->name.' submitted '.$a->title);break;
    case 'practice':
     self::published('skills',$d['skill_id']);$id=self::insert('practice_logs',$d+['user_id'=>$u->id]);break;

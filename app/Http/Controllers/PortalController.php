@@ -187,6 +187,12 @@ class PortalController extends Controller {
     return response()->file($path,['Content-Type'=>$mime?:'application/octet-stream','Content-Disposition'=>'inline; filename="'.basename($path).'"','Cache-Control'=>'private, no-store, no-cache, must-revalidate','X-Content-Type-Options'=>'nosniff','X-Frame-Options'=>'SAMEORIGIN']);
   }
   public function download(Request $r,string $type,string $id){
+   if($type==='attachments'){
+    $file=DB::table('learning_attachments')->find($id);abort_unless($file,404);
+    if($file->entity_type==='submission'){$submission=DB::table('submissions')->find($file->entity_id);abort_unless($submission,404);$assignment=DB::table('assignments')->find($submission->assignment_id);abort_unless($r->user()->id===$submission->user_id||$r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($assignment->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
+    else{$table=$file->entity_type==='lesson'?'lessons':'assignments';abort_unless(in_array($file->entity_type,['lesson','assignment'],true),404);$item=DB::table($table)->find($file->entity_id);abort_unless($item,404);if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);}else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
+    abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($file->file_path),404);return \Illuminate\Support\Facades\Storage::disk('local')->download($file->file_path,$file->original_name);
+   }
    abort_unless(in_array($type,['resources','submissions']),404);$item=DB::table($type)->find($id);abort_unless($item,404);
    if($type==='resources'){
      if($r->user()->role==='participant') {abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}

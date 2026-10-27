@@ -39,6 +39,7 @@
     <div class="field"><label for="cms-end">To</label><input id="cms-end" type="date" name="end_date" value="{{ $filters['end_date'] }}"></div>
 </x-filter-bar>
 <div class="toolbar">
+    @if($module==='lessons')<a class="button secondary" href="/admin/lessons/batch"><i class="fas fa-layer-group" aria-hidden="true"></i> Add multiple lessons</a>@endif
     @if($module!=='courses'||auth()->user()->manager())
     <button type="button" data-dialog-open="create-record"><i class="fas fa-plus" aria-hidden="true"></i> Add new</button>
     @endif

@@ -150,6 +150,20 @@ class CertificateController extends Controller
             DB::table('course_certificates')->insertOrIgnore(['user_id'=>$user->id,'course_id'=>$id,'recommended_by'=>$r->user()->id,'recommended_at'=>now(),'reference'=>'LW-'.$id.'-'.$user->id.'-'.strtoupper(bin2hex(random_bytes(4))),'created_at'=>now(),'updated_at'=>now()]);Workflow::insert('audit_logs',['user_id'=>$r->user()->id,'module'=>'certificates','action'=>'recommend','record_id'=>$user->id]);});
         return back()->with('success','Completion recommended. The learner can view and download the certificate.');
     }
+    public function recommendationPreview(Request $r,string $id)
+    {
+        $course=$this->course($r,$id);
+        abort_unless((new \App\Policies\CoursePolicy)->recommendCertificate($r->user(),$course),403);
+        $data=$r->validate(['user_id'=>'required|integer|exists:users,id']);
+        $user=User::findOrFail($data['user_id']);
+        LearningAccess::requireCourse($user,(int)$id);
+        abort_unless(LearningAccess::completionReady($user,(int)$id),422,'All published lessons and practical assessments must be completed first.');
+        $template=DB::table('certificate_templates')->where('course_id',$id)->first();abort_unless($template,404,'No certificate template is configured for this course.');
+        $sample=(object)['user_id'=>$user->id,'course_id'=>(int)$id,'recommended_by'=>$r->user()->id,'recommended_at'=>now(),'reference'=>'PREVIEW-NOT-ISSUED'];
+        $bytes=app(CertificatePdf::class)->render($sample,$template);
+        return response($bytes,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'inline; filename="certificate-preview.pdf"','Cache-Control'=>'private, no-store']);
+    }
+
     public function download(Request $r,string $id) {
         abort_unless($r->user()->role==='participant',403);LearningAccess::requireCourse($r->user(),(int)$id);abort_unless(LearningAccess::completionReady($r->user(),(int)$id),422,'Finish the course first.');
         $certificate=DB::table('course_certificates')->where('user_id',$r->user()->id)->where('course_id',$id)->first();abort_unless($certificate,403,'Awaiting the assigned instructor recommendation.');

@@ -6,7 +6,8 @@ use App\Models\{InstructorAssignments, Record, User};
 use App\Policies\CoursePolicy;
 use App\Services\Workflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\{DB, Notification, Storage};
+use Illuminate\Support\Facades\{Crypt, DB, Http, Notification, Storage};
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class InstructorAssignmentsTest extends TestCase
@@ -128,5 +129,49 @@ class InstructorAssignmentsTest extends TestCase
         Notification::assertSentToTimes($first, \App\Notifications\PlatformNotice::class, 1);
         Notification::assertSentToTimes($second, \App\Notifications\PlatformNotice::class, 1);
         Notification::assertNotSentTo($inactive, \App\Notifications\PlatformNotice::class);
+    }
+
+    public function test_participant_can_attach_multiple_files_to_assignment_submission(): void
+    {
+        Storage::fake('local');$course=$this->course();$instructor=$this->user();$learner=$this->user('participant');InstructorAssignments::sync($course,[$instructor->id]);
+        Workflow::insert('enrolments',['course_id'=>$course->id,'user_id'=>$learner->id,'payment_confirmed_at'=>now()]);
+        $assignment=Workflow::insert('assignments',['course_id'=>$course->id,'title'=>'Evidence task','instructions'=>'Attach evidence','pass_mark'=>60,'status'=>'published']);
+        $this->actingAs($learner)->post('/actions/submit',['assignment_id'=>$assignment,'body'=>'Completed','files'=>[UploadedFile::fake()->create('one.pdf',20),UploadedFile::fake()->create('two.png',20,'image/png')]])->assertRedirect();
+        $submission=DB::table('submissions')->where('user_id',$learner->id)->first();
+        $this->assertDatabaseCount('learning_attachments',2);
+        $this->actingAs($instructor)->get('/admin/reviews/submissions')->assertOk()->assertSee('one.pdf')->assertSee('two.png');
+        $this->get('/files/attachments/'.DB::table('learning_attachments')->where('original_name','one.pdf')->value('id'))->assertOk();
+    }
+
+    public function test_instructor_can_generate_ai_marks_and_approve_selected_suggestion(): void
+    {
+        $course=$this->course();$instructor=$this->user();$learner=$this->user('participant');InstructorAssignments::sync($course,[$instructor->id]);
+        $assignment=Workflow::insert('assignments',['course_id'=>$course->id,'title'=>'Build a plan','instructions'=>'Include clear steps','pass_mark'=>60,'status'=>'published']);
+        $submission=Workflow::insert('submissions',['assignment_id'=>$assignment,'user_id'=>$learner->id,'body'=>'A detailed plan','status'=>'submitted']);
+        DB::table('settings')->insert(['key'=>'ai_api_key','value'=>'enc:'.Crypt::encryptString('test-key'),'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('settings')->insert(['key'=>'ai_api_base_url','value'=>'https://ai.example.test/v1','created_at'=>now(),'updated_at'=>now()]);
+        DB::table('settings')->insert(['key'=>'ai_api_model','value'=>'test-model','created_at'=>now(),'updated_at'=>now()]);
+        Http::fake(['*'=>Http::response(['choices'=>[['message'=>['content'=>'{"score":82,"feedback":"Clear and complete."}']]]])]);
+        $this->actingAs($instructor)->post('/admin/reviews/submissions/ai-mark',['submission_ids'=>[$submission]])->assertRedirect()->assertSessionHas('ai_mark_suggestions.'.$submission.'.score',82);
+        $this->post('/admin/reviews/submissions/ai-approve',['marks'=>[$submission=>'1']])->assertRedirect();
+        $this->assertDatabaseHas('submissions',['id'=>$submission,'score'=>82,'status'=>'passed','reviewer_id'=>$instructor->id]);
+    }
+
+    public function test_instructor_can_create_quiz_and_exam_assessments(): void
+    {
+        $course=$this->course();$instructor=$this->user();InstructorAssignments::sync($course,[$instructor->id]);
+        foreach(['quiz','exam'] as $type){
+            $this->actingAs($instructor)->post('/admin/assignments',['course_id'=>$course->id,'assessment_type'=>$type,'title'=>ucfirst($type),'instructions'=>'Write your answers below.','pass_mark'=>60,'status'=>'published'])->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertDatabaseHas('assignments',['course_id'=>$course->id,'assessment_type'=>$type,'title'=>ucfirst($type)]);
+        }
+    }
+
+    public function test_instructor_can_add_several_lessons_in_one_submission(): void
+    {
+        $course=$this->course();$instructor=$this->user();InstructorAssignments::sync($course,[$instructor->id]);
+        $this->actingAs($instructor)->post('/admin/lessons/batch',['course_id'=>$course->id,'status'=>'draft','lessons'=>[['title'=>'First lesson','body'=>'First content'],['title'=>'Second lesson','body'=>'Second content'],['title'=>'','body'=>'']]])->assertRedirect('/admin/lessons')->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('lessons',2);
+        $this->assertDatabaseHas('lessons',['course_id'=>$course->id,'title'=>'First lesson','position'=>1]);
+        $this->assertDatabaseHas('lessons',['course_id'=>$course->id,'title'=>'Second lesson','position'=>2]);
     }
 }

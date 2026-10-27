@@ -60,7 +60,7 @@
                         <td class="column-context">{{ $certificate?'Recommended':'Awaiting recommendation' }}@if($certificate)<small>{{ $certificate->reference }}</small>@endif</td>
                         <td class="column-actions"><div class="actions">
                             <x-record-view-trigger :dialogId="'view-recommendation-'.$course->id.'-'.$learner->id" :name="$learner->name" />
-                            @if(!$certificate&&auth()->user()->role==='instructor'&&$ready)<form method="post" action="/admin/certificates/{{ $course->id }}/recommend">@csrf<input type="hidden" name="user_id" value="{{ $learner->id }}"><button type="submit" class="small">Recommend</button></form>@endif
+                             @if(!$certificate&&auth()->user()->role==='instructor'&&$ready)<a class="button secondary small" href="/admin/certificates/{{ $course->id }}/recommendation-preview.pdf?user_id={{ $learner->id }}" target="_blank" rel="noopener">Preview certificate</a><form method="post" action="/admin/certificates/{{ $course->id }}/recommend">@csrf<input type="hidden" name="user_id" value="{{ $learner->id }}"><button type="submit" class="small">Recommend</button></form>@endif
                         </div>
                         <x-record-view-dialog :id="'view-recommendation-'.$course->id.'-'.$learner->id" :title="$learner->name" :fields="[['label'=>'Learner','value'=>$learner->name],['label'=>'Course Name','value'=>$course->title],['label'=>'Completion','value'=>$ready?'Complete':'In progress'],['label'=>'Recommendation','value'=>$certificate?'Recommended':'Awaiting recommendation'],['label'=>'Certificate reference','value'=>$certificate?->reference]]" />
                         </td>

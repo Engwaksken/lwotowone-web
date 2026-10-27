@@ -77,7 +77,17 @@ class CmsController extends Controller {
  private function aiSettingsData(Request $r): array {
   return $r->validate(['ai_provider'=>['required',\Illuminate\Validation\Rule::in(array_keys(config('ai.providers')))],'ai_api_base_url'=>'required|url:https|max:500','ai_api_model'=>'required|string|max:120','ai_api_key'=>'nullable|string|max:4096','clear_api_key'=>'nullable|boolean']);
  }
- private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
+  private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
+  public function batchLessons(Request $r){
+   $this->access($r,'lessons');
+   if($r->isMethod('get'))return view('admin.lessons-batch',['courses'=>Catalog::options('lessons',$r->user())['course_id']??[]]);
+   $input=$r->input('lessons',[]);$uploads=$r->file('lessons',[]);$kept=[];foreach($input as $key=>$lesson){if(trim((string)($lesson['title']??''))!==''||trim((string)($lesson['body']??''))!==''){$lesson['file']=$uploads[$key]['file']??null;$kept[]=$lesson;}}$r->merge(['lessons'=>$kept]);
+   $data=$r->validate(['course_id'=>'required|integer|exists:courses,id','status'=>'required|in:draft,published','lessons'=>'required|array|min:1|max:30','lessons.*.title'=>'required|string|max:255','lessons.*.body'=>'required|string|max:50000','lessons.*.file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,mp3,wav,m4a,aac,flac|max:102400']);
+   abort_unless(Catalog::scope(Catalog::query('courses'),$r->user(),'courses')->whereKey($data['course_id'])->exists(),403);
+   $position=(int)DB::table('lessons')->where('course_id',$data['course_id'])->max('position');
+   DB::transaction(function()use($data,$r,&$position){foreach($data['lessons'] as $lesson){$file=$lesson['file']??null;$path=$file?->store('lessons','local');$id=DB::table('lessons')->insertGetId(['course_id'=>$data['course_id'],'title'=>$lesson['title'],'body'=>$lesson['body'],'position'=>++$position,'status'=>$data['status'],'content_format'=>'text','content_source'=>'write','content_body'=>$lesson['body'],'file_path'=>null,'created_at'=>now(),'updated_at'=>now()]);if($file)DB::table('learning_attachments')->insert(['entity_type'=>'lesson','entity_id'=>$id,'file_path'=>$path,'original_name'=>mb_substr($file->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'lessons','action'=>'create','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);}});
+   return redirect('/admin/lessons')->with('success',count($data['lessons']).' lessons added.');
+  }
  public function index(Request $r,string $module){
    $this->access($r,$module);
    $statusOptions=config("modules.$module.fields.status",[]);if(!is_array($statusOptions))$statusOptions=[];
@@ -118,7 +128,8 @@ class CmsController extends Controller {
     if($module==='lessons'){$lessonLanguage=$r->validate(['lesson_language'=>'sometimes|in:en,lg'])['lesson_language']??$record->content_language??'en';$rules['title_lg']=['nullable','string','max:255'];if($lessonLanguage==='lg'){$rules['title']=['nullable','string','max:255'];$rules['title_lg']=['required','string','max:255'];}}
     $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
     if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
-     $d=$r->validate($rules);
+      $d=$r->validate($rules);
+     $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,mp3,wav,m4a,aac,flac|max:102400'])['attachments']??[];
     if($module==='lessons')$d['content_language']=$lessonLanguage;
     $temporaryPassword=null;
     if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(8);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
@@ -153,7 +164,8 @@ class CmsController extends Controller {
    if($assignmentChange)\App\Models\InstructorAssignments::sync($record,$assignmentIds,$leadId);
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
   });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);throw $e;}
-  if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
+   if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
+   if(in_array($module,['lessons','assignments'],true))foreach($attachmentFiles as $attachment)DB::table('learning_attachments')->insert(['entity_type'=>$module==='lessons'?'lesson':'assignment','entity_id'=>$record->id,'file_path'=>$attachment->store($module,'local'),'original_name'=>mb_substr($attachment->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);
     if($module==='users'&&$temporaryPassword!==null){
      try{$record->notify(new \App\Notifications\AccountSetup($temporaryPassword));}
      catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('New user setup email failed.', ['user_id'=>$record->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return redirect('/admin/users')->withErrors(['email'=>'The user was added, but the setup email failed: '.$detail.' Check Email settings, then use “Resend setup email”.']);}

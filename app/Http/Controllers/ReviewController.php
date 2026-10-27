@@ -5,6 +5,20 @@ use Illuminate\Support\Facades\DB;
 use App\Services\Workflow;
 use Carbon\CarbonImmutable;
 class ReviewController extends Controller {
+  public function aiMark(Request $r){
+   $data=$r->validate(['submission_ids'=>'required|array|min:1|max:20','submission_ids.*'=>'required|integer|distinct']);
+   $items=$this->query($r,'submissions')->whereIn('id',$data['submission_ids'])->where('status','submitted')->get();abort_unless($items->count()===count($data['submission_ids']),422,'Some selected submissions are unavailable or already reviewed.');
+   $suggestions=[];$assistant=app(\App\Services\AiAssistant::class);
+   foreach($items as $item){$assignment=DB::table('assignments')->find($item->assignment_id);$prompt=json_encode(['assessment_type'=>$assignment->assessment_type??'assignment','assessment'=>$assignment->title,'questions_or_instructions'=>$assignment->instructions,'pass_mark'=>(int)$assignment->pass_mark,'participant_answers_or_work'=>$item->body],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);$answer=$assistant->complete('You assist a human instructor by proposing a provisional score from 0 to 100 and concise feedback. Assess answers against the supplied quiz, exam, or assignment instructions. Return JSON only: {"score": integer, "feedback": string}. Do not make the final decision; never claim approval.',$prompt,500);$decoded=$answer?json_decode($answer,true):null;if(!is_array($decoded)||!isset($decoded['score'])||!is_numeric($decoded['score'])||!isset($decoded['feedback'])||!is_string($decoded['feedback']))continue;$score=max(0,min(100,(int)$decoded['score']));$suggestions[$item->id]=['score'=>$score,'feedback'=>mb_substr($decoded['feedback'],0,5000),'pass_mark'=>(int)$assignment->pass_mark];}
+   abort_if(!$suggestions,422,'AI marking is unavailable or did not return usable suggestions.');
+   session(['ai_mark_suggestions'=>$suggestions]);return back()->with('success',count($suggestions).' provisional AI mark(s) generated. Review and select suggestions to approve.');
+  }
+  public function approveAiMarks(Request $r){
+   $data=$r->validate(['marks'=>'required|array|min:1|max:20','marks.*'=>'accepted']);
+   $suggestions=session('ai_mark_suggestions',[]);$ids=array_map('intval',array_keys($data['marks']));$items=$this->query($r,'submissions')->whereIn('id',$ids)->where('status','submitted')->get()->keyBy('id');abort_unless($items->count()===count($ids),422,'Some selected submissions are no longer available.');
+   foreach($data['marks'] as $id=>$approved){$item=$items->get((int)$id);abort_unless(isset($suggestions[$id]),422,'Only current AI suggestions can be approved.');$suggestion=$suggestions[$id];$assignment=DB::table('assignments')->find($item->assignment_id);$status=(int)$suggestion['score'] >= (int)$assignment->pass_mark?'passed':'failed';DB::table('submissions')->where('id',$id)->update(['score'=>$suggestion['score'],'feedback'=>$suggestion['feedback'],'status'=>$status,'reviewer_id'=>$r->user()->id,'updated_at'=>now()]);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'ai-mark-approved','module'=>'submissions','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);unset($suggestions[$id]);}
+   session(['ai_mark_suggestions'=>$suggestions]);return back()->with('success',count($ids).' AI mark(s) approved and recorded.');
+  }
  private function query(Request $r,string $type){
   abort_unless($r->user()->staff(),403);
   abort_unless(in_array($type,['submissions','practice_logs','bookings','applications','event_registrations','contacts','audit_logs']),404);
@@ -54,7 +68,9 @@ class ReviewController extends Controller {
     $to=$dateColumn==='created_at'?$end->endOfDay()->toDateTimeString():$end->toDateString();
     $q->whereBetween($dateColumn,[$from,$to]);
    }
-   return view('admin.reviews',['type'=>$type,'rows'=>$q->orderByDesc('id')->paginate(20)->withQueryString(),'filters'=>$filters]);
+    $rows=$q->orderByDesc('id')->paginate(20)->withQueryString();
+    if($type==='submissions')$rows->getCollection()->transform(function($row){$row->attachments=DB::table('learning_attachments')->where('entity_type','submission')->where('entity_id',$row->id)->get();return $row;});
+    return view('admin.reviews',['type'=>$type,'rows'=>$rows,'filters'=>$filters,'aiMarkSuggestions'=>session('ai_mark_suggestions',[])]);
   }
  public function update(Request $r,string $type,string $id){
   $item=$this->query($r,$type)->where('id',$id)->first();abort_unless($item,404);

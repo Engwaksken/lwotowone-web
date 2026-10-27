@@ -51,7 +51,8 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
  Route::put('/admin/certificates/{id}/template',[\App\Http\Controllers\CertificateController::class,'save']);
  Route::get('/admin/certificates/{id}/background',[\App\Http\Controllers\CertificateController::class,'background']);
  Route::get('/admin/certificates/{id}/preview.pdf',[\App\Http\Controllers\CertificateController::class,'preview']);
- Route::post('/admin/certificates/{id}/recommend',[\App\Http\Controllers\CertificateController::class,'recommend']);
+  Route::post('/admin/certificates/{id}/recommend',[\App\Http\Controllers\CertificateController::class,'recommend']);
+  Route::get('/admin/certificates/{id}/recommendation-preview.pdf',[\App\Http\Controllers\CertificateController::class,'recommendationPreview']);
  Route::get('/certificates/{id}/file',[\App\Http\Controllers\CertificateController::class,'download']);
  Route::post('/admin/calls',[\App\Http\Controllers\CallController::class,'save']);
  Route::put('/admin/calls/{id}',[\App\Http\Controllers\CallController::class,'save']);
@@ -114,7 +115,9 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
   Route::delete('/admin/mel/{category}/{id}',[\App\Http\Controllers\MelController::class,'delete']);
   Route::get('/admin/mel/documents/{id}/download',[\App\Http\Controllers\MelController::class,'downloadDocument']);
   Route::delete('/admin/mel/documents/{id}',[\App\Http\Controllers\MelController::class,'deleteDocument']);
- Route::get('/admin/reviews/{type}',[ReviewController::class,'index']);Route::post('/admin/reviews/{type}/{id}',[ReviewController::class,'update']);
+  Route::post('/admin/reviews/submissions/ai-mark',[ReviewController::class,'aiMark']);Route::post('/admin/reviews/submissions/ai-approve',[ReviewController::class,'approveAiMarks']);
+  Route::get('/admin/reviews/{type}',[ReviewController::class,'index']);Route::post('/admin/reviews/{type}/{id}',[ReviewController::class,'update']);
+  Route::match(['get','post'],'/admin/lessons/batch',[CmsController::class,'batchLessons']);
  Route::get('/admin/{module}',[CmsController::class,'index']);Route::get('/admin/{module}/create',[CmsController::class,'form']);Route::get('/admin/{module}/{id}/edit',[CmsController::class,'form']);
  Route::post('/admin/{module}',[CmsController::class,'save']);Route::put('/admin/{module}/{id}',[CmsController::class,'save']);Route::delete('/admin/{module}/{id}',[CmsController::class,'delete']);
 });

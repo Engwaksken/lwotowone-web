@@ -30,6 +30,7 @@
                 <summary><span class="course-item-number">{{ str_pad($lesson->position,2,'0',STR_PAD_LEFT) }}</span><span>{{ $lesson->title??$lesson->title_lg??$t('Lesson','Essomo') }}</span><span class="tag">{{ $completed?$t('Completed','Kiwedde'):$t('Lesson','Essomo') }}</span></summary>
                 @if($lesson->locked)<p><i class="fas fa-lock" aria-hidden="true"></i> {{ $t('Locked. Finish the earlier lessons and confirm payment if your trial has ended.','Kigaddwa. Maliriza amasomo agakulembera era kakasa okusasula singa ekiseera eky’okugezesa kiwedde.') }}</p>@elseif($lesson->language_unavailable)<p class="notice">{{ $t('This lesson is currently available in Luganda only. An English version has not been added yet.','Essomo lino kati liri mu Luganda yokka. Tewannateekebwawo nkyusa ya Lungereza.') }}</p>@else
                 <div class="prose course-item-content">{{ $lesson->body }}</div>
+                @foreach(($lesson->attachments??[]) as $attachment)<p><a href="{{ $attachment['url'] }}"><i class="fas fa-paperclip" aria-hidden="true"></i> {{ $attachment['name'] }}</a></p>@endforeach
                 @php $mediaUrl=$lesson->viewer_url??$lesson->content_url??$lesson->video_url; @endphp
                 @if($mediaUrl)<x-learning-media :url="$mediaUrl" :type="$lesson->video_url?'video':$lesson->media_type" :title="$lesson->title" :external="!$lesson->viewer_url" />@endif
                 @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">{{ $t('Mark complete','Teeka nti kiwedde') }}</button></form>@endif
@@ -55,9 +56,10 @@
         @forelse($courseAssignments as $assignment)
             @php $submission=collect($data['submissions'])->firstWhere('assignment_id',$assignment->id); @endphp
             <details class="course-item">
-                <summary><span>{{ $assignment->title }}</span><span class="tag">{{ $t('Pass mark','Obubonero obwetaagisa') }} {{ $assignment->pass_mark }}%</span></summary>
+                <summary><span>{{ $assignment->title }}</span><span class="tag">{{ ucfirst($assignment->assessment_type??'assignment') }} · {{ $t('Pass mark','Obubonero obwetaagisa') }} {{ $assignment->pass_mark }}%</span></summary>
                 @if($assignment->locked)<p>{{ $t('Locked until payment is confirmed.','Kigaddwa okutuusa ng’okusasula kukakasiddwa.') }}</p>@else
                 <p class="prose course-item-content">{{ $assignment->instructions }}</p>
+                @foreach(($assignment->attachments??[]) as $attachment)<p><a href="{{ $attachment['url'] }}"><i class="fas fa-paperclip" aria-hidden="true"></i> {{ $attachment['name'] }}</a></p>@endforeach
                 @if($assignment->due_at)<p class="muted">{{ $t('Due','Lunaku olusembayo') }} {{ \Carbon\Carbon::parse($assignment->due_at)->format('d M Y, H:i') }}</p>@endif
                 @if($submission)
                     <div class="submission-status"><strong>{{ $luganda?match($submission->status){'submitted'=>'Biweerezeddwa','passed'=>'Ayise','returned'=>'Aziziddwa','failed'=>'Agudde',default=>ucfirst($submission->status)}:ucfirst($submission->status) }}</strong><span>{{ $t('Score','Obubonero') }}: {{ $submission->score??$t('Awaiting review','Birindiridde okwekebejjebwa') }}</span></div>
@@ -66,8 +68,8 @@
                 @if(!$submission||$submission->status==='returned')
                     <form class="assignment-form" method="post" enctype="multipart/form-data" action="/actions/submit">@csrf
                         <input type="hidden" name="assignment_id" value="{{ $assignment->id }}">
-                        <div class="field"><label for="assignment-body-{{ $assignment->id }}">{{ $t('Your practical work','Omulimu gwo ogw’okukola') }}</label><textarea id="assignment-body-{{ $assignment->id }}" name="body" required></textarea></div>
-                        <div class="field"><label for="assignment-file-{{ $assignment->id }}">{{ $t('Evidence file (optional, up to 10 MB)','Faayo eraga obukakafu (si kya buwaze, okutuuka ku 10 MB)') }}</label><input id="assignment-file-{{ $assignment->id }}" type="file" name="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp"></div>
+                        <div class="field"><label for="assignment-body-{{ $assignment->id }}">{{ in_array($assignment->assessment_type??'assignment',['quiz','exam'])?'Your answers':'Your practical work' }}</label><textarea id="assignment-body-{{ $assignment->id }}" name="body" required></textarea></div>
+                        <div class="field"><label for="assignment-file-{{ $assignment->id }}">{{ $t('Evidence files (optional, up to 10 files; 10 MB each)','Faayo eraga obukakafu (si kya buwaze)') }}</label><input id="assignment-file-{{ $assignment->id }}" type="file" name="files[]" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp" multiple></div>
                         <button type="submit">{{ $t('Submit work','Weereza omulimu') }}</button>
                     </form>
                 @endif
