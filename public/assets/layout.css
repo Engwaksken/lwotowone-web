@@ -553,7 +553,7 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .dash-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .dash-card-head .dash-card-title{margin-bottom:10px}
 .dash-card-head>a{font-size:13px;font-weight:700}
-.dash-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.dash-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .dash-tile{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:#f4f7f3}
 .dash-tile i{color:var(--green);font-size:13px}
 .dash-tile strong{font-size:19px;line-height:1.15;overflow-wrap:anywhere}
