@@ -77,8 +77,14 @@
         @endforeach
     </nav>
 
-    <div class="dash-grid">
-        <section class="panel dash-card" aria-labelledby="dash-numbers">
+    <div class="tabs dash-dashboard-tabs" data-tabs>
+        <div class="tab-list" role="tablist" aria-label="Dashboard information">
+            <button type="button" role="tab" id="tab-dash-numbers" aria-controls="panel-dash-numbers" aria-selected="true">Key numbers</button>
+            <button type="button" role="tab" id="tab-dash-funnel" aria-controls="panel-dash-funnel" aria-selected="false" tabindex="-1">Learner funnel</button>
+            <button type="button" role="tab" id="tab-dash-events" aria-controls="panel-dash-events" aria-selected="false" tabindex="-1">Upcoming events</button>
+            <button type="button" role="tab" id="tab-dash-activity" aria-controls="panel-dash-activity" aria-selected="false" tabindex="-1">Recent activity</button>
+        </div>
+        <section class="tab-panel" role="tabpanel" id="panel-dash-numbers" aria-labelledby="tab-dash-numbers">
             <h2 id="dash-numbers" class="dash-card-title">Key numbers</h2>
             <div class="dash-tiles">
                 @foreach($tiles as $tile)
@@ -91,7 +97,7 @@
             </div>
         </section>
 
-        <section class="panel dash-card" aria-labelledby="dash-funnel">
+        <section class="tab-panel" role="tabpanel" id="panel-dash-funnel" aria-labelledby="tab-dash-funnel" hidden>
             <h2 id="dash-funnel" class="dash-card-title">Learner funnel</h2>
             <div class="mel-bar-list">
                 @foreach($funnelSteps as $step)
@@ -107,7 +113,7 @@
             <p class="dash-note"><i class="fas fa-bullhorn" aria-hidden="true"></i> {{ number_format($count($events['open_calls'] ?? 0)) }} open calls · <a href="/admin/calls">Manage</a></p>
         </section>
 
-        <section class="panel dash-card" aria-labelledby="dash-events">
+        <section class="tab-panel" role="tabpanel" id="panel-dash-events" aria-labelledby="tab-dash-events" hidden>
             <div class="dash-card-head">
                 <h2 id="dash-events" class="dash-card-title">Upcoming events</h2>
                 <a href="/admin/events">All events</a>
@@ -135,7 +141,7 @@
             @endif
         </section>
 
-        <section class="panel dash-card" aria-labelledby="dash-activity">
+        <section class="tab-panel" role="tabpanel" id="panel-dash-activity" aria-labelledby="tab-dash-activity" hidden>
             <h2 id="dash-activity" class="dash-card-title">Recent activity</h2>
             @if($activity)
                 <ul class="dash-list">
