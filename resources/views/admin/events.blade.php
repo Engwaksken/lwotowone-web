@@ -3,11 +3,11 @@
 <div class="page-wrap">
     <span class="eyebrow">Event registration and attendance</span><h1 class="page-title">Events</h1>
     <p class="page-intro">Create an event, publish it, and share its registration link or QR code. Track participant registrations and record attendance from each event's roster.</p>
-    <div class="stats" aria-label="Event statistics">
-        <div class="stat"><span class="stat-icon"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span><strong>{{ number_format($statistics['total']) }}</strong><span>Total events</span></div>
-        <div class="stat"><span class="stat-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span><strong>{{ number_format($statistics['upcoming']) }}</strong><span>Upcoming events</span></div>
-        <div class="stat"><span class="stat-icon"><i class="fas fa-users" aria-hidden="true"></i></span><strong>{{ number_format($statistics['registered']) }}</strong><span>Registrations</span></div>
-        <div class="stat"><span class="stat-icon"><i class="fas fa-user-check" aria-hidden="true"></i></span><strong>{{ number_format($statistics['attended']) }}</strong><span>Attended</span></div>
+    <div class="public-stat-strip" aria-label="Event statistics">
+        <article><i class="fas fa-calendar-alt" aria-hidden="true"></i><div><strong>{{ number_format($statistics['total']) }}</strong><span>Total events</span></div></article>
+        <article><i class="fas fa-calendar-check" aria-hidden="true"></i><div><strong>{{ number_format($statistics['upcoming']) }}</strong><span>Upcoming events</span></div></article>
+        <article><i class="fas fa-users" aria-hidden="true"></i><div><strong>{{ number_format($statistics['registered']) }}</strong><span>Registrations</span></div></article>
+        <article><i class="fas fa-user-check" aria-hidden="true"></i><div><strong>{{ number_format($statistics['attended']) }}</strong><span>Attended</span></div></article>
     </div>
     <form class="filter-form" method="get" action="/admin/events"><div class="field search-field"><label for="event-search">Search events</label><input id="event-search" name="q" value="{{ $filters['q'] }}"></div><div class="field"><label for="event-status">Status</label><select id="event-status" name="status">@foreach(['all'=>'All statuses','draft'=>'Draft','published'=>'Published','cancelled'=>'Cancelled'] as $key=>$label)<option value="{{ $key }}" @selected($filters['status']===$key)>{{ $label }}</option>@endforeach</select></div><div class="filter-actions"><button type="submit">Apply</button><a href="/admin/events">Reset</a></div></form>
     <div class="toolbar"><button type="button" data-dialog-open="create-event"><i class="fas fa-plus" aria-hidden="true"></i> Add event</button></div>
