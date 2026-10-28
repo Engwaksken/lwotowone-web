@@ -42,7 +42,7 @@ class LearningContent
         $rules = match ($source) {
             'write' => [($module === 'lessons' && $language === 'lg' ? 'content_body_lg' : 'content_body') => 'required|string|max:50000'],
             'url' => ['content_url' => 'required|url:http,https|max:1000'],
-            'upload' => ['file' => [$retainFile ? 'nullable' : 'required', 'file', 'mimes:'.self::EXTENSIONS[$format], 'extensions:'.self::EXTENSIONS[$format], 'max:102400']],
+            'upload' => ['file' => [$retainFile ? 'nullable' : 'required', 'file', self::typeRule($format), 'extensions:'.self::EXTENSIONS[$format], 'max:'.UploadLimit::fileKilobytes()]],
         };
         $data = $request->validate($rules);
         $out = $choice + ['content_body' => $data['content_body'] ?? null, 'content_url' => $data['content_url'] ?? null, 'file_path' => $source === 'upload' && $retainFile ? $record->file_path : null];
@@ -56,13 +56,23 @@ class LearningContent
         return $out;
     }
 
+    /** Phone and camera videos are often detected as QuickTime or 3GPP, so videos are checked by family rather than exact type. */
+    private static function typeRule(string $format): string
+    {
+        return match ($format) {
+            'video' => 'mimetypes:video/*,application/mp4,application/ogg',
+            'audio' => 'mimetypes:audio/*,video/mp4,application/ogg',
+            default => 'mimes:'.self::EXTENSIONS[$format],
+        };
+    }
+
     public static function mediaType(object $record): string
     {
         if (($record->content_format ?? null) === 'audio') return 'audio';
         if (($record->content_format ?? null) === 'video') return 'video';
         $path = ($record->content_source ?? null) === 'url' ? (string)parse_url($record->content_url, PHP_URL_PATH) : (string)($record->file_path ?? '');
         return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
-            'mp4', 'webm', 'ogg' => 'video', 'mp3', 'wav', 'm4a', 'aac', 'flac' => 'audio',
+            'mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v' => 'video', 'mp3', 'wav', 'm4a', 'aac', 'flac' => 'audio',
             'pdf' => 'pdf', 'png', 'jpg', 'jpeg', 'webp' => 'image', 'txt' => 'text', default => 'document',
         };
     }

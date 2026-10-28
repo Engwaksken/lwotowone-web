@@ -23,10 +23,7 @@ class CmsController extends Controller {
   return back()->with('success','Website appearance updated.');
  }
  public static function introVideoMaxKilobytes(): int {
-  $toBytes=function(string $value){$value=trim($value);$number=(float)$value;return match(strtolower(substr($value,-1))){'g'=>$number*1024**3,'m'=>$number*1024**2,'k'=>$number*1024,default=>$number};};
-  // The upload limit is the smaller of PHP's per-file and per-request limits, capped at 200 MB and leaving headroom for the other fields.
-  $limits=array_filter([$toBytes((string)ini_get('upload_max_filesize')),$toBytes((string)ini_get('post_max_size'))-1024*1024,200*1024**2],fn($bytes)=>$bytes>0);
-  return max(1024,(int)floor(min($limits)/1024));
+  return \App\Services\UploadLimit::fileKilobytes(200);
  }
  public function saveIntroVideo(Request $r){
   abort_unless($r->user()->role==='admin',403);
@@ -82,11 +79,12 @@ class CmsController extends Controller {
    $this->access($r,'lessons');
    if($r->isMethod('get'))return view('admin.lessons-batch',['courses'=>Catalog::options('lessons',$r->user())['course_id']??[]]);
    $input=$r->input('lessons',[]);$uploads=$r->file('lessons',[]);$kept=[];foreach($input as $key=>$lesson){if(trim((string)($lesson['title']??''))!==''||trim((string)($lesson['body']??''))!==''){$lesson['file']=$uploads[$key]['file']??null;$kept[]=$lesson;}}$r->merge(['lessons'=>$kept]);
-    $data=$r->validate(['course_id'=>'required|integer|exists:courses,id','status'=>'required|in:draft,published','lessons'=>'required|array|min:1|max:30','lessons.*.title'=>'required|string|max:255','lessons.*.body'=>'required|string|max:50000','lessons.*.file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:102400']);
+    $data=$r->validate(['course_id'=>'required|integer|exists:courses,id','status'=>'required|in:draft,published','lessons'=>'required|array|min:1|max:30','lessons.*.title'=>'required|string|max:255','lessons.*.body'=>'required|string|max:50000','lessons.*.file'=>'nullable|file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:'.\App\Services\UploadLimit::fileKilobytes()]);
    abort_unless(Catalog::scope(Catalog::query('courses'),$r->user(),'courses')->whereKey($data['course_id'])->exists(),403);
    $position=(int)DB::table('lessons')->where('course_id',$data['course_id'])->max('position');
     DB::transaction(function()use($data,$r,&$position){foreach($data['lessons'] as $lesson){$file=$lesson['file']??null;$path=$file?\App\Services\VideoUpload::store($file,'lessons','local'):null;$id=DB::table('lessons')->insertGetId(['course_id'=>$data['course_id'],'title'=>$lesson['title'],'body'=>$lesson['body'],'position'=>++$position,'status'=>$data['status'],'content_format'=>'text','content_source'=>'write','content_body'=>$lesson['body'],'file_path'=>null,'created_at'=>now(),'updated_at'=>now()]);if($file)DB::table('learning_attachments')->insert(['entity_type'=>'lesson','entity_id'=>$id,'file_path'=>$path,'original_name'=>mb_substr($file->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'lessons','action'=>'create','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);}});
-   return redirect('/admin/lessons')->with('success',count($data['lessons']).' lessons added.');
+   session()->flash('success',count($data['lessons']).' lessons added.');
+   return $r->expectsJson()?['ok'=>true,'redirect'=>'/admin/lessons']:redirect('/admin/lessons');
   }
  public function index(Request $r,string $module){
    $this->access($r,$module);
@@ -129,7 +127,7 @@ class CmsController extends Controller {
     $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
     if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
       $d=$r->validate($rules);
-     $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:102400'])['attachments']??[];
+     $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:'.\App\Services\UploadLimit::fileKilobytes()])['attachments']??[];
     if($module==='lessons')$d['content_language']=$lessonLanguage;
     $temporaryPassword=null;
     if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(8);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
@@ -171,7 +169,8 @@ class CmsController extends Controller {
      catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('New user setup email failed.', ['user_id'=>$record->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return redirect('/admin/users')->withErrors(['email'=>'The user was added, but the setup email failed: '.$detail.' Check Email settings, then use “Resend setup email”.']);}
     }
    if($module==='announcements'&&$record->status==='published')\App\Models\User::where('status','active')->chunkById(100,function($users)use($record){foreach($users as $u)$u->notify(new \App\Notifications\PlatformNotice($record->title,$record->body));});
-  return redirect('/admin/'.$module)->with('success','Saved successfully.');
+  session()->flash('success','Saved successfully.');
+  return $r->expectsJson()?['ok'=>true,'redirect'=>'/admin/'.$module]:redirect('/admin/'.$module);
  }
   public function resendUserSetup(Request $r,string $id){
    abort_unless($r->user()->role==='admin',403);

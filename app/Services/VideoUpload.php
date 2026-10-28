@@ -31,9 +31,18 @@ class VideoUpload
                 '-acodec', 'aac', '-b:a', '96k', '-movflags', '+faststart',
                 $output,
             ]);
-            $process->setTimeout((int) config('media.compression_timeout', 1800));
+            $timeout = (int) config('media.compression_timeout', 1800);
+            $process->setTimeout($timeout);
+            // PHP's execution limit would otherwise end the request mid-encode and lose the upload.
+            if (function_exists('set_time_limit')) @set_time_limit($timeout + 120);
             $process->run();
-            if ($process->isSuccessful() && is_file($output) && filesize($output) > 0) return $output;
+            if ($process->isSuccessful() && is_file($output) && filesize($output) > 0) {
+                // An MP4 or WebM that is already lean plays everywhere, so keep it; other containers always switch to MP4.
+                $playable = in_array(strtolower($file->getClientOriginalExtension()), ['mp4', 'webm'], true);
+                if (!$playable || filesize($output) < (int) $file->getSize()) return $output;
+                @unlink($output);
+                return null;
+            }
             Log::warning('Video compression failed; retaining the original upload.', [
                 'error' => mb_substr($process->getErrorOutput(), 0, 500),
             ]);
