@@ -86,9 +86,10 @@
 <dialog class="form-dialog" id="create-record" aria-labelledby="create-record-title">
     <div class="dialog-heading"><h2 id="create-record-title">Create {{ \Illuminate\Support\Str::singular($meta['title']) }}</h2><button class="secondary small" type="button" data-dialog-close>Close</button></div>
     @php $record=null; @endphp
-    <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}">
+    <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}" data-upload-progress data-max-file-bytes="{{ \App\Services\UploadLimit::fileKilobytes()*1024 }}" data-max-request-bytes="{{ \App\Services\UploadLimit::requestBytes() }}">
         @csrf<input type="hidden" name="_modal_id" value="create-record">
         @include('admin.fields',['formId'=>'create-record'])
+        <div class="upload-progress" data-upload-progress-status hidden><progress max="100" value="0"></progress><span aria-live="polite">Uploading…</span></div>
         <div class="dialog-actions"><button type="submit">Save record</button></div>
     </form>
 </dialog>
@@ -98,9 +99,10 @@
     <dialog class="form-dialog" id="edit-record-{{ $row->id }}" aria-labelledby="edit-record-title-{{ $row->id }}">
         <div class="dialog-heading"><h2 id="edit-record-title-{{ $row->id }}">Edit record</h2><button class="secondary small" type="button" data-dialog-close>Close</button></div>
         @php $record=$row; @endphp
-        <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}/{{ $row->id }}">
+        <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}/{{ $row->id }}" data-upload-progress data-max-file-bytes="{{ \App\Services\UploadLimit::fileKilobytes()*1024 }}" data-max-request-bytes="{{ \App\Services\UploadLimit::requestBytes() }}">
             @csrf @method('PUT')<input type="hidden" name="_modal_id" value="edit-record-{{ $row->id }}">
             @include('admin.fields',['formId'=>'edit-record-'.$row->id])
+            <div class="upload-progress" data-upload-progress-status hidden><progress max="100" value="0"></progress><span aria-live="polite">Uploading…</span></div>
             <div class="dialog-actions"><button type="submit">Save changes</button></div>
         </form>
     </dialog>
