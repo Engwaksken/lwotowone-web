@@ -1,12 +1,23 @@
 @extends('layout')
 @section('title','Lwotowone | Practical skills and new opportunities')
-@section('description','Explore practical learning, mentorship and enterprise support with Lwotowone Enterprises Ltd in Uganda.')
+@php
+    // Admins edit this page in Website pages (slug "home"): the title is the headline, the first paragraph of the body is the
+    // intro under it, and the remaining paragraphs fill "How it works here". The settings and text below are only fallbacks.
+    $homeParagraphs=$homePage?array_values(array_filter(array_map('trim',preg_split('/\R\s*\R/',(string)$homePage->body)),'strlen')):[];
+    $homeTitle=$homePage?->title?:($site['hero_title']??'Skills you can use on Monday morning.');
+    $homeLead=$homeParagraphs[0]??($site['hero_summary']??'We run hands-on courses in farming, trades and small business for young people in Uganda — and we stay with you after the course, with mentors and leads on work.');
+    $homeAbout=$homePage?array_slice($homeParagraphs,1):[
+        'Most of our learners already have an idea — a poultry unit, a tailoring stall, a phone repair bench. What’s missing is the know-how and someone to ask when things go wrong. So our courses are short and practical, built around the work itself.',
+        'When a course ends you can still book time with a mentor. We post job and enterprise opportunities as they come in, and you can come back for the next course when you’re ready.',
+    ];
+@endphp
+@section('description',$homePage?->meta_description?:'Explore practical learning, mentorship and enterprise support with Lwotowone Enterprises Ltd in Uganda.')
 @section('content')
 <section class="home-hero">
     <div class="home-hero-copy">
-        @if(!empty($site['hero_eyebrow']))<span class="eyebrow">{{ $site['hero_eyebrow'] }}</span>@endif
-        <h1>{{ $site['hero_title']??'Skills you can use on Monday morning.' }}</h1>
-        <p class="home-lead">{{ $site['hero_summary']??'We run hands-on courses in farming, trades and small business for young people in Uganda — and we stay with you after the course, with mentors and leads on work.' }}</p>
+        @if(!$homePage&&!empty($site['hero_eyebrow']))<span class="eyebrow">{{ $site['hero_eyebrow'] }}</span>@endif
+        <h1>{{ $homeTitle }}</h1>
+        @if($homeLead!=='')<p class="home-lead">{{ $homeLead }}</p>@endif
         <div class="actions home-actions"><a class="button" href="/courses">See the courses</a><a class="home-text-link" href="/about">Who we are &rarr;</a></div>
     </div>
     <section class="home-now" aria-labelledby="home-now-title">
@@ -44,13 +55,15 @@
 </section>
 @endif
 
+@if($homeAbout)
 <section class="home-about">
     <h2>How it works here</h2>
     <div class="home-about-text">
-        <p>Most of our learners already have an idea — a poultry unit, a tailoring stall, a phone repair bench. What’s missing is the know-how and someone to ask when things go wrong. So our courses are short and practical, built around the work itself.</p>
-        <p>When a course ends you can still book time with a mentor. We post job and enterprise opportunities as they come in, and you can come back for the next course when you’re ready. <a href="/approach">More about our approach</a>.</p>
+        @foreach($homeAbout as $paragraph)<p>{{ $paragraph }}</p>@endforeach
+        <p><a href="/approach">More about our approach</a></p>
     </div>
 </section>
+@endif
 
 <section class="home-programmes" aria-labelledby="home-programmes-title">
     <div class="home-section-heading"><h2 id="home-programmes-title">Our programmes</h2><a href="/programs">All programmes &rarr;</a></div>

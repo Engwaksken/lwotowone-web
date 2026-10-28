@@ -61,6 +61,21 @@ class HelpAndBrandingTest extends TestCase
         @rmdir(public_path('site-branding'));
     }
 
+    public function test_admin_edits_home_page_text_from_website_pages(): void
+    {
+        $admin = User::create(['name'=>'Admin','email'=>'admin-home@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'admin','status'=>'active']);
+        $home = \Illuminate\Support\Facades\DB::table('pages')->where('slug','home')->first();
+        $this->assertNotNull($home, 'The migration should add the home page to Website pages.');
+        $this->actingAs($admin)->get('/admin/pages')->assertOk()->assertSee($home->title);
+        $this->get('/admin/pages/'.$home->id.'/edit')->assertOk()->assertSee('This is the website home page.');
+        $this->put('/admin/pages/'.$home->id, ['title'=>'Learn a trade with us','slug'=>'home','status'=>'published','meta_description'=>'Trade courses in Gulu.','body'=>"Short courses near you.\n\nFirst about paragraph.\n\nSecond about paragraph."])->assertRedirect('/admin/pages');
+        $this->get('/')->assertOk()->assertSee('<h1>Learn a trade with us</h1>',false)->assertSee('<p class="home-lead">Short courses near you.</p>',false)
+            ->assertSee('<p>First about paragraph.</p>',false)->assertSee('<p>Second about paragraph.</p>',false)->assertSee('content="Trade courses in Gulu."',false);
+        $this->get('/pages/home')->assertRedirect('/');
+        \Illuminate\Support\Facades\DB::table('pages')->where('id',$home->id)->update(['status'=>'draft']);
+        $this->get('/')->assertOk()->assertDontSee('Learn a trade with us')->assertSee('How it works here');
+    }
+
     public function test_admin_can_upload_intro_video_shown_on_home_page(): void
     {
         $admin = User::create(['name'=>'Admin','email'=>'admin-video@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'admin','status'=>'active']);

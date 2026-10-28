@@ -15,6 +15,8 @@ class BulkPageSelectionTest extends TestCase
     public function test_admin_can_bulk_delete_selected_pages_and_audit_each_delete(): void
     {
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => Hash::make('A-long-test-password'), 'role' => 'admin', 'status' => 'active']);
+        // Start from an empty pages table; migrations add the website home page.
+        DB::table('pages')->delete();
         $ids = [];
         foreach (['First page', 'Second page'] as $index => $title) {
             $ids[] = DB::table('pages')->insertGetId(['title' => $title, 'slug' => 'page-'.$index, 'body' => 'Content', 'status' => 'draft', 'created_at' => now(), 'updated_at' => now()]);

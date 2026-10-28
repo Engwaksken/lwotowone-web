@@ -91,6 +91,8 @@ class TableFiltersTest extends TestCase
     {
         $this->travelTo(Carbon::parse('2026-10-07 12:00:00'));
         $admin = $this->user('admin');
+        // Start from an empty pages table; migrations add the website home page.
+        DB::table('pages')->delete();
         foreach (range(1, 22) as $day) {
             $createdAt = $day <= 3
                 ? Carbon::parse('2026-10-04')->addDays($day)
