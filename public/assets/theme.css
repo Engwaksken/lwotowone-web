@@ -216,8 +216,8 @@ input[type=checkbox]:focus,input[type=radio]:focus{box-shadow:none}
 .dash-card-title{display:flex;align-items:center;gap:8px;font-size:16px}
 .dash-card-title:before{content:'';width:4px;height:16px;border-radius:4px;background:var(--gold)}
 .dash-tile{gap:3px;padding:12px 13px;border:1px solid var(--border);background:var(--surface-muted)}
-.dash-tile i{display:grid;place-items:center;width:28px;height:28px;margin-bottom:4px;border-radius:9px;background:var(--brand-soft);color:var(--brand)}
-.dash-tile strong{font-weight:800;color:var(--ink)}
+.dash-tile i{display:grid;place-items:center;width:28px;height:28px;margin-bottom:0;border-radius:9px;background:var(--brand-soft);color:var(--brand)}
+.dash-tile strong{font-weight:800;color:var(--ink);overflow-wrap:anywhere}
 .mel-bar-track{background:var(--brand-soft)}
 .dash-count{color:var(--brand)}
 .dash-manage{overflow:hidden}

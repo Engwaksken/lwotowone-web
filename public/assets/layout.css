@@ -554,10 +554,10 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .dash-card-head .dash-card-title{margin-bottom:10px}
 .dash-card-head>a{font-size:13px;font-weight:700}
 .dash-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.dash-tile{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:#f4f7f3}
+.dash-tile{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:2px 8px;padding:10px 12px;border-radius:12px;background:#f4f7f3}
 .dash-tile i{color:var(--green);font-size:13px}
 .dash-tile strong{font-size:19px;line-height:1.15;overflow-wrap:anywhere}
-.dash-tile span{color:var(--muted);font-size:12px;line-height:1.3}
+.dash-tile span{grid-column:1/-1;color:var(--muted);font-size:12px;line-height:1.3}
 .dash .mel-bar-list{gap:9px}
 .dash .mel-bar-row{font-size:13px}
 .dash-note{margin:12px 0 0;color:var(--muted);font-size:13px}
