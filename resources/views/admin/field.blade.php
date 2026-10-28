@@ -6,10 +6,10 @@
 <div class="field" @if($module==='lessons'&&in_array($field,['title','title_lg','body_lg','content_body_lg'],true)) data-lesson-language-field="{{ in_array($field,['title_lg','body_lg','content_body_lg'],true)?'lg':'en' }}" @endif>
     <label for="{{ $formId }}-{{ $field }}">{{ $module==='lessons'&&$field==='title'?'Title (English)':\App\Services\RecordPresentation::label($field) }} {{ $optional?'(optional)':'' }}</label>
     @if(isset($options[$field]))
-        <select id="{{ $formId }}-{{ $field }}" name="{{ $field }}" @required(!$optional)>
+        <select id="{{ $formId }}-{{ $field }}" name="{{ $field }}" @required(!$optional) @isset($options['_course'][$field])data-course-filter @endisset>
             <option value="">Select</option>
             @foreach($options[$field] as $v=>$label)
-                <option value="{{ $v }}" @selected((string)$value===(string)$v)>{{ $label }}</option>
+                <option value="{{ $v }}" @selected((string)$value===(string)$v) @isset($options['_course'][$field][$v])data-course="{{ $options['_course'][$field][$v] }}"@endisset>{{ $label }}</option>
             @endforeach
         </select>
     @elseif($type==='textarea')

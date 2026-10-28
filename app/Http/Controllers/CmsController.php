@@ -140,8 +140,8 @@ class CmsController extends Controller {
     $leadId=isset($assignment['lead_instructor_id'])?(int)$assignment['lead_instructor_id']:null;
    }
    if($module==='courses'&&!empty($d['prerequisite_course_id'])){$previous=(int)$d['prerequisite_course_id'];$seen=[];while($previous){abort_if(isset($seen[$previous])||($id&&(int)$id===$previous),422,'Course prerequisites cannot form a cycle.');$seen[$previous]=true;$previous=(int)DB::table('courses')->where('id',$previous)->value('prerequisite_course_id');}}
-   if($module==='lessons'&&!empty($d['module_id']))abort_unless(DB::table('course_modules')->where('id',$d['module_id'])->where('course_id',$d['course_id'])->exists(),422,'Select a module from this course.');
-   if($module==='resources'&&!empty($d['lesson_id']))abort_unless(DB::table('lessons')->where('id',$d['lesson_id'])->where('course_id',$d['course_id'])->exists(),422,'Select a lesson from this course.');
+   if($module==='lessons'&&!empty($d['module_id'])&&!DB::table('course_modules')->where('id',$d['module_id'])->where('course_id',$d['course_id'])->exists())throw \Illuminate\Validation\ValidationException::withMessages(['module_id'=>'This module belongs to a different course. Choose a module from the selected course, or leave it empty.']);
+   if($module==='resources'&&!empty($d['lesson_id'])&&!DB::table('lessons')->where('id',$d['lesson_id'])->where('course_id',$d['course_id'])->exists())throw \Illuminate\Validation\ValidationException::withMessages(['lesson_id'=>'This lesson belongs to a different course. Choose a lesson from the selected course, or leave it empty.']);
   if(!$r->user()->manager()){
    if($module==='slots')$d['mentor_id']=$r->user()->id;
    elseif($module!=='courses')abort_unless(Catalog::query('courses')->assignedToInstructor((int)$r->user()->id)->whereKey($d['course_id'])->exists(),403);

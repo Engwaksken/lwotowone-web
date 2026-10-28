@@ -116,6 +116,24 @@ class LearningContentFormatsTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('file');
     }
 
+    public function test_lesson_module_from_another_course_is_a_field_error_not_a_dead_end(): void
+    {
+        Storage::fake('local'); config(['media.ffmpeg' => 'missing-ffmpeg-binary']);
+        $admin = $this->user('admin'); $teacher = $this->user('instructor');
+        $course = $this->course($teacher); $otherCourse = $this->course($teacher);
+        $module = Workflow::insert('course_modules', ['course_id' => $course, 'title' => 'Week one', 'position' => 1, 'status' => 'published']);
+        $otherModule = Workflow::insert('course_modules', ['course_id' => $otherCourse, 'title' => 'Other week', 'position' => 1, 'status' => 'published']);
+        $this->actingAs($admin)->get('/admin/lessons')->assertOk()
+            ->assertSee('data-course-filter', false)->assertSee('value="'.$otherModule.'"  data-course="'.$otherCourse.'"', false)
+            ->assertSee('class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/lessons" data-upload-progress', false);
+        $video = fn () => ['content_format' => 'video', 'content_source' => 'upload', 'file' => UploadedFile::fake()->create('clip.mp4', 20, 'video/mp4')];
+        $this->post('/admin/lessons', $this->payload($course, 'lessons') + ['module_id' => $otherModule] + $video())->assertSessionHasErrors('module_id');
+        $this->postJson('/admin/lessons', $this->payload($course, 'lessons') + ['module_id' => $otherModule] + $video())->assertUnprocessable()->assertJsonValidationErrors('module_id');
+        $this->assertSame(0, DB::table('lessons')->count());
+        $this->postJson('/admin/lessons', $this->payload($course, 'lessons') + ['module_id' => $module] + $video())->assertOk()->assertJson(['ok' => true]);
+        $this->assertSame($module, (int) DB::table('lessons')->value('module_id'));
+    }
+
     public function test_uploaded_lesson_is_private_sequenced_and_redacted_when_locked(): void
     {
         $this->endFreeAccess();

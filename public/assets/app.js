@@ -143,6 +143,16 @@ const updateLessonLanguage=form=>form.querySelectorAll('[data-lesson-language]')
     });
 });
 document.querySelectorAll('[data-lesson-language]').forEach(select=>select.addEventListener('change',()=>updateLessonLanguage(select.form)));
+// Modules and lessons belong to one course, so only offer those from the course chosen in the same form.
+document.querySelectorAll('select[data-course-filter]').forEach(select=>{
+    const course=select.form?.querySelector('select[name="course_id"]');
+    if(!course)return;
+    const update=()=>{
+        select.querySelectorAll('option[data-course]').forEach(option=>{const other=option.dataset.course!==course.value;option.hidden=other;option.disabled=other;});
+        if(select.selectedOptions[0]?.disabled)select.value='';
+    };
+    course.addEventListener('change',update);update();
+});
 document.querySelectorAll('[data-content-fields]').forEach(fields=>{
     const format=fields.querySelector('[data-content-format]'),source=fields.querySelector('[data-content-source]');
     const extensions={text:'.txt',file:'.pdf,.txt,.jpg,.jpeg,.png,.webp',video:'.mp4,.webm,.ogg,.ogv,.mov,.m4v',audio:'.mp3,.wav,.ogg,.m4a,.aac,.flac'};
