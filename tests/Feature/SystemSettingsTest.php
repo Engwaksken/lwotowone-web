@@ -53,7 +53,7 @@ class SystemSettingsTest extends TestCase
         Storage::fake('local');
         $admin = $this->admin();
         $this->actingAs($admin)->post('/admin/site-settings/backups/run', ['destination' => 'local'])
-            ->assertRedirect('/admin/site-settings#backup-settings');
+            ->assertRedirect('/admin/site-settings#backup-panel-local');
 
         $files = Storage::disk('local')->files('backups');
         $this->assertCount(1, $files);

@@ -85,7 +85,7 @@ class HelpAndBrandingTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('class="home-video"',false);
         $this->actingAs($manager)->put('/admin/site-settings/intro-video',['intro_video'=>$video(),'intro_video_enabled'=>1])->assertForbidden();
         $this->actingAs($admin)->get('/admin/site-settings')->assertOk()->assertSee('Introduction video')->assertSee('action="/admin/site-settings/intro-video"',false);
-        $this->actingAs($admin)->put('/admin/site-settings/intro-video',['intro_video'=>UploadedFile::fake()->create('intro.mov',10,'video/quicktime')])->assertSessionHasErrors('intro_video');
+        $this->actingAs($admin)->put('/admin/site-settings/intro-video',['intro_video'=>UploadedFile::fake()->create('intro.avi',10,'video/x-msvideo')])->assertSessionHasErrors('intro_video');
 
         $this->actingAs($admin)->put('/admin/site-settings/intro-video',[
             'intro_video'=>$video(),'intro_video_title'=>'Meet our team','intro_video_summary'=>'See how we work.','intro_video_enabled'=>1,

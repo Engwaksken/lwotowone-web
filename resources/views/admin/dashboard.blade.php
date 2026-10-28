@@ -78,7 +78,7 @@
     </nav>
 
     <div class="tabs dash-dashboard-tabs" data-tabs>
-        <div class="tab-list" role="tablist" aria-label="Dashboard information">
+        <div class="tab-list" role="tablist" aria-label="Overview sections">
             <button type="button" role="tab" id="tab-dash-numbers" aria-controls="panel-dash-numbers" aria-selected="true">Key numbers</button>
             <button type="button" role="tab" id="tab-dash-funnel" aria-controls="panel-dash-funnel" aria-selected="false" tabindex="-1">Learner funnel</button>
             <button type="button" role="tab" id="tab-dash-events" aria-controls="panel-dash-events" aria-selected="false" tabindex="-1">Upcoming events</button>
