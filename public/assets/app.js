@@ -159,6 +159,21 @@ document.querySelectorAll('[data-content-fields]').forEach(fields=>{
         if(fields.closest('form')?.querySelector('[data-lesson-language]'))updateLessonLanguage(fields.closest('form'));
     };
     format.addEventListener('change',update);source.addEventListener('change',update);update();
+    // Let staff watch or listen to a chosen file before spending time uploading it.
+    const picker=fields.querySelector('[type="file"]'),preview=fields.querySelector('[data-content-file-preview]');
+    if(picker&&preview&&window.URL?.createObjectURL){
+        let objectUrl=null;
+        picker.addEventListener('change',()=>{
+            if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=null;preview.replaceChildren();preview.hidden=true;
+            const file=picker.files?.[0];const kind=file&&['video','audio'].find(type=>file.type.startsWith(type+'/')||format.value===type);
+            if(!kind)return;
+            objectUrl=URL.createObjectURL(file);
+            const label=document.createElement('strong');label.textContent=`Preview of ${file.name}`;
+            const player=document.createElement(kind);player.controls=true;player.preload='metadata';player.src=objectUrl;player.className=kind==='video'?'resource-video':'resource-audio';
+            player.addEventListener('error',()=>{const note=document.createElement('small');note.textContent='This browser can’t play this file, but you can still upload it.';player.replaceWith(note);},{once:true});
+            preview.append(label,player);preview.hidden=false;
+        });
+    }
 });
 const certificateEditor=document.querySelector('[data-certificate-editor]');
 if(certificateEditor){

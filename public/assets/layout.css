@@ -644,6 +644,11 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .learning-content-fields legend{padding:0 8px;font-size:14px;font-weight:700}
 .content-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .learning-content-fields [hidden]{display:none!important}
+.content-preview{margin:0 0 16px}
+[data-content-file-preview]{margin:12px 0 0}
+.content-preview>strong{display:block;margin-bottom:6px;font-size:13px}
+.content-preview .resource-video,.content-preview .lesson-video{max-width:560px;margin:0}
+.content-preview .resource-audio{width:100%;max-width:560px}
 .resource-audio{width:100%;margin:16px 0}
 .header-search-disclosure{position:relative;flex:0 0 auto;z-index:8;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
 .header-search-disclosure>summary{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;color:var(--green);cursor:pointer;list-style:none}
