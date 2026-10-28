@@ -11,7 +11,7 @@ Route::get('/surveys/{token}',[\App\Http\Controllers\SurveyController::class,'sh
 Route::post('/surveys/{token}',[\App\Http\Controllers\SurveyController::class,'submit'])->middleware('throttle:20,1');
 Route::get('/about',[PublicController::class,'page'])->defaults('slug','about');
 Route::get('/approach',[PublicController::class,'page'])->defaults('slug','approach');
-Route::get('/pages/about',fn()=>redirect('/about',301));
+Route::get('/pages/about',fn()=>redirect('/about',301));Route::get('/pages/home',fn()=>redirect('/',301));
 Route::get('/pages/{slug}',[PublicController::class,'page']);
 foreach (['programs','courses','opportunities','events','posts'] as $publicType) {
     Route::get('/'.$publicType,[PublicController::class,'listing'])->defaults('type',$publicType);

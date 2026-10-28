@@ -122,7 +122,7 @@ class DashboardMetricsTest extends TestCase
             ->assertSee('Learner funnel')
             ->assertSee('Upcoming events')
             ->assertSee('Recent activity')
-            ->assertSee('aria-label="Dashboard information"', false)
+            ->assertSee('aria-label="Overview sections"', false)
             ->assertSee('id="panel-dash-activity"', false);
     }
 }

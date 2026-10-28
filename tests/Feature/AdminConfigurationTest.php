@@ -64,6 +64,8 @@ class AdminConfigurationTest extends TestCase
 
     public function test_page_status_filter_returns_only_matching_rows_and_preserves_pagination(): void
     {
+        // Start from an empty pages table; migrations add the website home page.
+        DB::table('pages')->delete();
         for($i=0;$i<22;$i++)DB::table('pages')->insert(['title'=>'Draft '.$i,'slug'=>'draft-'.$i,'body'=>'Text','status'=>'draft','created_at'=>now(),'updated_at'=>now()]);
         DB::table('pages')->insert(['title'=>'Published article','slug'=>'public','body'=>'Text','status'=>'published','created_at'=>now(),'updated_at'=>now()]);
         $this->actingAs($this->user())->get('/admin/pages?status=draft')->assertOk()->assertViewHas('rows',fn($rows)=>$rows->total()===22&&$rows->every(fn($row)=>$row->status==='draft'))->assertDontSee('Published article')->assertSee('status=draft');
