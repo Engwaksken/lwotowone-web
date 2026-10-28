@@ -650,7 +650,7 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .content-preview .resource-video,.content-preview .lesson-video{max-width:560px;margin:0}
 .content-preview .resource-audio{width:100%;max-width:560px}
 .resource-audio{width:100%;margin:16px 0}
-.header-search-disclosure{position:relative;flex:0 0 auto;z-index:8;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.header-search-disclosure{position:relative;flex:0 0 auto;z-index:8;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
 .header-search-disclosure>summary{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;color:var(--green);cursor:pointer;list-style:none}
 .header-search-disclosure>summary::-webkit-details-marker{display:none}
 .header-search-disclosure>summary:hover,.header-search-disclosure[open]>summary{background:transparent!important;box-shadow:none!important}
@@ -758,6 +758,14 @@ header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
  .site-sidebar{padding:16px}
 }
 @media(max-width:800px){.site-sidebar{border-bottom:1px solid var(--line)}}
+/* The full public menu needs about 1160px on one row; below that it folds into the menu button instead of wrapping to a second row. */
+@media(min-width:801px) and (max-width:1160px){
+ body.public-page>header{flex-direction:row;flex-wrap:nowrap;align-items:center;gap:12px}
+ body.public-page .header-menu-toggle{display:inline-grid;place-items:center;order:3;flex:0 0 42px;width:42px;height:42px;margin-left:auto;padding:0;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--green)}
+ body.public-page>header nav{display:none;position:absolute;top:calc(100% + 8px);right:12px;width:min(320px,calc(100% - 24px));z-index:20;flex-direction:column;align-items:stretch;gap:3px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 16px 34px rgba(15,23,18,.14)}
+ body.public-page>header nav.is-open{display:flex}
+ body.public-page>header nav>a{width:100%;padding:9px 10px;border-radius:8px}
+}
 @media(max-width:560px){.brand{min-width:0;max-width:calc(100% - 58px)}.site-logo{max-width:175px;max-height:50px}.sidebar-nav{grid-template-columns:1fr!important}}
 .page-select-cell{width:44px;text-align:center}
 .page-select-cell input{width:16px;height:16px;accent-color:var(--green);cursor:pointer}
