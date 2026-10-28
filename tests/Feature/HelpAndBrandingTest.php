@@ -76,6 +76,22 @@ class HelpAndBrandingTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('Learn a trade with us')->assertSee('How it works here');
     }
 
+    public function test_home_page_shows_live_courses_events_opportunities_and_stories(): void
+    {
+        $db = \Illuminate\Support\Facades\DB::table(...);
+        $this->get('/')->assertOk()->assertSee('New courses are on the way.')->assertDontSee('From the field');
+        $teacher = User::create(['name'=>'Teacher','email'=>'teacher-home@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'instructor','status'=>'active']);
+        $program = \App\Services\Workflow::insert('programs', ['title'=>'Farm skills','slug'=>'farm-skills','category'=>'Agribusiness','summary'=>'Grow and sell.','body'=>'B','status'=>'published']);
+        \App\Services\Workflow::insert('courses', ['program_id'=>$program,'instructor_id'=>$teacher->id,'title'=>'Poultry basics','summary'=>'Raise healthy birds.','level'=>'Beginner','duration_hours'=>6,'status'=>'published']);
+        $db('events')->insert(['title'=>'Open day','description'=>'Come along.','starts_at'=>now()->addWeek(),'ends_at'=>now()->addWeek()->addHours(3),'location'=>'Gulu','capacity'=>50,'status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+        $db('opportunities')->insert(['title'=>'Farm assistant','type'=>'Employment','organisation'=>'Green Farms','location'=>'Lira','description'=>'D','deadline'=>now()->addDays(10),'status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+        $db('posts')->insert(['title'=>'Amina’s first harvest','slug'=>'amina','body'=>'A story.','status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+        $this->get('/')->assertOk()
+            ->assertSee('home-tile home-tile-mint',false)->assertSee('fa-seedling',false)->assertSee('Farm skills')
+            ->assertSee('class="home-course"',false)->assertSee('Poultry basics')->assertDontSee('New courses are on the way.')
+            ->assertSee('Open day')->assertSee('Farm assistant')->assertSee('From the field')->assertSee('Amina’s first harvest');
+    }
+
     public function test_admin_can_upload_intro_video_shown_on_home_page(): void
     {
         $admin = User::create(['name'=>'Admin','email'=>'admin-video@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'admin','status'=>'active']);
