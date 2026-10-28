@@ -145,7 +145,7 @@ const updateLessonLanguage=form=>form.querySelectorAll('[data-lesson-language]')
 document.querySelectorAll('[data-lesson-language]').forEach(select=>select.addEventListener('change',()=>updateLessonLanguage(select.form)));
 document.querySelectorAll('[data-content-fields]').forEach(fields=>{
     const format=fields.querySelector('[data-content-format]'),source=fields.querySelector('[data-content-source]');
-    const extensions={text:'.txt',file:'.pdf,.txt,.jpg,.jpeg,.png,.webp',video:'.mp4,.webm,.ogg',audio:'.mp3,.wav,.ogg,.m4a,.aac,.flac'};
+    const extensions={text:'.txt',file:'.pdf,.txt,.jpg,.jpeg,.png,.webp',video:'.mp4,.webm,.ogg,.ogv,.mov,.m4v',audio:'.mp3,.wav,.ogg,.m4a,.aac,.flac'};
     const update=()=>{
         const write=source.querySelector('[value="write"]');write.disabled=format.value!=='text';
         if(write.disabled&&source.value==='write')source.value='upload';
@@ -155,7 +155,7 @@ document.querySelectorAll('[data-content-fields]').forEach(fields=>{
         });
         const file=fields.querySelector('[type="file"]');file.accept=extensions[format.value];
         fields.querySelector('[data-content-panel="upload"] label').textContent=`Upload ${format.options[format.selectedIndex].text.toLowerCase()}`;
-        fields.querySelector('[data-content-file-help]').textContent=`Accepted: ${extensions[format.value]}. Maximum 100 MB.`+(fields.dataset.hasFile==='1'&&fields.dataset.originalFormat===format.value?' Leave empty to keep the attached file.':'');
+        fields.querySelector('[data-content-file-help]').textContent=`Accepted: ${extensions[format.value]}. Maximum ${fields.dataset.maxMb||100} MB.`+(fields.dataset.hasFile==='1'&&fields.dataset.originalFormat===format.value?' Leave empty to keep the attached file.':'');
         if(fields.closest('form')?.querySelector('[data-lesson-language]'))updateLessonLanguage(fields.closest('form'));
     };
     format.addEventListener('change',update);source.addEventListener('change',update);update();
@@ -632,9 +632,15 @@ document.querySelectorAll('form[data-upload-progress]').forEach(form=>{
     const bar=status.querySelector('progress');
     const message=status.querySelector('span');
     form.addEventListener('submit',event=>{
-        const hasFile=[...form.querySelectorAll('input[type="file"]')].some(input=>input.files?.length);
-        if(!hasFile)return;
+        const files=[...form.querySelectorAll('input[type="file"]:not(:disabled)')].flatMap(input=>[...(input.files||[])]);
+        if(!files.length)return;
         event.preventDefault();
+        // Catch oversized files before uploading; the server would otherwise discard the whole form.
+        const megabytes=bytes=>Math.max(1,Math.floor(bytes/1048576));
+        const maxFile=Number(form.dataset.maxFileBytes)||0,maxRequest=Number(form.dataset.maxRequestBytes)||0;
+        const large=maxFile&&files.find(file=>file.size>maxFile);
+        if(large){status.hidden=false;bar.value=0;message.textContent=`“${large.name}” is ${megabytes(large.size)} MB. The largest file this server accepts is ${megabytes(maxFile)} MB.`;return;}
+        if(maxRequest&&files.reduce((total,file)=>total+file.size,0)>maxRequest){status.hidden=false;bar.value=0;message.textContent=`These files add up to more than ${megabytes(maxRequest)} MB. Save fewer at a time.`;return;}
         const button=form.querySelector('button[type="submit"]');
         if(button)button.disabled=true;
         status.hidden=false;bar.value=0;message.textContent='Uploading… 0%';

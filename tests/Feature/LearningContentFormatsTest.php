@@ -100,6 +100,20 @@ class LearningContentFormatsTest extends TestCase
         $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
+    public function test_phone_videos_upload_as_lessons_through_the_progress_uploader(): void
+    {
+        Storage::fake('local'); config(['media.ffmpeg' => 'missing-ffmpeg-binary']);
+        $teacher = $this->user('instructor'); $course = $this->course($teacher);
+        $this->actingAs($teacher)->get('/admin/lessons/create')->assertOk()->assertSee('data-upload-progress', false)->assertSee('data-max-file-bytes="'.\App\Services\UploadLimit::fileKilobytes() * 1024 .'"', false);
+        $this->postJson('/admin/lessons', $this->payload($course, 'lessons') + ['content_format' => 'video', 'content_source' => 'upload', 'file' => UploadedFile::fake()->create('phone.mov', 20, 'video/quicktime')])
+            ->assertOk()->assertJson(['ok' => true, 'redirect' => '/admin/lessons']);
+        $lesson = DB::table('lessons')->where('course_id', $course)->first();
+        $this->assertSame('video', $lesson->content_format);
+        Storage::disk('local')->assertExists($lesson->file_path);
+        $this->postJson('/admin/lessons', $this->payload($course, 'lessons') + ['content_format' => 'video', 'content_source' => 'upload', 'file' => UploadedFile::fake()->create('huge.mp4', \App\Services\UploadLimit::fileKilobytes() + 1, 'video/mp4')])
+            ->assertUnprocessable()->assertJsonValidationErrors('file');
+    }
+
     public function test_uploaded_lesson_is_private_sequenced_and_redacted_when_locked(): void
     {
         $this->endFreeAccess();
