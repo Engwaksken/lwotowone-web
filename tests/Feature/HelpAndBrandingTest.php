@@ -92,6 +92,17 @@ class HelpAndBrandingTest extends TestCase
             ->assertSee('Open day')->assertSee('Farm assistant')->assertSee('From the field')->assertSee('Amina’s first harvest');
     }
 
+    public function test_unknown_addresses_show_page_not_found_and_admin_opens_the_dashboard(): void
+    {
+        $this->get('/no-such-page')->assertNotFound()->assertSee('Page not found');
+        $this->get('/favicon.ico')->assertNotFound();
+        $this->get('/admin')->assertRedirect('/dashboard');
+        $admin = User::create(['name'=>'Admin','email'=>'admin-404@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'admin','status'=>'active']);
+        $this->actingAs($admin)->get('/admin/no-such-module/create')->assertNotFound()->assertSee('Page not found');
+        $home = \Illuminate\Support\Facades\DB::table('pages')->where('slug','home')->value('title');
+        $this->get('/about')->assertOk()->assertDontSee('href="/pages/home"',false)->assertDontSee('>'.e($home).'</a>',false);
+    }
+
     public function test_admin_can_upload_intro_video_shown_on_home_page(): void
     {
         $admin = User::create(['name'=>'Admin','email'=>'admin-video@example.test','password'=>Hash::make('A-long-test-password'),'role'=>'admin','status'=>'active']);

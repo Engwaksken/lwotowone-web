@@ -74,7 +74,7 @@ class CmsController extends Controller {
  private function aiSettingsData(Request $r): array {
   return $r->validate(['ai_provider'=>['required',\Illuminate\Validation\Rule::in(array_keys(config('ai.providers')))],'ai_api_base_url'=>'required|url:https|max:500','ai_api_model'=>'required|string|max:120','ai_api_key'=>'nullable|string|max:4096','clear_api_key'=>'nullable|boolean']);
  }
-  private function access(Request $r,$module){abort_unless(Catalog::allowed($r->user(),$module),403);}
+  private function access(Request $r,$module){abort_unless(config("modules.$module"),404);abort_unless(Catalog::allowed($r->user(),$module),403);}
   public function batchLessons(Request $r){
    $this->access($r,'lessons');
    if($r->isMethod('get'))return view('admin.lessons-batch',['courses'=>Catalog::options('lessons',$r->user())['course_id']??[]]);
