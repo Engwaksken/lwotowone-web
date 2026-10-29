@@ -3,6 +3,7 @@
     $source=old('content_source',\App\Services\LearningContent::source($record,$module));
     $hasFile=(bool)$record?->file_path;
     // Staff can watch what is saved now, through the same protected route learners use.
+    // The lessons list holds one hidden edit form per row, so the player must not fetch anything until played.
     $savedSource=$record?\App\Services\LearningContent::source($record,$module):null;
     $previewUrl=match(true){
         $record&&$savedSource==='upload'&&$hasFile=>url('/learning/content/'.$module.'/'.$record->id),
@@ -15,7 +16,7 @@
     <legend>Content format and source</legend>
     @if($previewUrl)
         <div class="content-preview"><strong>Saved {{ in_array($previewType,['video','audio','image'],true)?$previewType:'content' }}</strong>
-            <x-learning-media :url="$previewUrl" :type="$previewType" :title="$record->title??'Learning content'" :external="$savedSource==='url'" />
+            <x-learning-media :url="$previewUrl" :type="$previewType" :title="$record->title??'Learning content'" :external="$savedSource==='url'" preload="none" />
         </div>
     @endif
     <div class="content-choice-grid">
