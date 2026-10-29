@@ -1,4 +1,4 @@
-@props(['url','type'=>'document','title'=>'Learning content','external'=>false])
+@props(['url','type'=>'document','title'=>'Learning content','external'=>false,'preload'=>'metadata'])
 @php
     $embed=null;
     if($type==='video'){
@@ -11,9 +11,9 @@
 @endphp
 @if($type==='video')
     @if($embed)<div class="lesson-video"><iframe src="{{ $embed }}" title="{{ $title }} video" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
-    @else<video class="resource-video" controls controlslist="nodownload noplaybackrate" disablepictureinpicture playsinline preload="metadata" aria-label="{{ $title }}"><source src="{{ $url }}">Your browser cannot play this video.</video>@endif
+    @else<video class="resource-video" controls controlslist="nodownload noplaybackrate" disablepictureinpicture playsinline preload="{{ $preload }}" aria-label="{{ $title }}"><source src="{{ $url }}">Your browser cannot play this video.</video>@endif
 @elseif($type==='audio')
-    <audio class="resource-audio" controls preload="metadata" aria-label="{{ $title }}"><source src="{{ $url }}">Your browser cannot play this audio.</audio>
+    <audio class="resource-audio" controls preload="{{ $preload }}" aria-label="{{ $title }}"><source src="{{ $url }}">Your browser cannot play this audio.</audio>
 @elseif($type==='image')
     <img class="resource-image-viewer" src="{{ $url }}" alt="{{ $title }}" loading="lazy">
 @elseif(in_array($type,['pdf','text']))

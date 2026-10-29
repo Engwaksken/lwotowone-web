@@ -111,6 +111,8 @@ class LearningContentFormatsTest extends TestCase
         $this->assertSame('video', $lesson->content_format);
         Storage::disk('local')->assertExists($lesson->file_path);
         $this->get('/admin/lessons/'.$lesson->id.'/edit')->assertOk()->assertSee('Saved video')->assertSee('<source src="'.url('/learning/content/lessons/'.$lesson->id).'">', false)->assertSee('data-content-file-preview', false);
+        // The lessons list renders an edit form per row; previews there must not start downloading videos and tie up the browser's connections.
+        $this->get('/admin/lessons')->assertOk()->assertSee('preload="none"', false)->assertDontSee('preload="metadata"', false);
         $this->get('/learning/content/lessons/'.$lesson->id)->assertOk();
         $this->postJson('/admin/lessons', $this->payload($course, 'lessons') + ['content_format' => 'video', 'content_source' => 'upload', 'file' => UploadedFile::fake()->create('huge.mp4', \App\Services\UploadLimit::fileKilobytes() + 1, 'video/mp4')])
             ->assertUnprocessable()->assertJsonValidationErrors('file');
