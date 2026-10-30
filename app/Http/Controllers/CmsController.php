@@ -96,7 +96,9 @@ class CmsController extends Controller {
    'end_date'=>'exclude_unless:period,custom|required|date_format:Y-m-d|after_or_equal:start_date',
   ]);
    $filters+=['q'=>'','status'=>'all','period'=>'all','start_date'=>null,'end_date'=>null];$filters['q']=$filters['q']??'';$filters['status']=$filters['status']??'all';
-   $q=Catalog::scope(Catalog::query($module),$r->user(),$module);
+    $q=Catalog::scope(Catalog::query($module),$r->user(),$module);
+    $participantsOnly=$module==='users'&&$r->query('role')==='participant';
+    if($participantsOnly)$q->where('role','participant');
    if(in_array($module,['courses','programs']))$q->with('instructors');
    if($filters['status']!=='all')$q->where('status',$filters['status']);
   $field=$module==='users'?'name':($module==='settings'?'key':'title');
@@ -111,7 +113,9 @@ class CmsController extends Controller {
    };
    $q->whereBetween('created_at',[$start->startOfDay()->toDateTimeString(),$end->endOfDay()->toDateTimeString()]);
   }
-   return view('admin.index',['module'=>$module,'meta'=>config("modules.$module"),'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
+    $meta=config("modules.$module");
+    if($participantsOnly)$meta['title']='Participants';
+    return view('admin.index',['module'=>$module,'meta'=>$meta,'participantsOnly'=>$participantsOnly,'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
  }
  public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
   public function save(Request $r,string $module,?string $id=null){
@@ -126,7 +130,8 @@ class CmsController extends Controller {
     if($module==='lessons'){$lessonLanguage=$r->validate(['lesson_language'=>'sometimes|in:en,lg'])['lesson_language']??$record->content_language??'en';$rules['title_lg']=['nullable','string','max:255'];if($lessonLanguage==='lg'){$rules['title']=['nullable','string','max:255'];$rules['title_lg']=['required','string','max:255'];}}
     $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
     if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
-      $d=$r->validate($rules);
+     $d=$r->validate($rules);
+     if($module==='users'&&!$id&&$r->query('role')==='participant')$d['role']='participant';
      $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:'.\App\Services\UploadLimit::fileKilobytes()])['attachments']??[];
     if($module==='lessons')$d['content_language']=$lessonLanguage;
     $temporaryPassword=null;
