@@ -422,6 +422,15 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .workspace-page main{min-width:0;padding-inline:clamp(24px,3vw,64px)}
 .workspace-page .page-wrap{max-width:1700px}
 .workspace-page .dash,.workspace-page .mel-page{max-width:1700px}
+.enrollment-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 20px;padding:0;list-style:none}
+.enrollment-steps li{display:flex;align-items:center;gap:12px;min-width:0;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.enrollment-steps li>strong{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:#e8f0e9;color:var(--green)}
+.enrollment-steps li>span{font-size:14px;line-height:1.4}
+.enrollment-confirm-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.enrollment-confirm-form select{min-width:150px;max-width:100%}
+.enrollment-import{margin-top:16px;padding:16px 20px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.enrollment-import>summary{cursor:pointer;font-weight:700;color:var(--green)}
+@media(max-width:760px){.enrollment-steps{grid-template-columns:1fr}.enrollment-confirm-form{align-items:stretch;flex-direction:column}.enrollment-confirm-form select,.enrollment-confirm-form button{width:100%}}
 .page-wrap>.eyebrow{display:block;margin-bottom:6px}
 .page-title{margin:4px 0 8px;font-size:clamp(24px,2.8vw,34px);line-height:1.2;letter-spacing:-.6px}
 .page-wrap>.muted,.page-wrap>.page-intro{max-width:720px;margin:0 0 22px;color:var(--muted);font-size:15px}

@@ -39,7 +39,7 @@ class BulkEnrollmentTest extends TestCase
         $cohort=$this->cohort();$course=$this->course();
         $a=$this->user('participant',['profile_complete'=>true,'selected_course_id'=>$course]);
         $b=$this->user('participant',['profile_complete'=>true,'selected_course_id'=>$course]);
-        $this->actingAs($this->user('manager'))->get('/admin/enrollment')->assertOk()->assertSee('Download CSV template')->assertSee('Enroll selected learners');
+        $this->actingAs($this->user('manager'))->get('/admin/enrollment')->assertOk()->assertSee('Download CSV template')->assertSee('Enroll selected learners')->assertSee('Enroll participants')->assertSee('aria-selected="true">Enroll learners', false)->assertSee('Confirm and enroll');
         $template=$this->get('/admin/enrollment/template.csv')->assertOk()->assertDownload('enrollment-template.csv');
         $this->assertStringContainsString('email,cohort_id',$template->streamedContent());
         $csv="\xEF\xBB\xBFemail,cohort_id\r\n{$a->email},\r\n{$b->email},\r\n";
