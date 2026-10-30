@@ -61,8 +61,8 @@
             @if(auth()->user()->staff())
                 @php
                     $sidebarGroups=[
-                        'Learning and content'=>['pages','programs','courses','course_modules','lessons','assignments','resources','skills'],
-                        'People and opportunities'=>['users','slots','opportunities','events','announcements','posts'],
+                        'Learning and content'=>['pages','programs','courses','course_modules','lessons','assignments','resources','skills','users'],
+                        'People and opportunities'=>['slots','opportunities','events','announcements','posts'],
                     ];
                 @endphp
                 @foreach($sidebarGroups as $groupTitle=>$moduleKeys)
@@ -72,7 +72,7 @@
                             <summary><h2 class="sidebar-heading">{{ $groupTitle }}</h2></summary>
                             <ul class="sidebar-links">
                                 @foreach($visibleModules as $key)
-                                    <li><a href="/admin/{{ $key }}" @if(request()->is('admin/'.$key.'*')) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ config("modules.$key.title") }}</a></li>
+                                    <li><a href="/admin/{{ $key }}" @if(request()->is('admin/'.$key.'*')) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ $key==='users'?'Participants':config("modules.$key.title") }}</a></li>
                                 @endforeach
                                 @if($groupTitle==='Learning and content'&&auth()->user()->manager())
                                     <li><a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a></li>
