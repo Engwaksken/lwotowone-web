@@ -3,6 +3,7 @@
 <div class="page-wrap">
 <span class="eyebrow"><i class="fas fa-folder-open" aria-hidden="true"></i> Content management</span>
 <h1 class="page-title">{{ $meta['title'] }}</h1>
+@if($participantsOnly ?? false)<p class="page-intro">Manage participant accounts, enrollment, and course access.</p>@endif
 @include('partials.platform-stats')
 @php
     $cmsStatusOptions = $statusOptions
@@ -23,7 +24,8 @@
     };
 @endphp
 <x-filter-bar
-    :action="'/admin/'.$module"
+    :action="'/admin/'.$module.(($participantsOnly ?? false)?'?role=participant':'')"
+    searchName="q"
     :search="$filters['q']"
     searchLabel="Search records"
     searchPlaceholder="Search"
@@ -39,6 +41,7 @@
     <div class="field"><label for="cms-end">To</label><input id="cms-end" type="date" name="end_date" value="{{ $filters['end_date'] }}"></div>
 </x-filter-bar>
 <div class="toolbar">
+    @if(($participantsOnly ?? false)&&auth()->user()->manager())<a class="button secondary" href="/admin/enrollment"><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a>@endif
     @if($module==='lessons')<a class="button secondary" href="/admin/lessons/batch"><i class="fas fa-layer-group" aria-hidden="true"></i> Add multiple lessons</a>@endif
     @if($module!=='courses'||auth()->user()->manager())
     <button type="button" data-dialog-open="create-record"><i class="fas fa-plus" aria-hidden="true"></i> Add new</button>
@@ -71,6 +74,7 @@
             <td class="column-actions"><div class="actions">
                 <x-record-view-trigger :dialogId="'view-record-'.$row->id" :name="$rowName ?? 'Record '.$row->id" />
                 @if(($row->status??null)==='published'&&in_array($module,['pages','programs','courses','opportunities','events','posts']))<a class="secondary small icon-action" href="{{ $module==='pages'?'/pages/'.$row->slug:'/'.$module.'/'.$row->id }}" title="View published item" aria-label="View {{ $row->title??'published item' }}"><i class="fas fa-eye" aria-hidden="true"></i></a>@endif
+                @if(($participantsOnly ?? false)&&auth()->user()->manager())<a class="secondary small" href="/admin/enrollment?status=all&amp;q={{ urlencode($row->name) }}" aria-label="Manage enrollment for {{ $row->name }}">Enrollment</a>@endif
                 @if($module==='users'&&($row->requires_email_verification||$row->must_change_password))<form method="post" action="/admin/users/{{ $row->id }}/resend-setup">@csrf<button class="secondary small" type="submit">Resend setup email</button></form>@endif
                 <button type="button" class="secondary small icon-action" data-dialog-open="edit-record-{{ $row->id }}" title="Edit record" aria-label="Edit record"><i class="fas fa-pen" aria-hidden="true"></i></button>
                 <form method="post" action="/admin/{{ $module }}/{{ $row->id }}" data-confirm="Delete this record?">@csrf @method('DELETE')<button class="danger small icon-action" type="submit" title="Delete record" aria-label="Delete record"><i class="fas fa-trash-alt" aria-hidden="true"></i></button></form>
@@ -86,9 +90,9 @@
 <dialog class="form-dialog" id="create-record" aria-labelledby="create-record-title">
     <div class="dialog-heading"><h2 id="create-record-title">Create {{ \Illuminate\Support\Str::singular($meta['title']) }}</h2><button class="secondary small" type="button" data-dialog-close>Close</button></div>
     @php $record=null; @endphp
-    <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}" data-upload-progress data-max-file-bytes="{{ \App\Services\UploadLimit::fileKilobytes()*1024 }}" data-max-request-bytes="{{ \App\Services\UploadLimit::requestBytes() }}">
+    <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}{{ ($participantsOnly ?? false)?'?role=participant':'' }}" data-upload-progress data-max-file-bytes="{{ \App\Services\UploadLimit::fileKilobytes()*1024 }}" data-max-request-bytes="{{ \App\Services\UploadLimit::requestBytes() }}">
         @csrf<input type="hidden" name="_modal_id" value="create-record">
-        @include('admin.fields',['formId'=>'create-record'])
+        @include('admin.fields',['formId'=>'create-record','participantsOnly'=>$participantsOnly??false])
         <div class="upload-progress" data-upload-progress-status hidden><progress max="100" value="0"></progress><span aria-live="polite">Uploading…</span></div>
         <div class="dialog-actions"><button type="submit">Save record</button></div>
     </form>
@@ -99,9 +103,9 @@
     <dialog class="form-dialog" id="edit-record-{{ $row->id }}" aria-labelledby="edit-record-title-{{ $row->id }}">
         <div class="dialog-heading"><h2 id="edit-record-title-{{ $row->id }}">Edit record</h2><button class="secondary small" type="button" data-dialog-close>Close</button></div>
         @php $record=$row; @endphp
-        <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}/{{ $row->id }}" data-upload-progress data-max-file-bytes="{{ \App\Services\UploadLimit::fileKilobytes()*1024 }}" data-max-request-bytes="{{ \App\Services\UploadLimit::requestBytes() }}">
+        <form class="dialog-form" method="post" enctype="multipart/form-data" action="/admin/{{ $module }}/{{ $row->id }}{{ ($participantsOnly ?? false)?'?role=participant':'' }}" data-upload-progress data-max-file-bytes="{{ \App\Services\UploadLimit::fileKilobytes()*1024 }}" data-max-request-bytes="{{ \App\Services\UploadLimit::requestBytes() }}">
             @csrf @method('PUT')<input type="hidden" name="_modal_id" value="edit-record-{{ $row->id }}">
-            @include('admin.fields',['formId'=>'edit-record-'.$row->id])
+            @include('admin.fields',['formId'=>'edit-record-'.$row->id,'participantsOnly'=>$participantsOnly??false])
             <div class="upload-progress" data-upload-progress-status hidden><progress max="100" value="0"></progress><span aria-live="polite">Uploading…</span></div>
             <div class="dialog-actions"><button type="submit">Save changes</button></div>
         </form>

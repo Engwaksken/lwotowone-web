@@ -38,4 +38,20 @@ class LayoutNavigationTest extends TestCase
         }
         $this->actingAs($this->user('participant'))->get('/portal/learn')->assertOk()->assertSee('id="account-navigation"', false);
     }
+
+    public function test_participants_sidebar_page_filters_to_participants_and_links_to_enrollment(): void
+    {
+        $participant = $this->user('participant');
+        $otherStaff = $this->user('mentor');
+        $otherStaff->update(['name' => 'Staff Example']);
+
+        $this->actingAs($this->user('admin'))
+            ->get('/admin/users?role=participant')
+            ->assertOk()
+            ->assertSee('Participants')
+            ->assertSee($participant->name)
+            ->assertDontSee($otherStaff->name)
+            ->assertSee('href="/admin/enrollment"', false)
+            ->assertSee('Manage enrollment for '.$participant->name);
+    }
 }
