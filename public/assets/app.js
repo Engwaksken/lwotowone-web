@@ -281,9 +281,9 @@ if(bulkEnrollment){
     const hint=document.querySelector('[data-bulk-enrollment-hint]');
     const updateBulkEnrollment=()=>{
         const selected=checks.filter(check=>check.checked).length;
-        const ready=selected>0&&Boolean(cohort.value);
+        const ready=selected>0;
         if(submit)submit.disabled=!ready;
-        if(hint)hint.textContent=selected?`${selected} participant${selected===1?'':'s'} selected. ${cohort.value?'Ready to enroll.':'Choose a cohort to continue.'}`:'Select one or more participants, then choose a cohort to enable bulk enrollment.';
+        if(hint)hint.textContent=selected?`${selected} participant${selected===1?'':'s'} selected. ${cohort.value?'Ready to enroll.':'Choose a cohort before submitting.'}`:'Select one or more participants to enable bulk enrollment.';
     };
     checks.forEach(check=>check.addEventListener('change',updateBulkEnrollment));
     cohort?.addEventListener('change',updateBulkEnrollment);
