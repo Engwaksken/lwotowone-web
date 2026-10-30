@@ -273,10 +273,25 @@ if(certificateEditor){
     if(canvas.dataset.background)preview(canvas.dataset.background,canvas.dataset.format);
 }
 const gatewayForm=document.querySelector('[data-payment-gateway]');
-document.querySelector('[data-select-enrollment]')?.addEventListener('click',()=>{
+const bulkEnrollment=document.querySelector('#bulk-enrollment');
+if(bulkEnrollment){
     const checks=[...document.querySelectorAll('input[form="bulk-enrollment"]:not(:disabled)')];
-    const select=checks.some(check=>!check.checked);checks.forEach(check=>check.checked=select);
-});
+    const cohort=bulkEnrollment.querySelector('[name="cohort_id"]');
+    const submit=bulkEnrollment.querySelector('[data-bulk-enrollment-submit]');
+    const hint=document.querySelector('[data-bulk-enrollment-hint]');
+    const updateBulkEnrollment=()=>{
+        const selected=checks.filter(check=>check.checked).length;
+        const ready=selected>0&&Boolean(cohort.value);
+        if(submit)submit.disabled=!ready;
+        if(hint)hint.textContent=selected?`${selected} participant${selected===1?'':'s'} selected. ${cohort.value?'Ready to enroll.':'Choose a cohort to continue.'}`:'Select one or more participants, then choose a cohort to enable bulk enrollment.';
+    };
+    checks.forEach(check=>check.addEventListener('change',updateBulkEnrollment));
+    cohort?.addEventListener('change',updateBulkEnrollment);
+    document.querySelector('[data-select-enrollment]')?.addEventListener('click',()=>{
+        const select=checks.some(check=>!check.checked);checks.forEach(check=>check.checked=select);updateBulkEnrollment();
+    });
+    updateBulkEnrollment();
+}
 if(gatewayForm){
     const types=JSON.parse(document.getElementById('payment-type-fields').textContent);
     const type=gatewayForm.querySelector('[name="provider_type"]');

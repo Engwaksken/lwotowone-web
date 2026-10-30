@@ -428,6 +428,12 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .enrollment-steps li>span{font-size:14px;line-height:1.4}
 .enrollment-confirm-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .enrollment-confirm-form select{min-width:150px;max-width:100%}
+.enrollment-panel select.enrollment-cohort-select,.enrollment-confirm-form select{background:#fff;color:#182f28;color-scheme:light}
+.enrollment-panel select.enrollment-cohort-select option,.enrollment-confirm-form select option{background:#fff;color:#182f28}
+.enrollment-bulk-hint{margin:8px 0 14px;color:var(--muted);font-size:13px}
+.enrollment-panel select.enrollment-cohort-select:disabled,.enrollment-confirm-form select:disabled{opacity:.65}
+html.theme-dark .enrollment-panel select.enrollment-cohort-select,html.theme-dark .enrollment-confirm-form select{background:#17251e;color:#edf2ee;color-scheme:dark}
+html.theme-dark .enrollment-panel select.enrollment-cohort-select option,html.theme-dark .enrollment-confirm-form select option{background:#17251e;color:#edf2ee}
 .enrollment-import{margin-top:16px;padding:16px 20px;border:1px solid var(--line);border-radius:14px;background:#fff}
 .enrollment-import>summary{cursor:pointer;font-weight:700;color:var(--green)}
 @media(max-width:760px){.enrollment-steps{grid-template-columns:1fr}.enrollment-confirm-form{align-items:stretch;flex-direction:column}.enrollment-confirm-form select,.enrollment-confirm-form button{width:100%}}

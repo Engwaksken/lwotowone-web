@@ -85,6 +85,7 @@ class BulkEnrollmentTest extends TestCase
         $this->post('/admin/enrollment/bulk',['cohort_id'=>$cohort,'learner_ids'=>[$learner->id,$incomplete->id]])->assertSessionHasErrors('enrollment');
         $this->assertDatabaseCount('enrolments',0);
         $this->assertDatabaseHas('mel_cohorts',['id'=>$cohort,'next_sequence'=>1]);
+        $this->post('/admin/enrollment/bulk',['cohort_id'=>$cohort])->assertSessionHasErrors(['learner_ids'=>'Select at least one participant to enroll.']);
         $this->post('/admin/enrollment/bulk',['cohort_id'=>$cohort,'learner_ids'=>[$learner->id]])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertDatabaseCount('enrolments',1);
     }

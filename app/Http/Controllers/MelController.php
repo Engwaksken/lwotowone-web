@@ -49,7 +49,7 @@ return view('admin.mel',['categories'=>self::CATEGORIES,'records'=>$rowsByCatego
    return redirect('/admin/enrollment#enrollment-panel-payments')->with('success',"{$result['enrolled']} learners enrolled; {$result['skipped']} already enrolled learners skipped.");
   }
   public function bulkEnrollment(Request $r){
-   $this->authorize($r);$data=$r->validate(['cohort_id'=>'required|integer|exists:mel_cohorts,id','learner_ids'=>'required|array|min:1|max:1000','learner_ids.*'=>'required|integer|distinct|exists:users,id']);
+    $this->authorize($r);$data=$r->validate(['cohort_id'=>'required|integer|exists:mel_cohorts,id','learner_ids'=>'required|array|min:1|max:1000','learner_ids.*'=>'required|integer|distinct|exists:users,id'],['learner_ids.required'=>'Select at least one participant to enroll.','cohort_id.required'=>'Choose a cohort before enrolling participants.']);
    $count=DB::transaction(function()use($data,$r){$count=0;foreach($data['learner_ids'] as $id)if(app(\App\Services\Enrollment::class)->confirm((int)$id,(int)$data['cohort_id'],(int)$r->user()->id))$count++;return $count;});
    return redirect('/admin/enrollment#enrollment-panel-payments')->with('success',"$count learners enrolled.");
   }
