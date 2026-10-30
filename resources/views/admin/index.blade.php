@@ -10,7 +10,7 @@
         ? collect($statusOptions)->mapWithKeys(fn($status)=>[$status=>ucfirst($status)])->prepend('All statuses','all')->all()
         : [];
     $tableColumns=match($module){
-        'courses'=>['program_id'=>'Program Name','instructors'=>'Instructor Name'],
+        'courses'=>['program_id'=>'Program Name','instructors'=>'Instructor Name','learner_count'=>'Learners'],
         'programs'=>['category'=>'Category'],
         'lessons'=>['course_id'=>'Course Name','content_format'=>'Format','position'=>'Order'],
         'course_modules'=>['course_id'=>'Course Name','position'=>'Order'],
@@ -64,10 +64,10 @@
                         'content_format'=>ucfirst(\App\Services\LearningContent::format($row,$module)),
                         'program_id','course_id','mentor_id'=>$options[$column][$row->{$column}]??'—',
                         'starts_at','deadline'=>$row->{$column}?\Carbon\Carbon::parse($row->{$column})->format($column==='deadline'?'d M Y':'d M Y, H:i'):'—',
-                        'pass_mark'=>$row->pass_mark.'%', default=>$row->{$column}??'—',
+                        'pass_mark'=>$row->pass_mark.'%', 'learner_count'=>$courseLearnerCounts[$row->id]??0, default=>$row->{$column}??'—',
                     };
                 @endphp
-                <td class="{{ $column==='position'||$column==='pass_mark'?'column-number':'column-context' }}">{{ $cell?:'—' }}</td>
+                <td class="{{ in_array($column,['position','pass_mark','learner_count'],true)?'column-number':'column-context' }}">{{ $cell??'—' }}</td>
             @endforeach
             <td class="column-status">@if($row->status)<span class="status-badge" data-status="{{ $row->status }}">{{ ucfirst($row->status) }}</span>@else<span class="muted">—</span>@endif</td>
             <td class="column-date">{{ $row->updated_at?\Carbon\Carbon::parse($row->updated_at)->format('d M Y'):'—' }}</td>

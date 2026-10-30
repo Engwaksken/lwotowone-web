@@ -35,7 +35,8 @@ class LearningContentFormatsTest extends TestCase
     {
         $admin = $this->user('admin'); $teacher = $this->user('instructor'); $course = $this->course($teacher);
         Workflow::insert('lessons', ['course_id' => $course, 'title' => 'Text lesson', 'body' => 'Text', 'position' => 1, 'status' => 'published']);
-        $this->actingAs($admin)->get('/admin/courses')->assertOk()->assertSee('Program Name')->assertSee('Instructor Name')->assertSee('Practical programme')->assertSee($teacher->name)->assertDontSee('Program Id')->assertDontSee('Instructor Id');
+        foreach ([$this->user('participant'), $this->user('participant')] as $learner) Workflow::insert('enrolments', ['user_id'=>$learner->id,'course_id'=>$course]);
+        $this->actingAs($admin)->get('/admin/courses')->assertOk()->assertSee('Program Name')->assertSee('Instructor Name')->assertSee('Learners')->assertSee('<td class="column-number">2</td>',false)->assertSee('Practical programme')->assertSee($teacher->name)->assertDontSee('Program Id')->assertDontSee('Instructor Id');
         $this->get('/admin/lessons')->assertOk()->assertSee('Course Name')->assertSee('Named course')->assertSee('column-primary', false)->assertDontSee('Course Id');
         foreach (['lessons', 'resources'] as $module) {
             $form=$this->get('/admin/'.$module.'/create')->assertOk()->assertSee('Course Name')->assertSee('Content format and source')->assertSee('Audio')->assertSee('Use a URL')->assertDontSee('Course Id');

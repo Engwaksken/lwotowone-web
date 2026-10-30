@@ -49,6 +49,8 @@ class LayoutNavigationTest extends TestCase
             ->get('/admin/users?role=participant')
             ->assertOk()
             ->assertSee('Participants')
+            ->assertSee('Users')
+            ->assertSee('href="/admin/users"', false)
             ->assertSee($participant->name)
             ->assertDontSee($otherStaff->name)
             ->assertSee('href="/admin/enrollment"', false)

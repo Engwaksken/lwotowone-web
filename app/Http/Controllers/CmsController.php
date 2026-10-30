@@ -113,9 +113,12 @@ class CmsController extends Controller {
    };
    $q->whereBetween('created_at',[$start->startOfDay()->toDateTimeString(),$end->endOfDay()->toDateTimeString()]);
   }
-    $meta=config("modules.$module");
+     $rows=$q->latest()->paginate(20)->withQueryString();
+     $courseLearnerCounts=[];
+     if($module==='courses')$courseLearnerCounts=DB::table('enrolments')->whereIn('course_id',$rows->getCollection()->pluck('id'))->select('course_id')->selectRaw('COUNT(DISTINCT user_id) as learner_count')->groupBy('course_id')->pluck('learner_count','course_id')->all();
+     $meta=config("modules.$module");
     if($participantsOnly)$meta['title']='Participants';
-    return view('admin.index',['module'=>$module,'meta'=>$meta,'participantsOnly'=>$participantsOnly,'rows'=>$q->latest()->paginate(20)->withQueryString(),'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
+     return view('admin.index',['module'=>$module,'meta'=>$meta,'participantsOnly'=>$participantsOnly,'rows'=>$rows,'courseLearnerCounts'=>$courseLearnerCounts,'options'=>Catalog::options($module,$r->user()),'filters'=>$filters,'statusOptions'=>$statusOptions]);
  }
  public function form(Request $r,string $module,?string $id=null){$this->access($r,$module);if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);$record=$id?Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id):null;return view('admin.form',['module'=>$module,'meta'=>config("modules.$module"),'record'=>$record,'options'=>Catalog::options($module,$r->user())]);}
   public function save(Request $r,string $module,?string $id=null){

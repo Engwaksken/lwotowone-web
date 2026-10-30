@@ -62,17 +62,17 @@
                 @php
                     $sidebarGroups=[
                         'Learning and content'=>['pages','programs','courses','course_modules','lessons','assignments','resources','skills','users'],
-                        'People and opportunities'=>['slots','opportunities','events','announcements','posts'],
+                        'People and opportunities'=>['users','slots','opportunities','events','announcements','posts'],
                     ];
                 @endphp
                 @foreach($sidebarGroups as $groupTitle=>$moduleKeys)
                     @php $visibleModules=collect($moduleKeys)->filter(fn($key)=>isset(config('modules')[$key])&&\App\Services\Catalog::allowed(auth()->user(),$key)); @endphp
                     @if($visibleModules->isNotEmpty())
-                        <details class="sidebar-group sidebar-disclosure" data-sidebar-group="{{ \Illuminate\Support\Str::slug($groupTitle) }}" @if($visibleModules->contains(fn($key)=>request()->is('admin/'.$key.'*')||($key==='settings'&&request()->is('admin/site-settings')))) open @endif>
+                        <details class="sidebar-group sidebar-disclosure" data-sidebar-group="{{ \Illuminate\Support\Str::slug($groupTitle) }}" @if($visibleModules->contains(fn($key)=>$key==='users'?(request()->is('admin/users*')&&(($groupTitle==='Learning and content'&&request('role')==='participant')||($groupTitle==='People and opportunities'&&request('role')!=='participant'))):request()->is('admin/'.$key.'*')) open @endif>
                             <summary><h2 class="sidebar-heading">{{ $groupTitle }}</h2></summary>
                             <ul class="sidebar-links">
                                 @foreach($visibleModules as $key)
-                                    <li><a href="/admin/{{ $key }}{{ $key==='users'?'?role=participant':'' }}" @if(request()->is('admin/'.$key.'*')) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ $key==='users'?'Participants':config("modules.$key.title") }}</a></li>
+                                    <li><a href="/admin/{{ $key }}{{ $key==='users'&&$groupTitle==='Learning and content'?'?role=participant':'' }}" @if($key==='users'?(request()->is('admin/users*')&&(($groupTitle==='Learning and content'&&request('role')==='participant')||($groupTitle==='People and opportunities'&&request('role')!=='participant'))):request()->is('admin/'.$key.'*')) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ $key==='users'?($groupTitle==='Learning and content'?'Participants':'Users'):config("modules.$key.title") }}</a></li>
                                 @endforeach
                                 @if($groupTitle==='Learning and content'&&auth()->user()->manager())
                                     <li><a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a></li>
