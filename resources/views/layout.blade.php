@@ -66,13 +66,29 @@
                     ];
                 @endphp
                 @foreach($sidebarGroups as $groupTitle=>$moduleKeys)
-                    @php $visibleModules=collect($moduleKeys)->filter(fn($key)=>isset(config('modules')[$key])&&\App\Services\Catalog::allowed(auth()->user(),$key)); @endphp
+                    @php
+                        $visibleModules=collect($moduleKeys)->filter(fn($key)=>isset(config('modules')[$key])&&\App\Services\Catalog::allowed(auth()->user(),$key));
+                        $activeGroup=$visibleModules->contains(function($key)use($groupTitle){
+                            if($key==='users'){
+                                if(!request()->is('admin/users*'))return false;
+                                return $groupTitle==='Learning and content'
+                                    ? request('role')==='participant'
+                                    : request('role')!=='participant';
+                            }
+                            return request()->is('admin/'.$key.'*');
+                        });
+                    @endphp
                     @if($visibleModules->isNotEmpty())
-                        <details class="sidebar-group sidebar-disclosure" data-sidebar-group="{{ \Illuminate\Support\Str::slug($groupTitle) }}" @if($visibleModules->contains(fn($key)=>$key==='users'?(request()->is('admin/users*')&&(($groupTitle==='Learning and content'&&request('role')==='participant')||($groupTitle==='People and opportunities'&&request('role')!=='participant'))):request()->is('admin/'.$key.'*')) open @endif>
+                        <details class="sidebar-group sidebar-disclosure" data-sidebar-group="{{ \Illuminate\Support\Str::slug($groupTitle) }}" @if($activeGroup) open @endif>
                             <summary><h2 class="sidebar-heading">{{ $groupTitle }}</h2></summary>
                             <ul class="sidebar-links">
                                 @foreach($visibleModules as $key)
-                                    <li><a href="/admin/{{ $key }}{{ $key==='users'&&$groupTitle==='Learning and content'?'?role=participant':'' }}" @if($key==='users'?(request()->is('admin/users*')&&(($groupTitle==='Learning and content'&&request('role')==='participant')||($groupTitle==='People and opportunities'&&request('role')!=='participant'))):request()->is('admin/'.$key.'*')) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ $key==='users'?($groupTitle==='Learning and content'?'Participants':'Users'):config("modules.$key.title") }}</a></li>
+                                    @php
+                                        $activeLink=$key==='users'
+                                            ? $activeGroup
+                                            : request()->is('admin/'.$key.'*');
+                                    @endphp
+                                    <li><a href="/admin/{{ $key }}{{ $key==='users'&&$groupTitle==='Learning and content'?'?role=participant':'' }}" @if($activeLink) aria-current="page" @endif><i class="fas {{ match($key){'pages'=>'fa-file-alt','programs'=>'fa-layer-group','courses'=>'fa-graduation-cap','lessons'=>'fa-book-open','assignments'=>'fa-tasks','resources'=>'fa-folder-open','skills'=>'fa-tools','users'=>'fa-users','slots'=>'fa-calendar-check','opportunities'=>'fa-briefcase','events'=>'fa-calendar-alt','announcements'=>'fa-bullhorn','posts'=>'fa-newspaper',default=>'fa-folder'} }}" aria-hidden="true"></i> {{ $key==='users'?($groupTitle==='Learning and content'?'Participants':'Users'):config("modules.$key.title") }}</a></li>
                                 @endforeach
                                 @if($groupTitle==='Learning and content'&&auth()->user()->manager())
                                     <li><a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a></li>
