@@ -53,6 +53,22 @@ class BulkEnrollmentTest extends TestCase
         $this->assertDatabaseCount('audit_logs',2);
     }
 
+    public function test_manager_can_assign_course_to_participant_during_individual_enrollment(): void
+    {
+        $cohort=$this->cohort();$course=$this->course();
+        $learner=$this->user('participant',['profile_complete'=>true,'selected_course_id'=>null]);
+        $manager=$this->user('manager');
+
+        $this->actingAs($manager)->get('/admin/enrollment')->assertOk()
+            ->assertSee($learner->name)->assertSee('Admin assigns course')->assertSee('Choose course');
+
+        $this->post('/admin/enrollment/learners/'.$learner->id.'/confirm-payment',['course_id'=>$course,'cohort_id'=>$cohort])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('users',['id'=>$learner->id,'learning_access_paid'=>true,'cohort_id'=>$cohort]);
+        $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$course]);
+    }
+
     public function test_invalid_row_stops_all_changes_and_reports_row_number(): void
     {
         $cohort=$this->cohort();$learner=$this->user('participant',['profile_complete'=>true,'selected_course_id'=>$this->course()]);
