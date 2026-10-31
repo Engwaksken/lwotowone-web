@@ -77,6 +77,7 @@ class PortalController extends Controller {
     $d=$r->validate(['course_id'=>'required|integer|exists:courses,id','message'=>'nullable|string|max:2000']);
     $message=trim((string)($d['message']??''))?:null;
     app(\App\Services\Enrollment::class)->request((int)$r->user()->id,(int)$d['course_id'],$message);
+    if($r->expectsJson())return response()->json(['message'=>'Enrollment request sent. An administrator will review it.'],201);
     return redirect('/portal/learn#panel-course-catalog')->with('success','Enrollment request sent. An administrator will review it.');
   }
   public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);$uploaded=fn($table)=>DB::table($table)->where('course_id',$id)->whereNotNull('file_path')->where(fn($q)=>$q->where('content_source','upload')->orWhereNull('content_source'))->pluck('id');

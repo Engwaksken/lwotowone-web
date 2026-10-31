@@ -17,7 +17,9 @@ class Snapshot {
      if($u->preferred_language==='lg'){$translations=match($t){'lessons'=>['title'=>'title_lg','body'=>'body_lg','content_body'=>'content_body_lg','module_title'=>'module_title_lg'],'assignments'=>['title'=>'title_lg','instructions'=>'instructions_lg'],'resources'=>['title'=>'title_lg','description'=>'description_lg','content_body'=>'content_body_lg']};LearnerContent::useLuganda($r,$translations);}
       if($t==='lessons')$r->language_unavailable=$u->preferred_language==='en'&&($r->content_language??'en')==='lg'&&empty($r->title);
      $attachmentType=match($t){'lessons'=>'lesson','assignments'=>'assignment',default=>null};
-     if($attachmentType)$r->attachments=DB::table('learning_attachments')->where('entity_type',$attachmentType)->where('entity_id',$r->id)->get(['id','original_name'])->map(fn($file)=>['name'=>$file->original_name,'url'=>url('/files/attachments/'.$file->id)]);
+     if($attachmentType)$r->attachments=DB::table('learning_attachments')->where('entity_type',$attachmentType)->where('entity_id',$r->id)->get(['id','original_name'])->map(fn($file)=>['id'=>$file->id,'name'=>$file->original_name,'url'=>url('/files/attachments/'.$file->id)]);
+     // Files the learner may ask to save; saving itself needs an approved download request.
+     if($t!=='assignments')$r->downloadable=($r->file_path&&LearningContent::source($r,$t)==='upload')||($t==='lessons'&&collect($r->attachments??[])->isNotEmpty());
     $r->locked=!($access[$r->course_id]??false);
     if($t==='lessons'){$r->locked=!($lessonAccess[$r->id]??false);$r->sort_order=$lessonOrder[$r->id][0]??PHP_INT_MAX;$r->module_title=$lessonOrder[$r->id][1]??null;$r->media_type=LearningContent::mediaType($r);$r->viewer_url=!$r->locked&&$r->file_path?url('/learning/content/lessons/'.$r->id):null;$r->download_url=$r->viewer_url?url('/api/lessons/'.$r->id.'/download'):null;unset($r->file_path);if($r->locked){$r->body=null;$r->video_url=null;$r->content_body=null;$r->content_url=null;}}
     if($t==='assignments'&&$r->locked)$r->instructions=null;
@@ -30,6 +32,9 @@ class Snapshot {
   $currency=DB::table('payment_gateways')->where('active',true)->orderBy('name')->value('currency')??'UGX';$out['events']=$out['events']->map(function($event)use($currency){$event->registration_open=now()->lt($event->starts_at);$event->fee_due=(float)($event->payment_amount??0)>0&&!FreeAccess::active();$event->currency=$currency;return $event;});
    $out['course_progress']=LearningProgress::fromSnapshot($out);
    $out['course_access']=collect($out['enrolments'])->map(fn($row)=>['course_id'=>$row->course_id,'allowed'=>$access[$row->course_id]??false,'trial_expires_at'=>$row->trial_expires_at,'paid'=>(bool)$row->payment_confirmed_at])->all();
+   $out['enrollment_requests']=DB::table('enrollment_requests')->where('user_id',$u->id)->get(['course_id','status','message','decision_note','updated_at']);
+   $out['download_policy']=['valid_days'=>Downloads::VALID_DAYS,'max_downloads'=>Downloads::MAX_DOWNLOADS];
+   $out['download_requests']=DB::table('download_requests')->where('user_id',$u->id)->get()->map(fn($row)=>['id'=>$row->id,'item_type'=>$row->item_type,'item_id'=>$row->item_id,'state'=>Downloads::state($row),'expires_at'=>$row->expires_at,'downloads_left'=>max(0,Downloads::MAX_DOWNLOADS-(int)$row->downloads_used),'decision_note'=>$row->decision_note,'download_url'=>Downloads::isActive($row)?url('/api/downloads/'.$row->id):null])->values();
    $out['certificates']=DB::table('course_certificates')->where('user_id',$u->id)->get(['course_id','reference','recommended_at']);
   $out['event_registrations']=$out['event_registrations']->map(function($r){$event=DB::table('events')->find($r->event_id);$r->event_title=$event?->title;$r->can_cancel=$r->status==='registered'&&$event&&now()->lt($event->starts_at);return $r;});
   $out['notifications']=$u->notifications()->latest()->limit(100)->get(['id','data','read_at','created_at']);

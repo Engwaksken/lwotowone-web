@@ -74,6 +74,35 @@ class DownloadRequestTest extends TestCase
         $this->withHeaders(['Authorization'=>'','User-Agent'=>'Mozilla/5.0'])->getJson('/api/lessons/'.$this->lesson.'/download')->assertUnauthorized();
     }
 
+    public function test_mobile_app_requests_and_downloads_through_the_api(): void
+    {
+        $attachment=DB::table('learning_attachments')->insertGetId(['entity_type'=>'lesson','entity_id'=>$this->lesson,'file_path'=>'attachments/notes.pdf','original_name'=>'notes.pdf','created_at'=>now(),'updated_at'=>now()]);
+        Storage::disk('local')->put('attachments/notes.pdf','PDF');
+        $auth=['Authorization'=>'Bearer '.$this->learner->createToken('app')->plainTextToken];
+
+        $snapshot=$this->withHeaders($auth)->getJson('/api/snapshot')->assertOk();
+        $this->assertSame(['valid_days'=>7,'max_downloads'=>3],$snapshot->json('download_policy'));
+        $lesson=collect($snapshot->json('lessons'))->firstWhere('id',$this->lesson);
+        $this->assertTrue($lesson['downloadable']);
+        $this->assertSame($attachment,$lesson['attachments'][0]['id']);
+        $this->assertSame([],$snapshot->json('download_requests'));
+
+        $this->withHeaders($auth)->postJson('/api/download-requests',['item_type'=>'lessons','item_id'=>$this->lesson,'message'=>'No data at home'])->assertCreated();
+        $this->withHeaders($auth)->postJson('/api/download-requests',['item_type'=>'lessons','item_id'=>$this->lesson])->assertUnprocessable()->assertJsonValidationErrors('download');
+        $request=collect($this->withHeaders($auth)->getJson('/api/snapshot')->json('download_requests'))->first();
+        $this->assertSame(['pending',null],[$request['state'],$request['download_url']]);
+        $this->withHeaders($auth)->get('/api/downloads/'.$request['id'])->assertForbidden();
+
+        app(\App\Services\Downloads::class)->decide($request['id'],'approve',$this->user('manager')->id);
+        $this->app['auth']->forgetGuards();
+        $approved=collect($this->withHeaders($auth)->getJson('/api/snapshot')->json('download_requests'))->first();
+        $this->assertSame(['approved',3],[$approved['state'],$approved['downloads_left']]);
+        $this->assertStringEndsWith('/api/downloads/'.$request['id'],$approved['download_url']);
+        $this->withHeaders($auth)->get('/api/downloads/'.$request['id'])->assertOk()->assertDownload('coop-building.mp4');
+        $this->withHeaders($auth)->get('/api/downloads/'.$request['id'].'/attachments/'.$attachment)->assertOk()->assertDownload('notes.pdf');
+        $this->assertSame(2,collect($this->withHeaders($auth)->getJson('/api/snapshot')->json('download_requests'))->first()['downloads_left']);
+    }
+
     public function test_learner_requests_download_and_manager_approves_limited_downloads(): void
     {
         $this->actingAs($this->learner)->get('/learning/'.$this->course)->assertOk()->assertSee('Request download');

@@ -81,6 +81,17 @@ class EnrollmentRequestTest extends TestCase
         $this->assertDatabaseCount('enrollment_requests',1);
     }
 
+    public function test_mobile_app_sends_enrollment_request_and_sees_its_status(): void
+    {
+        $cohort=$this->cohort();$first=$this->course('First');$second=$this->course('Second course');
+        $learner=$this->enrolledLearner($first,$cohort);
+        $auth=['Authorization'=>'Bearer '.$learner->createToken('app')->plainTextToken];
+        $this->withHeaders($auth)->postJson('/api/enrollment-requests',['course_id'=>$second,'message'=>'From the app'])->assertCreated();
+        $this->withHeaders($auth)->postJson('/api/enrollment-requests',['course_id'=>$second])->assertUnprocessable()->assertJsonValidationErrors('course_id');
+        $requests=$this->withHeaders($auth)->getJson('/api/snapshot')->assertOk()->json('enrollment_requests');
+        $this->assertSame([[$second,'pending','From the app']],collect($requests)->map(fn($r)=>[$r['course_id'],$r['status'],$r['message']])->all());
+    }
+
     public function test_requests_are_validated_and_admin_actions_require_manager(): void
     {
         $cohort=$this->cohort();$first=$this->course('First');$draft=$this->course('Draft','draft');

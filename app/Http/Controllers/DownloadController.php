@@ -21,6 +21,7 @@ class DownloadController extends Controller
         abort_unless($r->user()->role === 'participant', 403, 'Participant access required.');
         $d = $r->validate(['item_type'=>'required|in:'.implode(',', Downloads::TYPES), 'item_id'=>'required|integer', 'message'=>'nullable|string|max:1000']);
         app(Downloads::class)->request($r->user(), $d['item_type'], (int) $d['item_id'], trim((string) ($d['message'] ?? '')) ?: null);
+        if ($r->expectsJson()) return response()->json(['message'=>'Download request sent. You will be notified when it is reviewed.'], 201);
         return back()->with('success', 'Download request sent. You will be notified when it is reviewed.');
     }
 
