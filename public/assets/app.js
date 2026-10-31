@@ -137,12 +137,12 @@ const updateLessonLanguage=form=>form.querySelectorAll('[data-lesson-language]')
             const contentPanel=control.closest('[data-content-panel]');
             const visible=active&&(!contentPanel||!contentPanel.hidden);
             control.disabled=!visible;
-            if(['title','title_lg'].includes(control.name))control.required=visible;
+            if(['title','title_lg','instructions','instructions_lg','description','description_lg'].includes(control.name))control.required=visible;
             if(['content_body','content_body_lg'].includes(control.name))control.required=visible&&select.form.querySelector('[data-content-source]')?.value==='write';
         });
     });
 });
-document.querySelectorAll('[data-lesson-language]').forEach(select=>select.addEventListener('change',()=>updateLessonLanguage(select.form)));
+document.querySelectorAll('[data-lesson-language]').forEach(select=>{select.addEventListener('change',()=>updateLessonLanguage(select.form));updateLessonLanguage(select.form);});
 // Modules and lessons belong to one course, so only offer those from the course chosen in the same form.
 document.querySelectorAll('select[data-course-filter]').forEach(select=>{
     const course=select.form?.querySelector('select[name="course_id"]');

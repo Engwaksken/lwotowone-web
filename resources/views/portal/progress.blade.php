@@ -4,7 +4,7 @@
     <strong>Learning progress · {{ $progress['lesson_percent'] }}%</strong>
     <p>{{ $progress['lessons_completed'] }} of {{ $progress['lessons_total'] }} published lessons completed · {{ $progress['assignments_passed'] }} of {{ $progress['assignments_total'] }} practical assignments passed</p>
     <progress max="100" value="{{ $progress['lesson_percent'] }}" aria-label="Lesson completion">{{ $progress['lesson_percent'] }}%</progress>
-    <p class="muted">{{ $progress['certificate_ready']?'Your completion certificate is ready.':(($progress['completion_ready']??false)?'Course complete. Waiting for instructor recommendation.':($progress['lessons_total']===0?'Lessons are not published yet.':'Finish the remaining lessons and pass the practical assignments to earn your certificate.')) }}</p>
+    <p class="muted">{{ $progress['certificate_ready']?'Your completion certificate is ready.':(($progress['completion_ready']??false)?'Course complete. Waiting for instructor recommendation.':($progress['lessons_total']===0?'Lessons in your learning language are not published yet.':(($progress['awaiting_assessments']??false)?'Practical assignments in your learning language are being prepared. You can finish the course once they are published.':'Finish the remaining lessons and pass the practical assignments to earn your certificate.'))) }}</p>
     @if($progress['certificate_ready'])<a class="button" href="/certificates/{{ $progressCourseId }}">View your certificate</a>@elseif($progress['next_lesson_id'])<a href="/learning/{{ $progressCourseId }}#lesson-{{ $progress['next_lesson_id'] }}">Continue with the next lesson</a>@endif
 </div>
 @endif

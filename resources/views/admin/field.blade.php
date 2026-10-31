@@ -3,8 +3,12 @@
     $type=$optional?substr($raw,9):$raw;
     $value=old($field,$record?->{$field});
 @endphp
-<div class="field" @if($module==='lessons'&&in_array($field,['title','title_lg','body_lg','content_body_lg'],true)) data-lesson-language-field="{{ in_array($field,['title_lg','body_lg','content_body_lg'],true)?'lg':'en' }}" @endif>
-    <label for="{{ $formId }}-{{ $field }}">{{ $module==='lessons'&&$field==='title'?'Title (English)':\App\Services\RecordPresentation::label($field) }} {{ $optional?'(optional)':'' }}</label>
+@php
+    $languageFields=['lessons'=>['title','title_lg','body_lg','content_body_lg'],'assignments'=>['title','instructions','title_lg','instructions_lg'],'resources'=>['title','description','title_lg','description_lg','content_body_lg']][$module]??[];
+    $fieldLanguage=in_array($field,$languageFields,true)?(str_ends_with($field,'_lg')?'lg':'en'):null;
+@endphp
+<div class="field" @if($fieldLanguage) data-lesson-language-field="{{ $fieldLanguage }}" @endif>
+    <label for="{{ $formId }}-{{ $field }}">{{ $fieldLanguage==='en'?\App\Services\RecordPresentation::label($field).' (English)':\App\Services\RecordPresentation::label($field) }} {{ $optional&&!$fieldLanguage?'(optional)':'' }}</label>
     @if($module==='users'&&$field==='role'&&($participantsOnly??false))
         <input type="hidden" id="{{ $formId }}-{{ $field }}" name="{{ $field }}" value="participant">
         <span class="muted">New accounts from this page are created as participants.</span>

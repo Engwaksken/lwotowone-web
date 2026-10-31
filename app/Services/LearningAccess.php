@@ -19,6 +19,10 @@ class LearningAccess
     }
     /** A learner only sees lessons written in their learning language. */
     public static function language(User $user): string {return $user->preferred_language==='lg'?'lg':'en';}
+    public static function inLanguage(User $user,object $item): bool {return ($item->content_language??'en')===self::language($user);}
+    public static function assignments(int $courseId,?string $language=null) {return DB::table('assignments')->where('course_id',$courseId)->where('status','published')->when($language,fn($q)=>$q->where('content_language',$language))->pluck('id');}
+    /** The course has assessments, but none in this language yet, so it cannot be completed in this language. */
+    public static function awaitingAssessments(int $courseId,string $language): bool {return self::assignments($courseId,$language)->isEmpty()&&self::assignments($courseId)->isNotEmpty();}
     public static function lessons(int $courseId,?string $language=null) {
         return DB::table('lessons')->leftJoin('course_modules','course_modules.id','=','lessons.module_id')->where('lessons.course_id',$courseId)->where('lessons.status','published')
             ->when($language,fn($q)=>$q->where('lessons.content_language',$language))
@@ -32,7 +36,7 @@ class LearningAccess
         return false;
     }
     public static function resourceAllowed(User $user,object $resource): bool {
-        if(!self::allowed($user,(int)$resource->course_id))return false;
+        if(!self::inLanguage($user,$resource)||!self::allowed($user,(int)$resource->course_id))return false;
         if(!$resource->lesson_id)return true;
         $lesson=DB::table('lessons')->where('id',$resource->lesson_id)->where('course_id',$resource->course_id)->where('status','published')->first();
         return $lesson&&self::lessonAllowed($user,$lesson);
@@ -42,8 +46,8 @@ class LearningAccess
         return $ids->isNotEmpty()&&DB::table('lesson_progress')->where('user_id',$user->id)->whereIn('lesson_id',$ids)->count()===$ids->count();
     }
     public static function completionReady(User $user,int $courseId): bool {
-        $ids=DB::table('assignments')->where('course_id',$courseId)->where('status','published')->pluck('id');
-        return self::lessonsComplete($user,$courseId)&&DB::table('submissions')->where('user_id',$user->id)->whereIn('assignment_id',$ids)->where('status','passed')->count()===$ids->count();
+        $ids=self::assignments($courseId,self::language($user));
+        return self::lessonsComplete($user,$courseId)&&!self::awaitingAssessments($courseId,self::language($user))&&DB::table('submissions')->where('user_id',$user->id)->whereIn('assignment_id',$ids)->where('status','passed')->count()===$ids->count();
     }
     public static function trial(int $userId,int $courseId): void {
         DB::table('enrolments')->insertOrIgnore(['user_id'=>$userId,'course_id'=>$courseId,'trial_started_at'=>now(),'trial_expires_at'=>now()->addHours(12),'created_at'=>now(),'updated_at'=>now()]);

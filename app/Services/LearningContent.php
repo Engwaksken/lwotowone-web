@@ -40,7 +40,7 @@ class LearningContent
         }
         $retainFile = $record?->file_path && self::format($record, $module) === $format && self::source($record, $module) === 'upload';
         $rules = match ($source) {
-            'write' => [($module === 'lessons' && $language === 'lg' ? 'content_body_lg' : 'content_body') => 'required|string|max:50000'],
+            'write' => [(in_array($module, ['lessons', 'resources'], true) && $language === 'lg' ? 'content_body_lg' : 'content_body') => 'required|string|max:50000'],
             'url' => ['content_url' => 'required|url:http,https|max:1000'],
             'upload' => ['file' => [$retainFile ? 'nullable' : 'required', 'file', self::typeRule($format), 'extensions:'.self::EXTENSIONS[$format], 'max:'.UploadLimit::fileKilobytes()]],
         };

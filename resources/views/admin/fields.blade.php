@@ -17,14 +17,15 @@
     $fieldCount=array_sum(array_map('count',$groups))+($hasContentFormats?3:0)+($hasTeam?2:0);
     $tabbed=count($tabs)>1&&$fieldCount>=6;
 @endphp
-@if($module==='lessons')
+@if(in_array($module,['lessons','assignments','resources'],true))
+@php $languageNoun=\Illuminate\Support\Str::singular($module); @endphp
 <div class="field">
-    <label for="{{ $formId }}-lesson-language">Lesson content language</label>
+    <label for="{{ $formId }}-lesson-language">{{ ucfirst($languageNoun) }} content language</label>
     <select id="{{ $formId }}-lesson-language" name="lesson_language" data-lesson-language required>
         <option value="en" @selected(old('lesson_language',$record?->content_language??'en')==='en')>English</option>
         <option value="lg" @selected(old('lesson_language',$record?->content_language??'en')==='lg')>Luganda</option>
     </select>
-    <small>Choose which language you are entering for this lesson. Add the other language by editing the lesson later.</small>
+    <small>Learners only see content in their own learning language. Create a separate {{ $languageNoun }} for the other language.</small>
 </div>
 @endif
 @if($tabbed)

@@ -10,7 +10,7 @@ class Workflow {
     if($action==='enrol'||$action==='complete'||$action==='submit'){
      abort_unless($u->profile_complete,403,'Complete your learner profile first.');
      if($action==='enrol')abort(403,'Apply through an available call. M&E approval creates the enrollment.');
-     if(in_array($action,['complete','submit'])){$field=$action==='complete'?'lesson_id':'assignment_id';$table=$action==='complete'?'lessons':'assignments';$checked=Validator::make($input,[$field=>'required|integer|exists:'.$table.',id'])->validate();$item=self::published($table,$checked[$field]);LearningAccess::requireCourse($u,(int)$item->course_id);if($action==='complete')abort_unless(LearningAccess::lessonAllowed($u,$item),403,'Complete the preceding lesson first.');}
+     if(in_array($action,['complete','submit'])){$field=$action==='complete'?'lesson_id':'assignment_id';$table=$action==='complete'?'lessons':'assignments';$checked=Validator::make($input,[$field=>'required|integer|exists:'.$table.',id'])->validate();$item=self::published($table,$checked[$field]);LearningAccess::requireCourse($u,(int)$item->course_id);abort_unless(LearningAccess::inLanguage($u,$item),403,'This content is not in your learning language.');if($action==='complete')abort_unless(LearningAccess::lessonAllowed($u,$item),403,'Complete the preceding lesson first.');}
    }
   return DB::transaction(function()use($u,$action,$input){
    // Serialise actions for one participant. Also protects uniqueness and sync replay.

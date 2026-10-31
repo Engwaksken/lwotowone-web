@@ -198,7 +198,7 @@ class PortalController extends Controller {
    if($type==='attachments'){
     $file=DB::table('learning_attachments')->find($id);abort_unless($file,404);
     if($file->entity_type==='submission'){$submission=DB::table('submissions')->find($file->entity_id);abort_unless($submission,404);$assignment=DB::table('assignments')->find($submission->assignment_id);abort_unless($r->user()->id===$submission->user_id||$r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($assignment->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
-    else{$table=$file->entity_type==='lesson'?'lessons':'assignments';abort_unless(in_array($file->entity_type,['lesson','assignment'],true),404);$item=DB::table($table)->find($file->entity_id);abort_unless($item,404);if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);}else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
+    else{$table=$file->entity_type==='lesson'?'lessons':'assignments';abort_unless(in_array($file->entity_type,['lesson','assignment'],true),404);$item=DB::table($table)->find($file->entity_id);abort_unless($item,404);if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::inLanguage($r->user(),$item),403);}else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
     abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($file->file_path),404);return \Illuminate\Support\Facades\Storage::disk('local')->download($file->file_path,$file->original_name);
    }
    abort_unless(in_array($type,['resources','submissions']),404);$item=DB::table($type)->find($id);abort_unless($item,404);
@@ -216,7 +216,8 @@ class PortalController extends Controller {
    Workflow::enrolled($r->user(),$id);$c=DB::table('courses')->find($id);
     $lessons=\App\Services\LearningAccess::lessons((int)$id,\App\Services\LearningAccess::language($r->user()))->pluck('id');
    abort_unless($lessons->count()>0&&DB::table('lesson_progress')->where('user_id',$r->user()->id)->whereIn('lesson_id',$lessons)->count()===$lessons->count(),422,'Complete all published lessons first.');
-   $assignments=DB::table('assignments')->where('course_id',$id)->where('status','published')->pluck('id');
+   abort_if(\App\Services\LearningAccess::awaitingAssessments((int)$id,\App\Services\LearningAccess::language($r->user())),422,'Practical assignments in your learning language are not published yet.');
+   $assignments=\App\Services\LearningAccess::assignments((int)$id,\App\Services\LearningAccess::language($r->user()));
    abort_unless(DB::table('submissions')->where('user_id',$r->user()->id)->whereIn('assignment_id',$assignments)->where('status','passed')->count()===$assignments->count(),422,'Pass all published practical assignments first.');
     $certificate=DB::table('course_certificates')->where('course_id',$id)->where('user_id',$r->user()->id)->first();abort_unless($certificate,403,'Awaiting your assigned instructor completion recommendation.');
     return view('portal.certificate',['course'=>$c,'user'=>$r->user(),'certificate'=>$certificate]);

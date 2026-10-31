@@ -49,7 +49,7 @@ class Catalog {
    foreach(config("modules.$module.fields") as $f=>$t){
     if(is_string($t)&&str_starts_with($t,'optional:'))$t=substr($t,9);
    if(is_array($t))$out[$f]=array_combine($t,$t);
-    elseif(str_starts_with($t,'ref:')){ $table=substr($t,4);$q=self::query($table);if(!$u->manager()&&in_array($table,['courses','lessons','course_modules']))$q=self::scope($q,$u,$table);$out[$f]=$q->pluck('title','id')->all();if(in_array($table,['lessons','course_modules'],true))$out['_course'][$f]=(clone $q)->pluck('course_id','id')->all(); }
+    elseif(str_starts_with($t,'ref:')){ $table=substr($t,4);$q=self::query($table);if(!$u->manager()&&in_array($table,['courses','lessons','course_modules']))$q=self::scope($q,$u,$table);$out[$f]=$table==='lessons'?(clone $q)->get(['id','title','title_lg','content_language'])->mapWithKeys(fn($lesson)=>[$lesson->id=>($lesson->title?:$lesson->title_lg).' ('.($lesson->content_language==='lg'?'Luganda':'English').')'])->all():$q->pluck('title','id')->all();if(in_array($table,['lessons','course_modules'],true))$out['_course'][$f]=(clone $q)->pluck('course_id','id')->all(); }
    elseif(str_starts_with($t,'user:'))$out[$f]=User::where('role',substr($t,5))->where('status','active')->pluck('name','id')->all();
   }return $out;
  }

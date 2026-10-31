@@ -130,13 +130,16 @@ class CmsController extends Controller {
    if($module==='courses'&&!$id)abort_unless($r->user()->manager(),403);
      $rules=Catalog::rules($module,$id);if($module==='courses')unset($rules['instructor_id']);
     $lessonLanguage='en';
-    if($module==='lessons'){$lessonLanguage=$r->validate(['lesson_language'=>'sometimes|in:en,lg'])['lesson_language']??$record->content_language??'en';$rules['title_lg']=['nullable','string','max:255'];if($lessonLanguage==='lg'){$rules['title']=['nullable','string','max:255'];$rules['title_lg']=['required','string','max:255'];}}
+    // Lessons, assignments and resources are each written in one language; the other language has its own records.
+    $languageFields=['lessons'=>['title'=>'string|max:255'],'assignments'=>['title'=>'string|max:255','instructions'=>'string|max:20000'],'resources'=>['title'=>'string|max:255','description'=>'string|max:20000']][$module]??null;
+    if($languageFields){$lessonLanguage=$r->validate(['lesson_language'=>'sometimes|in:en,lg'])['lesson_language']??$record->content_language??'en';foreach($languageFields as $field=>$rule){$rules[$field.'_lg']=($lessonLanguage==='lg'?'required|':'nullable|').$rule;if($lessonLanguage==='lg')$rules[$field]='nullable|'.$rule;}}
+    if($module==='resources'&&$r->filled('lesson_id')&&!\Illuminate\Support\Facades\DB::table('lessons')->where('id',$r->input('lesson_id'))->where('content_language',$lessonLanguage)->exists())throw \Illuminate\Validation\ValidationException::withMessages(['lesson_id'=>'Choose a lesson in the same language as this resource.']);
     $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
     if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
      $d=$r->validate($rules);
      if($module==='users'&&!$id&&$r->query('role')==='participant')$d['role']='participant';
      $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:'.\App\Services\UploadLimit::fileKilobytes()])['attachments']??[];
-    if($module==='lessons')$d['content_language']=$lessonLanguage;
+    if($languageFields)$d['content_language']=$lessonLanguage;
     $temporaryPassword=null;
     if($module==='users'&&!$id){$temporaryPassword=\Illuminate\Support\Str::random(8);$d['password']=$temporaryPassword;$d['requires_email_verification']=true;$d['must_change_password']=true;}
    if($module==='events'&&!$id)$d['registration_token']=(string)\Illuminate\Support\Str::uuid();

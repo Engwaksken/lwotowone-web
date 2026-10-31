@@ -63,6 +63,92 @@ class LearnerProgressAndLanguageTest extends TestCase
         $this->assertTrue(LearningAccess::lessonsComplete($luganda,$course));
     }
 
+    public function test_assignments_and_resources_belong_to_one_language(): void
+    {
+        $course=$this->course();
+        $this->lesson($course,1,'en');$lgLesson=$this->lesson($course,2,'lg');
+        $enTask=Workflow::insert('assignments',['course_id'=>$course,'title'=>'English task','instructions'=>'Do it','pass_mark'=>50,'content_language'=>'en','status'=>'published']);
+        $lgTask=Workflow::insert('assignments',['course_id'=>$course,'title'=>null,'instructions'=>null,'title_lg'=>'Omulimu','instructions_lg'=>'Kola','pass_mark'=>50,'content_language'=>'lg','status'=>'published']);
+        Workflow::insert('resources',['course_id'=>$course,'title'=>'English guide','description'=>'Guide','content_language'=>'en','status'=>'published']);
+        $lgResource=Workflow::insert('resources',['course_id'=>$course,'title'=>null,'description'=>null,'title_lg'=>'Ekitabo','description_lg'=>'Ebikwata','content_language'=>'lg','lesson_id'=>$lgLesson,'status'=>'published']);
+
+        $english=$this->learner($course,'en');
+        $this->actingAs($english)->get("/learning/$course")->assertOk()->assertSee('English task')->assertSee('English guide')->assertDontSee('Omulimu')->assertDontSee('Ekitabo');
+        $this->post('/actions/submit',['assignment_id'=>$lgTask,'body'=>'Answer'])->assertForbidden();
+        $this->get("/learning/content/resources/$lgResource")->assertForbidden();
+
+        $luganda=$this->learner($course,'lg');
+        $this->actingAs($luganda)->get("/learning/$course")->assertOk()->assertSee('Omulimu')->assertSee('Ekitabo')->assertDontSee('English task')->assertDontSee('English guide');
+        $this->post('/actions/submit',['assignment_id'=>$enTask,'body'=>'Answer'])->assertForbidden();
+        // Completion counts only the learner's own language: one Luganda lesson and one Luganda assignment.
+        $this->post('/actions/complete',['lesson_id'=>$lgLesson])->assertRedirect();
+        DB::table('submissions')->insert(['user_id'=>$luganda->id,'assignment_id'=>$lgTask,'body'=>'Answer','status'=>'passed','created_at'=>now(),'updated_at'=>now()]);
+        $this->assertTrue(LearningAccess::completionReady($luganda,$course));
+    }
+
+    public function test_admin_creates_luganda_assignment_and_resource_without_english_fields(): void
+    {
+        $course=$this->course();$enLesson=$this->lesson($course,1,'en');$lgLesson=$this->lesson($course,2,'lg');
+        $admin=$this->user('admin');
+        $this->actingAs($admin)->get('/admin/assignments')->assertOk()->assertSee('Assignment content language');
+        $this->post('/admin/assignments',['course_id'=>$course,'assessment_type'=>'assignment','lesson_language'=>'lg','title_lg'=>'Omulimu','instructions_lg'=>'Kola','pass_mark'=>60,'status'=>'published'])->assertRedirect()->assertSessionHasNoErrors();
+        $task=DB::table('assignments')->latest('id')->first();
+        $this->assertSame('lg',$task->content_language);$this->assertNull($task->title);$this->assertSame('Omulimu',$task->title_lg);
+        $this->post('/admin/assignments',['course_id'=>$course,'assessment_type'=>'assignment','lesson_language'=>'lg','pass_mark'=>60,'status'=>'published'])->assertSessionHasErrors(['title_lg','instructions_lg']);
+
+        $resource=['course_id'=>$course,'lesson_language'=>'lg','title_lg'=>'Ekitabo','description_lg'=>'Ebikwata','content_format'=>'text','content_source'=>'write','content_body_lg'=>'Ebirimu','status'=>'published'];
+        $this->post('/admin/resources',$resource+['lesson_id'=>$enLesson])->assertSessionHasErrors('lesson_id');
+        $this->post('/admin/resources',$resource+['lesson_id'=>$lgLesson])->assertRedirect()->assertSessionHasNoErrors();
+        $saved=DB::table('resources')->latest('id')->first();
+        $this->assertSame('lg',$saved->content_language);$this->assertNull($saved->title);$this->assertSame('Ebirimu',$saved->content_body_lg);
+        $this->get('/admin/resources')->assertOk()->assertSee('Ekitabo')->assertSee('Luganda');
+    }
+
+    public function test_migration_splits_existing_luganda_translations_into_their_own_items(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $migration=require database_path('migrations/2026_10_31_000002_add_content_language_to_assignments_and_resources.php');
+        $migration->down();
+        $course=$this->course();$enLesson=$this->lesson($course,1,'en');
+        $task=DB::table('assignments')->insertGetId(['course_id'=>$course,'assessment_type'=>'assignment','title'=>'Task','instructions'=>'Do it','title_lg'=>'Omulimu','instructions_lg'=>'Kola','pass_mark'=>50,'status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+        $partial=DB::table('assignments')->insertGetId(['course_id'=>$course,'assessment_type'=>'assignment','title'=>'Partial','instructions'=>'Do it','title_lg'=>'Kitundu','pass_mark'=>50,'status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+        DB::table('learning_attachments')->insert(['entity_type'=>'assignment','entity_id'=>$task,'file_path'=>'attachments/sheet.pdf','original_name'=>'sheet.pdf','created_at'=>now(),'updated_at'=>now()]);
+        \Illuminate\Support\Facades\Storage::disk('local')->put('resources/guide.pdf','PDF');
+        $resource=DB::table('resources')->insertGetId(['course_id'=>$course,'lesson_id'=>$enLesson,'title'=>'Guide','description'=>'About','title_lg'=>'Ekitabo','description_lg'=>'Ebikwata','file_path'=>'resources/guide.pdf','content_format'=>'file','content_source'=>'upload','status'=>'published','created_at'=>now(),'updated_at'=>now()]);
+
+        $migration->up();
+
+        $this->assertDatabaseHas('assignments',['id'=>$task,'content_language'=>'en','title'=>'Task','title_lg'=>null,'instructions_lg'=>null]);
+        $lgTask=DB::table('assignments')->where('content_language','lg')->first();
+        $this->assertSame(['Omulimu','Kola',null,null],[$lgTask->title_lg,$lgTask->instructions_lg,$lgTask->title,$lgTask->instructions]);
+        $this->assertSame(1,DB::table('learning_attachments')->where('entity_type','assignment')->where('entity_id',$lgTask->id)->count());
+        // An incomplete translation is left on the English item rather than becoming a half-empty Luganda one.
+        $this->assertDatabaseHas('assignments',['id'=>$partial,'content_language'=>'en','title_lg'=>'Kitundu']);
+        $this->assertSame(1,DB::table('assignments')->where('content_language','lg')->count());
+
+        $this->assertDatabaseHas('resources',['id'=>$resource,'content_language'=>'en','title_lg'=>null,'lesson_id'=>$enLesson]);
+        $lgResource=DB::table('resources')->where('content_language','lg')->first();
+        $this->assertSame(['Ekitabo',null,null],[$lgResource->title_lg,$lgResource->title,$lgResource->lesson_id]);
+        $this->assertNotSame('resources/guide.pdf',$lgResource->file_path);
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists([$lgResource->file_path,'resources/guide.pdf']);
+    }
+
+    public function test_course_cannot_be_completed_while_assignments_exist_only_in_another_language(): void
+    {
+        $course=$this->course();$lgLesson=$this->lesson($course,1,'lg');
+        Workflow::insert('assignments',['course_id'=>$course,'title'=>'English task','instructions'=>'Do it','pass_mark'=>50,'content_language'=>'en','status'=>'published']);
+        $learner=$this->learner($course,'lg');
+        $this->actingAs($learner)->post('/actions/complete',['lesson_id'=>$lgLesson])->assertRedirect();
+        $this->assertFalse(LearningAccess::completionReady($learner,$course));
+        $this->get('/portal/learn')->assertSee('Practical assignments in your learning language are being prepared');
+        $this->actingAs($this->user('manager'))->get('/admin/enrollment')->assertSee('No assignments in Luganda yet');
+
+        Workflow::insert('assignments',['course_id'=>$course,'title_lg'=>'Omulimu','instructions_lg'=>'Kola','pass_mark'=>50,'content_language'=>'lg','status'=>'published']);
+        $this->assertFalse(LearningAccess::completionReady($learner,$course));
+        DB::table('submissions')->insert(['user_id'=>$learner->id,'assignment_id'=>DB::table('assignments')->where('content_language','lg')->value('id'),'body'=>'Answer','status'=>'passed','created_at'=>now(),'updated_at'=>now()]);
+        $this->assertTrue(LearningAccess::completionReady($learner,$course));
+    }
+
     public function test_manager_sees_lesson_progress_per_learner(): void
     {
         $course=$this->course('Poultry basics');

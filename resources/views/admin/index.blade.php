@@ -12,10 +12,10 @@
     $tableColumns=match($module){
         'courses'=>['program_id'=>'Program Name','instructors'=>'Instructor Name','learner_count'=>'Learners'],
         'programs'=>['category'=>'Category'],
-        'lessons'=>['course_id'=>'Course Name','content_format'=>'Format','position'=>'Order'],
+        'lessons'=>['course_id'=>'Course Name','content_language'=>'Language','content_format'=>'Format','position'=>'Order'],
         'course_modules'=>['course_id'=>'Course Name','position'=>'Order'],
-        'resources'=>['course_id'=>'Course Name','content_format'=>'Format'],
-        'assignments'=>['course_id'=>'Course Name','pass_mark'=>'Pass mark'],
+        'resources'=>['course_id'=>'Course Name','content_language'=>'Language','content_format'=>'Format'],
+        'assignments'=>['course_id'=>'Course Name','content_language'=>'Language','pass_mark'=>'Pass mark'],
         'users'=>['email'=>'Email','role'=>'Role'],
         'slots'=>['mentor_id'=>'Mentor Name','starts_at'=>'Starts'],
         'opportunities'=>['organisation'=>'Organisation','deadline'=>'Deadline'],
@@ -53,7 +53,7 @@
     <thead><tr><th scope="col" class="page-select-cell"><input type="checkbox" aria-label="Select all records on this page" data-page-select-all></th><th scope="col" class="column-primary">{{ $module==='users'?'Name':($module==='settings'?'Setting':'Title') }}</th>@foreach($tableColumns as $column=>$label)<th scope="col" class="{{ $column==='position'||$column==='pass_mark'?'column-number':'column-context' }}">{{ $label }}</th>@endforeach<th scope="col" class="column-status">Status</th><th scope="col" class="column-date">Updated</th><th scope="col" class="column-actions">Actions</th></tr></thead>
     <tbody>
     @forelse($rows as $row)
-        @php $rowName = $row->title??$row->name??$row->key; @endphp
+        @php $rowName = $row->title??$row->title_lg??$row->name??$row->key; @endphp
         <tr>
             <td class="page-select-cell"><input type="checkbox" name="record_ids[]" value="{{ $row->id }}" form="cms-bulk-delete" aria-label="Select {{ $rowName }}" data-page-row-select></td>
             <td class="column-primary"><strong>{{ $rowName }}</strong><small>Record #{{ $row->id }}</small></td>
@@ -64,7 +64,7 @@
                         'content_format'=>ucfirst(\App\Services\LearningContent::format($row,$module)),
                         'program_id','course_id','mentor_id'=>$options[$column][$row->{$column}]??'—',
                         'starts_at','deadline'=>$row->{$column}?\Carbon\Carbon::parse($row->{$column})->format($column==='deadline'?'d M Y':'d M Y, H:i'):'—',
-                        'pass_mark'=>$row->pass_mark.'%', 'learner_count'=>$courseLearnerCounts[$row->id]??0, default=>$row->{$column}??'—',
+                        'content_language'=>($row->content_language??'en')==='lg'?'Luganda':'English', 'pass_mark'=>$row->pass_mark.'%', 'learner_count'=>$courseLearnerCounts[$row->id]??0, default=>$row->{$column}??'—',
                     };
                 @endphp
                 <td class="{{ in_array($column,['position','pass_mark','learner_count'],true)?'column-number':'column-context' }}">{{ $cell??'—' }}</td>
@@ -113,7 +113,7 @@
 @endforeach
 @foreach($rows as $row)
     @php
-        $rowName = $row->title??$row->name??$row->key;
+        $rowName = $row->title??$row->title_lg??$row->name??$row->key;
         $attributes = method_exists($row, 'getAttributes') ? $row->getAttributes() : (array) $row;
         $secretKeys = '/password|remember|token|secret|api_key|fcm/i';
         $isSecretSetting = $module==='settings' && preg_match('/api|secret|token|password|key/i', (string) $rowName);
