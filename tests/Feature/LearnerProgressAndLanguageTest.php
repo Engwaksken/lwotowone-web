@@ -141,7 +141,7 @@ class LearnerProgressAndLanguageTest extends TestCase
         $this->actingAs($learner)->post('/actions/complete',['lesson_id'=>$lgLesson])->assertRedirect();
         $this->assertFalse(LearningAccess::completionReady($learner,$course));
         $this->get('/portal/learn')->assertSee('Practical assignments in your learning language are being prepared');
-        $this->actingAs($this->user('manager'))->get('/admin/enrollment')->assertSee('No assignments in Luganda yet');
+        $this->actingAs($this->user('manager'))->get('/admin/learner-progress')->assertSee('No assignments in Luganda yet');
 
         Workflow::insert('assignments',['course_id'=>$course,'title_lg'=>'Omulimu','instructions_lg'=>'Kola','pass_mark'=>50,'content_language'=>'lg','status'=>'published']);
         $this->assertFalse(LearningAccess::completionReady($learner,$course));
@@ -156,9 +156,44 @@ class LearnerProgressAndLanguageTest extends TestCase
         $learner=$this->learner($course,'en');
         $this->actingAs($learner)->post('/actions/complete',['lesson_id'=>$en1])->assertRedirect();
 
-        $this->actingAs($this->user('manager'))->get('/admin/enrollment')->assertOk()
+        $manager=$this->user('manager');
+        $this->actingAs($manager)->get('/admin/enrollment')->assertOk()->assertSee('href="/admin/learner-progress"',false)->assertDontSee('enrollment-panel-progress');
+        $this->get('/admin/learner-progress')->assertOk()
             ->assertSee('Learner progress')->assertSee($learner->name)->assertSee('Poultry basics')
             ->assertSee('1 of 2 · 50%')->assertSee('English lesson 1')->assertSee('Completed '.now()->format('d M Y'))->assertSee('Not started');
+        $this->actingAs($learner)->get('/admin/learner-progress')->assertForbidden();
+    }
+
+    public function test_progress_page_has_statistics_filters_and_pagination(): void
+    {
+        $poultry=$this->course('Poultry basics');$tailoring=$this->course('Tailoring');
+        $first=$this->lesson($poultry,1,'en');$this->lesson($poultry,2,'en');$this->lesson($poultry,3,'lg');$this->lesson($tailoring,1,'en');
+        $done=$this->learner($poultry,'en');$done->forceFill(['name'=>'Akello Done'])->save();
+        $started=$this->learner($poultry,'en');$started->forceFill(['name'=>'Babirye Started'])->save();
+        $luganda=$this->learner($poultry,'lg');$luganda->forceFill(['name'=>'Nakato Luganda'])->save();
+        $tailor=$this->learner($tailoring,'en');$tailor->forceFill(['name'=>'Okello Tailor'])->save();
+        foreach(DB::table('lessons')->where('course_id',$poultry)->where('content_language','en')->pluck('id') as $lesson)DB::table('lesson_progress')->insert(['user_id'=>$done->id,'lesson_id'=>$lesson,'completed_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('lesson_progress')->insert(['user_id'=>$started->id,'lesson_id'=>$first,'completed_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
+
+        $this->actingAs($this->user('manager'));
+        $page=$this->get('/admin/learner-progress')->assertOk();
+        // Enrollments 4; not started 2 (Luganda learner and tailor); in progress 1; completed 1; average of 0, 50, 100, 0.
+        $stats=$page->viewData('stats');
+        $this->assertSame([4,2,1,1,0,38],[$stats['total'],$stats['not_started'],$stats['in_progress'],$stats['completed'],$stats['no_lessons'],$stats['average']]);
+        $page->assertSee('All lessons completed')->assertSee('Average lesson completion')->assertSee('38%');
+
+        $this->get('/admin/learner-progress?status=in_progress')->assertSee('Babirye Started')->assertDontSee('Akello Done')->assertDontSee('Okello Tailor');
+        $this->get('/admin/learner-progress?course_id='.$tailoring)->assertSee('Okello Tailor')->assertDontSee('Babirye Started');
+        $this->get('/admin/learner-progress?language=lg')->assertSee('Nakato Luganda')->assertDontSee('Akello Done');
+        $this->get('/admin/learner-progress?q=akello')->assertSee('Akello Done')->assertDontSee('Babirye Started');
+        $this->get('/admin/learner-progress?q='.urlencode($tailor->learner_no))->assertSee('Okello Tailor')->assertDontSee('Akello Done');
+        // Cards keep the other filters but swap the status.
+        $this->get('/admin/learner-progress?course_id='.$poultry)->assertSee('/admin/learner-progress?course_id='.$poultry.'&amp;status=completed',false);
+
+        for($i=0;$i<26;$i++)$this->learner($tailoring,'en');
+        $first=$this->get('/admin/learner-progress?course_id='.$tailoring)->assertSee('Page 1 of 2')->assertSee('course_id='.$tailoring.'&amp;page=2',false);
+        $this->assertCount(25,$first->viewData('rows'));
+        $this->assertCount(2,$this->get('/admin/learner-progress?course_id='.$tailoring.'&page=2')->viewData('rows'));
     }
 
     public function test_manager_can_change_learner_course(): void

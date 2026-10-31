@@ -70,6 +70,7 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
   Route::post('/admin/site-settings/payment-gateways', [\App\Http\Controllers\MelController::class,'saveGateway']);
   Route::delete('/admin/site-settings/payment-gateways/{id}', [\App\Http\Controllers\MelController::class,'deleteGateway']);
    Route::get('/admin/enrollment', [\App\Http\Controllers\MelController::class,'enrollment']);
+   Route::get('/admin/learner-progress', [\App\Http\Controllers\MelController::class,'progress']);
    Route::get('/admin/enrollment/template.csv', [\App\Http\Controllers\MelController::class,'enrollmentTemplate']);
    Route::post('/admin/enrollment/import', [\App\Http\Controllers\MelController::class,'importEnrollment'])->middleware('throttle:5,1');
    Route::post('/admin/enrollment/bulk', [\App\Http\Controllers\MelController::class,'bulkEnrollment']);

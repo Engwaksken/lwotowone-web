@@ -92,6 +92,7 @@
                                 @endforeach
                                 @if($groupTitle==='Learning and content'&&auth()->user()->manager())
                                     <li><a href="/admin/enrollment" @if(request()->is('admin/enrollment*')) aria-current="page" @endif><i class="fas fa-user-graduate" aria-hidden="true"></i> Enrollment and cohorts</a></li>
+                                    <li><a href="/admin/learner-progress" @if(request()->is('admin/learner-progress*')) aria-current="page" @endif><i class="fas fa-chart-bar" aria-hidden="true"></i> Learner progress</a></li>
                                     <li><a href="/admin/calls" @if(request()->is('admin/calls*')) aria-current="page" @endif><i class="fas fa-bullhorn" aria-hidden="true"></i> M&E application calls</a></li>
                                 @endif
                                 @if($groupTitle==='Learning and content'&&(auth()->user()->manager()||auth()->user()->role==='instructor'))
