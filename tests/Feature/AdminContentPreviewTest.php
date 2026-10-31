@@ -56,6 +56,41 @@ class AdminContentPreviewTest extends TestCase
             ->assertSee('data-dialog-open="preview-record-'.$empty.'"',false)->assertSee('No content has been added yet.');
     }
 
+    public function test_staff_view_course_as_learner_in_each_language(): void
+    {
+        $course=$this->course();
+        $module=Workflow::insert('course_modules',['course_id'=>$course,'title'=>'Getting started','title_lg'=>'Okutandika','position'=>1,'status'=>'published']);
+        Workflow::insert('lessons',['course_id'=>$course,'module_id'=>$module,'title'=>'Second English','body'=>'Second body','content_language'=>'en','position'=>2,'status'=>'published']);
+        Workflow::insert('lessons',['course_id'=>$course,'module_id'=>$module,'title'=>'First English','body'=>'First body','content_language'=>'en','position'=>1,'status'=>'published']);
+        Workflow::insert('lessons',['course_id'=>$course,'title'=>'Unfinished','body'=>'Draft body','content_language'=>'en','position'=>3,'status'=>'draft']);
+        Workflow::insert('lessons',['course_id'=>$course,'module_id'=>$module,'title'=>null,'body'=>null,'title_lg'=>'Essomo erisooka','body_lg'=>'Ebirimu','content_language'=>'lg','position'=>1,'status'=>'published']);
+        Workflow::insert('assignments',['course_id'=>$course,'title'=>'English task','instructions'=>'Describe your coop','pass_mark'=>60,'content_language'=>'en','status'=>'published']);
+        Workflow::insert('resources',['course_id'=>$course,'title'=>'English guide','description'=>'Read this','content_format'=>'text','content_source'=>'write','content_body'=>'Guide text','content_language'=>'en','status'=>'published']);
+
+        $admin=$this->user('admin');
+        $this->actingAs($admin)->get('/admin/courses')->assertOk()->assertSee('href="/admin/courses/'.$course.'/learner-view"',false);
+
+        $english=$this->get("/admin/courses/$course/learner-view")->assertOk()
+            ->assertSee('Getting started')->assertSee('Second body')->assertSee('Describe your coop')->assertSee('Pass mark 60%')->assertSee('Guide text')
+            ->assertSee('Not shown because they are drafts: 1 lesson in English')
+            ->assertDontSee('Draft body')->assertDontSee('Essomo erisooka');
+        $this->assertLessThan(strpos($english->getContent(),'Second English'),strpos($english->getContent(),'First English'));
+
+        $this->get("/admin/courses/$course/learner-view?language=lg")->assertOk()
+            ->assertSee('Okutandika')->assertSee('Essomo erisooka')->assertSee('Ebirimu')
+            ->assertDontSee('First English')->assertDontSee('Guide text')
+            ->assertSee('Assignments exist in English only, so Luganda learners cannot complete this course yet.');
+    }
+
+    public function test_learner_view_is_limited_to_staff_who_can_edit_the_course(): void
+    {
+        $course=$this->course();
+        $this->actingAs($this->user('participant'))->get("/admin/courses/$course/learner-view")->assertForbidden();
+        $this->actingAs($this->user('instructor'))->get("/admin/courses/$course/learner-view")->assertNotFound();
+        $this->actingAs($this->user('manager'))->get("/admin/courses/$course/learner-view")->assertOk();
+        $this->get("/admin/courses/$course/learner-view?language=fr")->assertSessionHasErrors('language');
+    }
+
     public function test_other_modules_have_no_preview_button(): void
     {
         $this->course();

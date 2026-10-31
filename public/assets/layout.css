@@ -852,3 +852,5 @@ header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
 .content-preview-meta{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}
 .content-preview-learner{margin:12px 0}
 .content-preview-learner h3{margin-top:0}
+.learner-view-languages{align-items:center;margin:0 0 16px}
+.learner-view-module{margin:22px 0 8px;font-size:1.1rem}

@@ -73,6 +73,7 @@
             <td class="column-date">{{ $row->updated_at?\Carbon\Carbon::parse($row->updated_at)->format('d M Y'):'—' }}</td>
             <td class="column-actions"><div class="actions">
                 <x-record-view-trigger :dialogId="'view-record-'.$row->id" :name="$rowName ?? 'Record '.$row->id" />
+                @if($module==='courses')<a class="secondary small icon-action" href="/admin/courses/{{ $row->id }}/learner-view" title="View as learner" aria-label="View {{ $rowName }} as a learner"><i class="fas fa-user-graduate" aria-hidden="true"></i></a>@endif
                 @if(in_array($module,['lessons','resources'],true))<button type="button" class="secondary small icon-action" data-dialog-open="preview-record-{{ $row->id }}" title="Preview content" aria-label="Preview {{ $rowName }}"><i class="fas fa-play-circle" aria-hidden="true"></i></button>@endif
                 @if(($row->status??null)==='published'&&in_array($module,['pages','programs','courses','opportunities','events','posts']))<a class="secondary small icon-action" href="{{ $module==='pages'?'/pages/'.$row->slug:'/'.$module.'/'.$row->id }}" title="View published item" aria-label="View {{ $row->title??'published item' }}"><i class="fas fa-eye" aria-hidden="true"></i></a>@endif
                 @if(($participantsOnly ?? false)&&auth()->user()->manager())<a class="secondary small" href="/admin/enrollment?status=all&amp;q={{ urlencode($row->name) }}" aria-label="Manage enrollment for {{ $row->name }}">Enrollment</a>@endif

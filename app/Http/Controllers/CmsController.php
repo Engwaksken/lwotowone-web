@@ -75,6 +75,22 @@ class CmsController extends Controller {
   return $r->validate(['ai_provider'=>['required',\Illuminate\Validation\Rule::in(array_keys(config('ai.providers')))],'ai_api_base_url'=>'required|url:https|max:500','ai_api_model'=>'required|string|max:120','ai_api_key'=>'nullable|string|max:4096','clear_api_key'=>'nullable|boolean']);
  }
   private function access(Request $r,$module){abort_unless(config("modules.$module"),404);abort_unless(Catalog::allowed($r->user(),$module),403);}
+  /** Staff walk through a course exactly as a learner in the chosen language would, with every lesson open. */
+  public function learnerView(Request $r,string $id){
+   $this->access($r,'courses');
+   $course=Catalog::scope(Catalog::query('courses'),$r->user(),'courses')->findOrFail($id);
+   $language=$r->validate(['language'=>'nullable|in:en,lg'])['language']??'en';
+   $published=fn($table)=>DB::table($table)->where('course_id',$course->id)->where('content_language',$language);
+   return view('admin.learner-view',[
+     'course'=>$course,'language'=>$language,
+     'lessons'=>\App\Services\LearningAccess::lessons((int)$course->id,$language),
+     'resources'=>$published('resources')->where('status','published')->orderBy('id')->get(),
+     'assignments'=>$published('assignments')->where('status','published')->orderBy('id')->get(),
+     'attachments'=>DB::table('learning_attachments')->where('entity_type','assignment')->whereIn('entity_id',$published('assignments')->select('id'))->get()->groupBy('entity_id'),
+     'drafts'=>['lessons'=>$published('lessons')->where('status','!=','published')->count(),'resources'=>$published('resources')->where('status','!=','published')->count(),'assignments'=>$published('assignments')->where('status','!=','published')->count()],
+     'otherLanguage'=>['lessons'=>DB::table('lessons')->where('course_id',$course->id)->where('status','published')->where('content_language','!=',$language)->count()],
+   ]);
+  }
   public function batchLessons(Request $r){
    $this->access($r,'lessons');
    if($r->isMethod('get'))return view('admin.lessons-batch',['courses'=>Catalog::options('lessons',$r->user())['course_id']??[]]);

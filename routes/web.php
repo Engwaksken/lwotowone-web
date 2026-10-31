@@ -123,6 +123,7 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
   Route::post('/admin/reviews/submissions/ai-mark',[ReviewController::class,'aiMark']);Route::post('/admin/reviews/submissions/ai-approve',[ReviewController::class,'approveAiMarks']);
   Route::get('/admin/reviews/{type}',[ReviewController::class,'index']);Route::post('/admin/reviews/{type}/{id}',[ReviewController::class,'update']);
   Route::match(['get','post'],'/admin/lessons/batch',[CmsController::class,'batchLessons']);
+  Route::get('/admin/courses/{id}/learner-view',[CmsController::class,'learnerView'])->whereNumber('id');
  Route::get('/admin/{module}',[CmsController::class,'index']);Route::get('/admin/{module}/create',[CmsController::class,'form']);Route::get('/admin/{module}/{id}/edit',[CmsController::class,'form']);
  Route::post('/admin/{module}',[CmsController::class,'save']);Route::put('/admin/{module}/{id}',[CmsController::class,'save']);Route::delete('/admin/{module}/{id}',[CmsController::class,'delete']);
 });
