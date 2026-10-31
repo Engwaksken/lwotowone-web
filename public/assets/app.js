@@ -427,6 +427,11 @@ document.querySelectorAll('[data-dialog-open]').forEach(button=>button.addEventL
     document.getElementById(button.dataset.dialogOpen)?.showModal();
 }));
 document.querySelectorAll('[data-dialog-close]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog')?.close()));
+// Closing a dialog must stop anything still playing inside it, including embedded players.
+document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',()=>{
+    dialog.querySelectorAll('video,audio').forEach(media=>media.pause());
+    dialog.querySelectorAll('.lesson-video iframe').forEach(frame=>{const src=frame.src;frame.src='about:blank';frame.src=src;});
+}));
 document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('click',event=>{
     if(event.target===dialog)dialog.close();
 }));
