@@ -214,7 +214,7 @@ class PortalController extends Controller {
   public function certificate(Request $r,string $id){
     abort_unless($r->user()->role==='participant',403);\App\Services\LearningAccess::requireCourse($r->user(),(int)$id);
    Workflow::enrolled($r->user(),$id);$c=DB::table('courses')->find($id);
-    $lessons=\App\Services\LearningAccess::lessons((int)$id)->pluck('id');
+    $lessons=\App\Services\LearningAccess::lessons((int)$id,\App\Services\LearningAccess::language($r->user()))->pluck('id');
    abort_unless($lessons->count()>0&&DB::table('lesson_progress')->where('user_id',$r->user()->id)->whereIn('lesson_id',$lessons)->count()===$lessons->count(),422,'Complete all published lessons first.');
    $assignments=DB::table('assignments')->where('course_id',$id)->where('status','published')->pluck('id');
    abort_unless(DB::table('submissions')->where('user_id',$r->user()->id)->whereIn('assignment_id',$assignments)->where('status','passed')->count()===$assignments->count(),422,'Pass all published practical assignments first.');

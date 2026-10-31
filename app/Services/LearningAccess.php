@@ -17,15 +17,18 @@ class LearningAccess
         Workflow::enrolled($user,$courseId);
         abort_unless(self::allowed($user,$courseId),403,FreeAccess::active()?'Complete the prerequisite course first.':'Complete the prerequisite course and confirm payment if your 12-hour trial has ended.');
     }
-    public static function lessons(int $courseId) {
+    /** A learner only sees lessons written in their learning language. */
+    public static function language(User $user): string {return $user->preferred_language==='lg'?'lg':'en';}
+    public static function lessons(int $courseId,?string $language=null) {
         return DB::table('lessons')->leftJoin('course_modules','course_modules.id','=','lessons.module_id')->where('lessons.course_id',$courseId)->where('lessons.status','published')
+            ->when($language,fn($q)=>$q->where('lessons.content_language',$language))
             ->where(fn($q)=>$q->whereNull('lessons.module_id')->orWhere(fn($q)=>$q->where('course_modules.status','published')->where('course_modules.course_id',$courseId)))
             ->select('lessons.*','course_modules.title as module_title','course_modules.title_lg as module_title_lg')->orderByRaw('COALESCE(course_modules.position, 0)')->orderBy('course_modules.id')->orderBy('lessons.position')->orderBy('lessons.id')->get();
     }
     public static function lessonAllowed(User $user,object $lesson): bool {
         if(!self::allowed($user,(int)$lesson->course_id))return false;
         $done=DB::table('lesson_progress')->where('user_id',$user->id)->pluck('lesson_id');
-        foreach(self::lessons((int)$lesson->course_id) as $item){if($item->id===$lesson->id)return true;if(!$done->contains($item->id))return false;}
+        foreach(self::lessons((int)$lesson->course_id,self::language($user)) as $item){if($item->id===$lesson->id)return true;if(!$done->contains($item->id))return false;}
         return false;
     }
     public static function resourceAllowed(User $user,object $resource): bool {
@@ -35,7 +38,7 @@ class LearningAccess
         return $lesson&&self::lessonAllowed($user,$lesson);
     }
     public static function lessonsComplete(User $user,int $courseId): bool {
-        $ids=self::lessons($courseId)->pluck('id');
+        $ids=self::lessons($courseId,self::language($user))->pluck('id');
         return $ids->isNotEmpty()&&DB::table('lesson_progress')->where('user_id',$user->id)->whereIn('lesson_id',$ids)->count()===$ids->count();
     }
     public static function completionReady(User $user,int $courseId): bool {

@@ -86,6 +86,31 @@ class Enrollment
         });
     }
 
+    /** Moves a learner's enrolment (and its payment/trial status) from one course to another. */
+    public function changeCourse(int $learnerId, int $fromCourseId, int $toCourseId, int $actorId): void
+    {
+        DB::transaction(function () use ($learnerId, $fromCourseId, $toCourseId, $actorId) {
+            $enrolment = DB::table('enrolments')->where('user_id', $learnerId)->where('course_id', $fromCourseId)->lockForUpdate()->first();
+            abort_unless($enrolment && DB::table('users')->where('id', $learnerId)->where('role', 'participant')->exists(), 404);
+            if ($fromCourseId === $toCourseId) {
+                throw ValidationException::withMessages(['course_id'=>'Choose a different course.']);
+            }
+            if (!DB::table('courses')->where('id', $toCourseId)->where('status', 'published')->exists()) {
+                throw ValidationException::withMessages(['course_id'=>'Choose a published course.']);
+            }
+            if (DB::table('enrolments')->where('user_id', $learnerId)->where('course_id', $toCourseId)->exists()) {
+                throw ValidationException::withMessages(['course_id'=>'The learner is already enrolled in that course.']);
+            }
+            if (DB::table('course_certificates')->where('user_id', $learnerId)->where('course_id', $fromCourseId)->exists()) {
+                throw ValidationException::withMessages(['course_id'=>'The learner already has a certificate for this course, so it cannot be changed.']);
+            }
+            DB::table('enrolments')->where('id', $enrolment->id)->update(['course_id'=>$toCourseId, 'updated_at'=>now()]);
+            DB::table('users')->where('id', $learnerId)->update(['selected_course_id'=>$toCourseId, 'updated_at'=>now()]);
+            DB::table('enrollment_requests')->where('user_id', $learnerId)->where('course_id', $toCourseId)->where('status', 'pending')->update(['status'=>'approved', 'decided_by'=>$actorId, 'decided_at'=>now(), 'updated_at'=>now()]);
+            DB::table('audit_logs')->insert(['user_id'=>$actorId, 'action'=>'change-course', 'module'=>'learners', 'record_id'=>$learnerId, 'created_at'=>now(), 'updated_at'=>now()]);
+        });
+    }
+
     private function pendingRequest(int $requestId): object
     {
         $request = DB::table('enrollment_requests')->where('id', $requestId)->lockForUpdate()->first();

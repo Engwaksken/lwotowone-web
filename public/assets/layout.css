@@ -426,6 +426,7 @@ html.reduce-motion *,html.reduce-motion *:before,html.reduce-motion *:after{scro
 .enrollment-steps li{display:flex;align-items:center;gap:12px;min-width:0;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fff}
 .enrollment-steps li>strong{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:#e8f0e9;color:var(--green)}
 .enrollment-steps li>span{font-size:14px;line-height:1.4}
+.enrollment-panel td progress{display:block;width:100%;min-width:90px;height:8px;accent-color:var(--green)}
 .enrollment-confirm-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .enrollment-confirm-form select{min-width:150px;max-width:100%}
 .enrollment-panel select.enrollment-cohort-select,.enrollment-confirm-form select{background:#fff;color:#182f28;color-scheme:light}

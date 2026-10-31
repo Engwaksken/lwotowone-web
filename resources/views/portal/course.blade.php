@@ -36,7 +36,7 @@
                 @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">{{ $t('Mark complete','Teeka nti kiwedde') }}</button></form>@endif
                 @endif
             </details>
-        @empty<p class="muted">{{ $t('Lessons will appear here once they are published.','Amasomo ganaalabika wano nga gafulumiziddwa.') }}</p>
+        @empty<p class="muted">{{ $t('No lessons in English have been published for this course yet. They will appear here once they are ready.','Tewali masomo mu Luganda agafulumiziddwa ku koosi eno. Ganaalabika wano nga gamaze okutegekebwa.') }}</p>
         @endforelse
     </section>
     <section class="tab-panel" role="tabpanel" id="panel-course-resources" aria-labelledby="tab-course-resources" hidden>
