@@ -78,6 +78,8 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
   Route::delete('/admin/enrollment/cohorts/{id}', [\App\Http\Controllers\MelController::class,'deleteCohort']);
   Route::post('/admin/enrollment/settlements', [\App\Http\Controllers\MelController::class,'addSettlement']);
   Route::delete('/admin/enrollment/settlements/{id}', [\App\Http\Controllers\MelController::class,'deleteSettlement']);
+  Route::post('/admin/enrollment/requests/{id}/approve', [\App\Http\Controllers\MelController::class,'approveRequest'])->whereNumber('id');
+  Route::post('/admin/enrollment/requests/{id}/reject', [\App\Http\Controllers\MelController::class,'rejectRequest'])->whereNumber('id');
   Route::post('/admin/enrollment/learners/{id}/confirm-payment', [\App\Http\Controllers\MelController::class,'confirmPayment']);
   Route::put('/admin/enrollment/learners/{id}/outcomes', [\App\Http\Controllers\MelController::class,'updateLearner']);
   Route::get('/profile',[PortalController::class,'section'])->defaults('section','profile');
@@ -93,6 +95,7 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
     Route::get('/certificates/{id}',[PortalController::class,'certificate']);
   });
   Route::post('/profile',[PortalController::class,'profile']);
+  Route::post('/portal/enrollment-requests',[PortalController::class,'requestEnrollment'])->middleware('throttle:10,1');
 
   Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);
   Route::post('/admin/{module}/bulk-delete',[CmsController::class,'bulkDelete']);

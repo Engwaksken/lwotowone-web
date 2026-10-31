@@ -42,6 +42,60 @@ class Enrollment
         });
     }
 
+    /** A learner asks to join a course. A rejected request can be sent again. */
+    public function request(int $learnerId, int $courseId, ?string $message=null): void
+    {
+        DB::transaction(function () use ($learnerId, $courseId, $message) {
+            $learner = DB::table('users')->where('id', $learnerId)->where('role', 'participant')->lockForUpdate()->first();
+            if (!$learner || !$learner->profile_complete) {
+                throw ValidationException::withMessages(['course_id'=>'Complete your learner profile before requesting a course.']);
+            }
+            if (!DB::table('courses')->where('id', $courseId)->where('status', 'published')->exists()) {
+                throw ValidationException::withMessages(['course_id'=>'This course is not available.']);
+            }
+            if (DB::table('enrolments')->where('user_id', $learnerId)->where('course_id', $courseId)->exists()) {
+                throw ValidationException::withMessages(['course_id'=>'You are already enrolled in this course.']);
+            }
+            $existing = DB::table('enrollment_requests')->where('user_id', $learnerId)->where('course_id', $courseId)->first();
+            if ($existing?->status === 'pending') {
+                throw ValidationException::withMessages(['course_id'=>'Your request for this course is already waiting for review.']);
+            }
+            DB::table('enrollment_requests')->updateOrInsert(['user_id'=>$learnerId, 'course_id'=>$courseId], ['status'=>'pending', 'message'=>$message, 'decision_note'=>null, 'decided_by'=>null, 'decided_at'=>null, 'created_at'=>$existing?->created_at ?? now(), 'updated_at'=>now()]);
+        });
+    }
+
+    /** Approving enrolls the learner in the requested course under the chosen cohort. */
+    public function approve(int $requestId, int $cohortId, int $actorId): object
+    {
+        return DB::transaction(function () use ($requestId, $cohortId, $actorId) {
+            $request = $this->pendingRequest($requestId);
+            $this->confirm((int) $request->user_id, $cohortId, $actorId, (int) $request->course_id);
+            DB::table('enrollment_requests')->where('id', $requestId)->update(['status'=>'approved', 'decided_by'=>$actorId, 'decided_at'=>now(), 'updated_at'=>now()]);
+            DB::table('audit_logs')->insert(['user_id'=>$actorId, 'action'=>'approve-enrollment-request', 'module'=>'learners', 'record_id'=>$request->user_id, 'created_at'=>now(), 'updated_at'=>now()]);
+            return $request;
+        });
+    }
+
+    public function reject(int $requestId, int $actorId, ?string $note=null): object
+    {
+        return DB::transaction(function () use ($requestId, $actorId, $note) {
+            $request = $this->pendingRequest($requestId);
+            DB::table('enrollment_requests')->where('id', $requestId)->update(['status'=>'rejected', 'decision_note'=>$note, 'decided_by'=>$actorId, 'decided_at'=>now(), 'updated_at'=>now()]);
+            DB::table('audit_logs')->insert(['user_id'=>$actorId, 'action'=>'reject-enrollment-request', 'module'=>'learners', 'record_id'=>$request->user_id, 'created_at'=>now(), 'updated_at'=>now()]);
+            return $request;
+        });
+    }
+
+    private function pendingRequest(int $requestId): object
+    {
+        $request = DB::table('enrollment_requests')->where('id', $requestId)->lockForUpdate()->first();
+        abort_unless($request, 404);
+        if ($request->status !== 'pending') {
+            throw ValidationException::withMessages(['enrollment'=>'This request has already been '.$request->status.'.']);
+        }
+        return $request;
+    }
+
     public function import(string $path, ?int $defaultCohort, int $actorId): array
     {
         $handle = fopen($path, 'rb');

@@ -69,7 +69,15 @@ class PortalController extends Controller {
     $snapshot=Snapshot::get($r->user());
     if($section==='mentorship')$snapshot['mentors']=app(\App\Services\MentorMatcher::class)->rank($r->user(),collect($snapshot['mentors']));
     return view('portal.section',['section'=>$section,'data'=>$snapshot,'earnings'=>$earnings,
-      'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters]);
+      'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters,
+      'enrollmentRequests'=>$section==='learn'?DB::table('enrollment_requests')->where('user_id',$r->user()->id)->get()->keyBy('course_id'):collect()]);
+  }
+  public function requestEnrollment(Request $r){
+    abort_unless($r->user()->role==='participant',403,'Participant access required.');
+    $d=$r->validate(['course_id'=>'required|integer|exists:courses,id','message'=>'nullable|string|max:2000']);
+    $message=trim((string)($d['message']??''))?:null;
+    app(\App\Services\Enrollment::class)->request((int)$r->user()->id,(int)$d['course_id'],$message);
+    return redirect('/portal/learn#panel-course-catalog')->with('success','Enrollment request sent. An administrator will review it.');
   }
   public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);return view('portal.course',compact('data','course'));}
  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}

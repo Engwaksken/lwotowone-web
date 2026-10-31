@@ -22,7 +22,13 @@
         <div class="grid">@forelse($enrolledCourses as $c)<article class="card"><span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p>@include('portal.progress',['progressCourseId'=>$c->id])<a class="button" href="/learning/{{ $c->id }}">Continue learning</a></article>@empty<div class="empty">You are not enrolled in any course yet. Browse courses to get started.</div>@endforelse</div>
     </section>
     <section class="tab-panel" role="tabpanel" id="panel-course-catalog" aria-labelledby="tab-course-catalog">
-        <div class="grid">@forelse($availableCourses as $c)<article class="card"><span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p><a class="button" href="/calls">Find an open call</a></article>@empty<div class="empty">You are enrolled in all available courses.</div>@endforelse</div>
+        <div class="grid">@forelse($availableCourses as $c)<article class="card"><span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p>@php $courseRequest=($enrollmentRequests??collect())->get($c->id); @endphp
+            @if($courseRequest?->status==='pending')<p class="notice" role="status"><strong>Request pending.</strong> Sent {{ \Illuminate\Support\Carbon::parse($courseRequest->updated_at)->format('d M Y') }}. An administrator will review it.</p>
+            @else
+                @if($courseRequest?->status==='rejected')<p class="notice error" role="status"><strong>Request declined.</strong>@if($courseRequest->decision_note) {{ $courseRequest->decision_note }}@endif You can send a new request.</p>@endif
+                <form method="post" action="/portal/enrollment-requests">@csrf<input type="hidden" name="course_id" value="{{ $c->id }}"><div class="field"><label for="enroll-message-{{ $c->id }}">Message to the admin (optional)</label><textarea id="enroll-message-{{ $c->id }}" name="message" maxlength="2000" rows="2"></textarea></div><button type="submit">{{ $courseRequest?->status==='rejected'?'Request again':'Request enrollment' }}</button></form>
+            @endif
+        </article>@empty<div class="empty">You are enrolled in all available courses.</div>@endforelse</div>
     </section>
 </div>
 @elseif($section==='practice')
