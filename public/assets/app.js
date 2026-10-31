@@ -427,6 +427,8 @@ document.querySelectorAll('[data-dialog-open]').forEach(button=>button.addEventL
     document.getElementById(button.dataset.dialogOpen)?.showModal();
 }));
 document.querySelectorAll('[data-dialog-close]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog')?.close()));
+// Learners save files through an approved download request, so the media players offer no save menu.
+document.addEventListener('contextmenu',event=>{if(event.target.closest?.('.resource-video,.resource-audio,.resource-image-viewer,.resource-document-viewer'))event.preventDefault();});
 // Closing a dialog must stop anything still playing inside it, including embedded players.
 document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',()=>{
     dialog.querySelectorAll('video,audio').forEach(media=>media.pause());

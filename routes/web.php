@@ -97,6 +97,11 @@ Route::middleware(['auth','active',\App\Http\Middleware\RequirePasswordChange::c
     Route::get('/certificates/{id}',[PortalController::class,'certificate']);
   });
   Route::post('/profile',[PortalController::class,'profile']);
+  Route::post('/portal/download-requests',[\App\Http\Controllers\DownloadController::class,'store'])->middleware('throttle:20,1');
+  Route::get('/downloads/{id}',[\App\Http\Controllers\DownloadController::class,'download'])->whereNumber('id')->middleware('throttle:30,1');
+  Route::get('/downloads/{id}/attachments/{attachment}',[\App\Http\Controllers\DownloadController::class,'download'])->whereNumber(['id','attachment'])->middleware('throttle:30,1');
+  Route::get('/admin/download-requests',[\App\Http\Controllers\DownloadController::class,'index']);
+  Route::post('/admin/download-requests/{id}/{decision}',[\App\Http\Controllers\DownloadController::class,'decide'])->whereNumber('id')->whereIn('decision',['approve','reject','revoke']);
   Route::post('/portal/enrollment-requests',[PortalController::class,'requestEnrollment'])->middleware('throttle:10,1');
 
   Route::get('/admin/reports/impact.csv',[ReviewController::class,'report']);

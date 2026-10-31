@@ -854,3 +854,7 @@ header nav{display:flex;align-items:center;gap:clamp(10px,1.5vw,22px)}
 .content-preview-learner h3{margin-top:0}
 .learner-view-languages{align-items:center;margin:0 0 16px}
 .learner-view-module{margin:22px 0 8px;font-size:1.1rem}
+.download-request{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}
+.download-request small{color:var(--muted)}
+.download-request-form summary{cursor:pointer;color:var(--green);font-weight:600}
+.download-request-form form{margin-top:8px}

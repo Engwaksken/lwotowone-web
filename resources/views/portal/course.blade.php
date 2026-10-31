@@ -30,9 +30,11 @@
                 <summary><span class="course-item-number">{{ str_pad($lesson->position,2,'0',STR_PAD_LEFT) }}</span><span>{{ $lesson->title??$lesson->title_lg??$t('Lesson','Essomo') }}</span><span class="tag">{{ $completed?$t('Completed','Kiwedde'):$t('Lesson','Essomo') }}</span></summary>
                 @if($lesson->locked)<p><i class="fas fa-lock" aria-hidden="true"></i> {{ $t('Locked. Finish the earlier lessons and confirm payment if your trial has ended.','Kigaddwa. Maliriza amasomo agakulembera era kakasa okusasula singa ekiseera eky’okugezesa kiwedde.') }}</p>@elseif($lesson->language_unavailable)<p class="notice">{{ $t('This lesson is currently available in Luganda only. An English version has not been added yet.','Essomo lino kati liri mu Luganda yokka. Tewannateekebwawo nkyusa ya Lungereza.') }}</p>@else
                 <div class="prose course-item-content">{{ $lesson->body }}</div>
-                @foreach(($lesson->attachments??[]) as $attachment)<p><a href="{{ $attachment['url'] }}"><i class="fas fa-paperclip" aria-hidden="true"></i> {{ $attachment['name'] }}</a></p>@endforeach
+                @php $lessonGrant=$downloadRequests->get('lessons-'.$lesson->id); $grantActive=\App\Services\Downloads::isActive($lessonGrant); @endphp
+                @foreach(($lesson->attachments??[]) as $attachment)<p>@if($grantActive)<a href="/downloads/{{ $lessonGrant->id }}/attachments/{{ basename($attachment['url']) }}"><i class="fas fa-paperclip" aria-hidden="true"></i> {{ $attachment['name'] }}</a>@else<i class="fas fa-paperclip" aria-hidden="true"></i> {{ $attachment['name'] }} <small class="muted">{{ $t('(available after your download request is approved)','(kijja kuwanulibwa ng’okusaba kwo kukkiriziddwa)') }}</small>@endif</p>@endforeach
                 @php $mediaUrl=$lesson->viewer_url??$lesson->content_url??$lesson->video_url; @endphp
                 @if($mediaUrl)<x-learning-media :url="$mediaUrl" :type="$lesson->video_url?'video':$lesson->media_type" :title="$lesson->title" :external="!$lesson->viewer_url" />@endif
+                @if($downloadable['lessons']->contains($lesson->id))@include('portal.download-request',['type'=>'lessons','itemId'=>$lesson->id])@endif
                 @if(!$completed)<form method="post" action="/actions/complete">@csrf<input type="hidden" name="lesson_id" value="{{ $lesson->id }}"><button type="submit">{{ $t('Mark complete','Teeka nti kiwedde') }}</button></form>@endif
                 @endif
             </details>
@@ -47,6 +49,7 @@
                     @elseif($resource->content_source==='write')<div class="prose course-item-content">{{ $resource->content_body }}</div>
                     @elseif($resource->viewer_url||$resource->content_url)<x-learning-media :url="$resource->viewer_url??$resource->content_url" :type="$resource->media_type" :title="$resource->title" :external="!$resource->viewer_url" />
                     @else<p class="muted">{{ $t('No content attached yet.','Tewali birimu byateekeddwamu.') }}</p>@endif
+                    @if(!$resource->locked&&$downloadable['resources']->contains($resource->id))@include('portal.download-request',['type'=>'resources','itemId'=>$resource->id])@endif
                 </article>
             @empty<p class="muted">{{ $t('No resources yet.','Tewali bikozesebwa.') }}</p>
             @endforelse

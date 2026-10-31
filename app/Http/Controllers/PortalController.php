@@ -79,7 +79,10 @@ class PortalController extends Controller {
     app(\App\Services\Enrollment::class)->request((int)$r->user()->id,(int)$d['course_id'],$message);
     return redirect('/portal/learn#panel-course-catalog')->with('success','Enrollment request sent. An administrator will review it.');
   }
-  public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);return view('portal.course',compact('data','course'));}
+  public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);$uploaded=fn($table)=>DB::table($table)->where('course_id',$id)->whereNotNull('file_path')->where(fn($q)=>$q->where('content_source','upload')->orWhereNull('content_source'))->pluck('id');
+   $downloadable=['lessons'=>$uploaded('lessons')->merge(DB::table('learning_attachments')->where('entity_type','lesson')->whereIn('entity_id',DB::table('lessons')->where('course_id',$id)->select('id'))->pluck('entity_id'))->unique()->values(),'resources'=>$uploaded('resources')];
+   $downloadRequests=\App\Services\Downloads::forUser($r->user());
+   return view('portal.course',compact('data','course','downloadable','downloadRequests'));}
  public function action(Request $r,string $action){$result=Workflow::run($r->user(),$action,$r->all());return $r->is('api/*')?$result:back()->with('success',$result['message']);}
   public function snapshot(Request $r){abort_unless($r->user()->role==='participant',403);return Snapshot::get($r->user());}
   public function profilePhoto(Request $r){
@@ -176,15 +179,23 @@ class PortalController extends Controller {
    }
   public function resource(Request $r,string $id){
     $item=DB::table('resources')->find($id);abort_unless($item,404);
-    if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
+    if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');$this->guardStreaming($r);}
     else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
     return $this->inlineResource($item);
   }
   public function lessonMedia(Request $r,string $id){
     $item=DB::table('lessons')->find($id);abort_unless($item,404);
-    if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::lessonAllowed($r->user(),$item),403);}
+    if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::lessonAllowed($r->user(),$item),403);$this->guardStreaming($r);}
     else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
     return $this->inlineResource($item);
+  }
+  /**
+   * Learners in the browser may only load files through the page's own player; saving needs an approved download request.
+   * The mobile app authenticates with its own access token and keeps in-app playback.
+   */
+  private function guardStreaming(Request $r): void {
+    if($r->user()->currentAccessToken() instanceof \Laravel\Sanctum\PersonalAccessToken)return;
+    abort_unless(\App\Services\Downloads::streamingAllowed($r),403,'Downloading is not allowed here. Use “Request download” in the lesson to ask for a copy.');
   }
   private function inlineResource(object $item){
     if(($item->content_source??null)==='url'&&!empty($item->content_url))return redirect()->away($item->content_url)->header('Cache-Control','private, no-store');
@@ -198,12 +209,12 @@ class PortalController extends Controller {
    if($type==='attachments'){
     $file=DB::table('learning_attachments')->find($id);abort_unless($file,404);
     if($file->entity_type==='submission'){$submission=DB::table('submissions')->find($file->entity_id);abort_unless($submission,404);$assignment=DB::table('assignments')->find($submission->assignment_id);abort_unless($r->user()->id===$submission->user_id||$r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($assignment->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
-    else{$table=$file->entity_type==='lesson'?'lessons':'assignments';abort_unless(in_array($file->entity_type,['lesson','assignment'],true),404);$item=DB::table($table)->find($file->entity_id);abort_unless($item,404);if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::inLanguage($r->user(),$item),403);}else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
+    else{$table=$file->entity_type==='lesson'?'lessons':'assignments';abort_unless(in_array($file->entity_type,['lesson','assignment'],true),404);$item=DB::table($table)->find($file->entity_id);abort_unless($item,404);if($r->user()->role==='participant'){abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::inLanguage($r->user(),$item),403);if($file->entity_type==='lesson')abort(403,'Lesson files can be downloaded after your download request is approved.');}else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);}
     abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($file->file_path),404);return \Illuminate\Support\Facades\Storage::disk('local')->download($file->file_path,$file->original_name);
    }
    abort_unless(in_array($type,['resources','submissions']),404);$item=DB::table($type)->find($id);abort_unless($item,404);
    if($type==='resources'){
-     if($r->user()->role==='participant') {abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');}
+     if($r->user()->role==='participant') {abort_unless($item->status==='published',404);\App\Services\LearningAccess::requireCourse($r->user(),(int)$item->course_id);abort_unless(\App\Services\LearningAccess::resourceAllowed($r->user(),$item),403,'Complete the preceding lessons to unlock this resource.');$this->guardStreaming($r);}
      else abort_unless($r->user()->manager()||\App\Services\Catalog::query('courses')->whereKey($item->course_id)->assignedToInstructor((int)$r->user()->id)->exists(),403);
    }else{
     $a=DB::table('assignments')->find($item->assignment_id);
