@@ -344,3 +344,23 @@ html.theme-high-contrast .site-sidebar .sidebar-nav a,html.theme-high-contrast .
 .course-detail-image{display:block;width:100%;max-width:880px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin:8px 0 20px}
 .course-image-preview{display:block;width:240px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin:4px 0 8px;border:1px solid var(--border)}
 
+/* Phones: keep the brand visible, tabs reachable, fields from zooming, and floating help out of the way. */
+@media(max-width:800px){
+    /* Logos without an intrinsic size (e.g. an SVG with only a viewBox) collapse when the header shrinks to fit. */
+    body.site-page>header .site-logo{height:40px;width:auto;max-width:min(160px,52vw)}
+}
+@media(max-width:680px){
+    /* iOS zooms into any field with text under 16px and leaves the page zoomed. */
+    input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea{font-size:max(16px,1rem)!important}
+    /* Wrap tabs instead of cutting the last ones off the edge. */
+    .tab-list{display:flex;flex-wrap:wrap;width:auto;max-width:100%;overflow-x:visible;margin-right:0}
+    .tab-list [role=tab]{flex:1 1 auto;justify-content:center;white-space:normal;text-align:center}
+    /* Round icon-only launchers, tucked into the corner, with room below the page so they never cover the last content. */
+    .help-widget{right:10px;bottom:10px}
+    .help-widget-launchers{gap:6px}
+    .help-chat-toggle{display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;font-size:17px}
+    .help-chat-toggle .help-widget-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .help-widget .accessibility-menu>summary{width:44px;height:44px}
+    body{padding-bottom:110px}
+    progress{width:100%}
+}
