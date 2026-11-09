@@ -338,3 +338,9 @@ html.theme-high-contrast .site-sidebar .sidebar-nav a,html.theme-high-contrast .
 .content-page-meta{margin:0;color:var(--muted);font-size:14px}
 .content-page .page-content{padding:clamp(22px,4vw,44px);border:1px solid var(--border);border-radius:var(--radius-lg,16px);background:var(--surface);box-shadow:var(--shadow-sm);font-size:1.02rem;line-height:1.8;text-align:left}
 .content-page-footer{margin:18px 0 0;text-align:center;color:var(--muted);font-size:14px}
+
+/* Course cover images */
+.course-card-image{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:12px;background:var(--brand-soft)}
+.course-detail-image{display:block;width:100%;max-width:880px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin:8px 0 20px}
+.course-image-preview{display:block;width:240px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin:4px 0 8px;border:1px solid var(--border)}
+

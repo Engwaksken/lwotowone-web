@@ -153,6 +153,7 @@ class CmsController extends Controller {
     $formattedContent=in_array($module,['lessons','resources'],true)&&$r->exists('content_format');
     if($formattedContent){unset($rules['body'],$rules['video_url'],$rules['file']);}
      $d=$r->validate($rules);
+     $courseImage=$module==='courses'?$r->validate(['image'=>\App\Services\CourseImage::RULES,'remove_image'=>'nullable|boolean'],['image.max'=>'The course image must be 4 MB or smaller.','image.extensions'=>'Upload the course image as a JPG, PNG or WebP file.','image.mimetypes'=>'Upload the course image as a JPG, PNG or WebP file.']):[];
      if($module==='users'&&!$id&&$r->query('role')==='participant')$d['role']='participant';
      $attachmentFiles=$r->validate(['attachments'=>'nullable|array|max:10','attachments.*'=>'file|mimes:pdf,txt,jpg,jpeg,png,webp,mp4,webm,ogg,ogv,mov,m4v,mp3,wav,m4a,aac,flac|max:'.\App\Services\UploadLimit::fileKilobytes()])['attachments']??[];
     if($languageFields)$d['content_language']=$lessonLanguage;
@@ -183,12 +184,17 @@ class CmsController extends Controller {
    if($id&&DB::table('bookings')->where('slot_id',$id)->exists())return back()->withErrors(['starts_at'=>'A booked session cannot be edited. Review the booking instead.']);
   }
   $oldFile=$record->file_path;$newFile=null;
+  // Course cover image: a new upload replaces the old one; "remove" clears it.
+  $oldImage=$module==='courses'?$record->image_path:null;$newImage=null;
+  if(!empty($courseImage['image']))$record->image_path=$newImage=\App\Services\CourseImage::store($courseImage['image']);
+  elseif(!empty($courseImage['remove_image']))$record->image_path=null;
    if(isset($d['file'])){$d['file_path']=$newFile=\App\Services\VideoUpload::store($d['file'],$module==='lessons'?'lessons':'resources','local');unset($d['file']);}
   try{DB::transaction(function()use($record,$d,$assignmentChange,$assignmentIds,$leadId,$r,$module,$id){
    $record->fill($d)->save();
    if($assignmentChange)\App\Models\InstructorAssignments::sync($record,$assignmentIds,$leadId);
    DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>$module,'action'=>$id?'update':'create','record_id'=>$record->id,'created_at'=>now(),'updated_at'=>now()]);
-  });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);throw $e;}
+  });}catch(\Throwable $e){if($newFile)\Illuminate\Support\Facades\Storage::disk('local')->delete($newFile);\App\Services\CourseImage::delete($newImage);throw $e;}
+   if($oldImage&&$oldImage!==$record->image_path)\App\Services\CourseImage::delete($oldImage);
    if($oldFile&&array_key_exists('file_path',$d)&&$oldFile!==$d['file_path'])\Illuminate\Support\Facades\Storage::disk('local')->delete($oldFile);
     if(in_array($module,['lessons','assignments'],true))foreach($attachmentFiles as $attachment)DB::table('learning_attachments')->insert(['entity_type'=>$module==='lessons'?'lesson':'assignment','entity_id'=>$record->id,'file_path'=>\App\Services\VideoUpload::store($attachment,$module,'local'),'original_name'=>mb_substr($attachment->getClientOriginalName(),0,255),'created_at'=>now(),'updated_at'=>now()]);
     if($module==='users'&&$temporaryPassword!==null){
@@ -209,7 +215,7 @@ class CmsController extends Controller {
    catch(\Throwable $e){\Illuminate\Support\Facades\Log::error('User setup email resend failed.', ['user_id'=>$user->id,'exception'=>$e]);$detail=\Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())),220);return redirect('/admin/users')->withErrors(['email'=>'The temporary password was reset, but email delivery failed: '.$detail.' Check Email settings and try again.']);}
    return redirect('/admin/users')->with('success','Setup email sent again to '.$user->email.'.');
   }
-  public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
+  public function delete(Request $r,string $module,string $id){$this->access($r,$module);$record=Catalog::scope(Catalog::query($module),$r->user(),$module)->findOrFail($id);if($module==='users'&&($record->id===$r->user()->id||$record->role==='admin'))return back()->withErrors(['delete'=>'Administrators cannot be deleted here.']);try{$record->delete();}catch(QueryException $e){if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['delete'=>'This record is in use. Archive it using its status instead.']);throw $e;}if($module==='courses')\App\Services\CourseImage::delete($record->image_path);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'delete','module'=>$module,'record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Deleted successfully.');}
   public function bulkDelete(Request $r,string $module){
    abort_unless(isset(config('modules')[$module]),404);
    $this->access($r,$module);
@@ -229,6 +235,7 @@ class CmsController extends Controller {
     if(in_array((string)$e->getCode(),['23000','23503']))return back()->withErrors(['record_ids'=>'One or more selected records are in use and cannot be deleted.']);
     throw $e;
    }
+   if($module==='courses')$records->each(fn($record)=>\App\Services\CourseImage::delete($record->image_path));
    return redirect('/admin/'.$module)->with('success',count($ids).' record(s) deleted.');
   }
   public function saveEmailSettings(Request $r){

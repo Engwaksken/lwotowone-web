@@ -5,6 +5,7 @@
 <div class="grid public-list-grid">
     @forelse($rows as $row)
         <article class="card">
+            @if(!empty($row->image_path))<img class="course-card-image" src="{{ $row->image_path }}" alt="" loading="lazy">@endif
             <h3>{{ $row->title }}</h3>
             <p>{{ \Illuminate\Support\Str::limit($row->summary??$row->description??$row->body??'',200) }}</p>
             @if(isset($row->location))<small>{{ $row->location }}</small>@endif

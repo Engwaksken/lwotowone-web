@@ -114,6 +114,7 @@
         <div class="home-course-grid">
             @foreach($courses as $course)
                 <a class="home-course" href="/courses/{{ $course->id }}">
+                    @if(!empty($course->image_path))<img class="course-card-image" src="{{ $course->image_path }}" alt="" loading="lazy">@endif
                     <span class="home-course-meta"><span>{{ $course->level }}</span><span><i class="far fa-clock" aria-hidden="true"></i> {{ $course->duration_hours }} hours</span></span>
                     <strong>{{ $course->title }}</strong>
                     @if(!empty($course->summary))<span class="home-course-summary">{{ \Illuminate\Support\Str::limit($course->summary,120) }}</span>@endif
