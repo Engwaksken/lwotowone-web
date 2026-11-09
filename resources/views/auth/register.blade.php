@@ -1,69 +1,84 @@
 @extends('auth.layout')
 @section('title','Create an account | Lwotowone')
 @section('content')
+@php
+    $policyDocs=\App\Services\Policies::all();
+    // After a failed submit, reopen the tab that holds the first problem.
+    $detailsFirst=$errors->hasAny(['preferred_language','name','email','phone','district','password','password_confirmation'])&&!$errors->hasAny(['terms_read','privacy_read','consent']);
+@endphp
 <section class="auth-card auth-card-wide">
     <a class="auth-brand" href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'auth-logo'])</a>
     @include('auth.notices')
     <form class="auth-form" method="post" action="/register" data-register-form>
         @csrf
         <div class="auth-heading"><span class="eyebrow">A place to learn and grow</span><h1>Create your account</h1><p>Join Lwotowone to find training, mentors and opportunities.</p></div>
-        <p class="form-note"><span class="required-marker" aria-hidden="true">*</span> Required</p>
-        <div class="auth-fields-grid">
-            <div class="field">
-                <label for="preferred_language">Learning language</label>
-                <select id="preferred_language" name="preferred_language" required>
-                    <option value="en" @selected(old('preferred_language','en')==='en')>English</option>
-                    <option value="lg" @selected(old('preferred_language')==='lg')>Luganda</option>
-                </select>
-                <small>Choose the language you prefer for course materials.</small>
-                @error('preferred_language')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+        <div class="tabs register-tabs" data-tabs>
+            <div class="tab-list" role="tablist" aria-label="Create your account steps">
+                <button type="button" role="tab" id="register-tab-policies" aria-controls="register-panel-policies" aria-selected="{{ $detailsFirst?'false':'true' }}" @if($detailsFirst) tabindex="-1" @endif>1. Terms and privacy</button>
+                <button type="button" role="tab" id="register-tab-details" aria-controls="register-panel-details" aria-selected="{{ $detailsFirst?'true':'false' }}" @unless($detailsFirst) tabindex="-1" @endunless>2. Your details</button>
             </div>
-            <div class="field">
-                <label for="name">Full name <span class="required-marker" aria-hidden="true">*</span></label>
-                <input id="name" name="name" type="text" value="{{ old('name') }}" autocomplete="name" required aria-required="true" @error('name') aria-invalid="true" aria-describedby="name-error" @enderror>
-                @error('name')<p class="field-error" id="name-error" role="alert">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="email">Email address <span class="required-marker" aria-hidden="true">*</span></label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required aria-required="true" @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
-                @error('email')<p class="field-error" id="email-error" role="alert">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="phone">Phone number <span class="required-marker" aria-hidden="true">*</span></label>
-                <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" autocomplete="tel" required aria-required="true" @error('phone') aria-invalid="true" aria-describedby="phone-error" @enderror>
-                @error('phone')<p class="field-error" id="phone-error" role="alert">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="district">District <span class="optional">(optional)</span></label>
-                <input id="district" name="district" type="text" value="{{ old('district') }}" @error('district') aria-invalid="true" aria-describedby="district-error" @enderror>
-                @error('district')<p class="field-error" id="district-error" role="alert">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="password">Password <span class="required-marker" aria-hidden="true">*</span></label>
-                <input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required aria-required="true" @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
-                @error('password')<p class="field-error" id="password-error" role="alert">{{ $message }}</p>@enderror
-            </div>
-            <div class="field">
-                <label for="password_confirmation">Confirm password <span class="required-marker" aria-hidden="true">*</span></label>
-                <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="12" required aria-required="true" @error('password_confirmation') aria-invalid="true" aria-describedby="password_confirmation-error" @enderror>
-                @error('password_confirmation')<p class="field-error" id="password_confirmation-error" role="alert">{{ $message }}</p>@enderror
-            </div>
+            <section class="tab-panel" role="tabpanel" id="register-panel-policies" aria-labelledby="register-tab-policies">
+                <div class="policy-reading" data-policy-reading>
+                    <p class="policy-reading-intro">Before you create your account, please read the Terms of use and the Privacy notice. Open each one and scroll to the end.</p>
+                    <div class="policy-reading-list">
+                        @foreach($policyDocs as $key=>$doc)
+                            <button type="button" class="policy-open secondary" data-policy-open="{{ $key }}" aria-haspopup="dialog"><i class="fas fa-file-alt" aria-hidden="true"></i> <span>{{ $doc['title'] }}</span><span class="policy-status" data-policy-status="{{ $key }}">@if(old($key.'_read'))<i class="fas fa-check-circle" aria-hidden="true"></i> Read @else Not read yet @endif</span></button>
+                            <input type="hidden" name="{{ $key }}_read" value="{{ old($key.'_read')?'1':'' }}" data-policy-input="{{ $key }}">
+                        @endforeach
+                    </div>
+                    @error('terms_read')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                    @error('privacy_read')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <label class="consent-label"><input type="checkbox" name="consent" value="1" required aria-required="true" data-policy-consent @checked(old('consent')) @error('consent') aria-invalid="true" aria-describedby="consent-error" @enderror><span>I have read and agree to the terms of use and the privacy notice.</span></label>
+                @error('consent')<p class="field-error" id="consent-error" role="alert">{{ $message }}</p>@enderror
+                <button class="auth-submit" type="button" data-register-next>Continue</button>
+            </section>
+            <section class="tab-panel" role="tabpanel" id="register-panel-details" aria-labelledby="register-tab-details">
+                <p class="form-note"><span class="required-marker" aria-hidden="true">*</span> Required</p>
+                <div class="auth-fields-grid">
+                    <div class="field">
+                        <label for="preferred_language">Learning language</label>
+                        <select id="preferred_language" name="preferred_language" required>
+                            <option value="en" @selected(old('preferred_language','en')==='en')>English</option>
+                            <option value="lg" @selected(old('preferred_language')==='lg')>Luganda</option>
+                        </select>
+                        <small>Choose the language you prefer for course materials.</small>
+                        @error('preferred_language')<p class="field-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="name">Full name <span class="required-marker" aria-hidden="true">*</span></label>
+                        <input id="name" name="name" type="text" value="{{ old('name') }}" autocomplete="name" required aria-required="true" @error('name') aria-invalid="true" aria-describedby="name-error" @enderror>
+                        @error('name')<p class="field-error" id="name-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="email">Email address <span class="required-marker" aria-hidden="true">*</span></label>
+                        <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required aria-required="true" @error('email') aria-invalid="true" aria-describedby="email-error" @enderror>
+                        @error('email')<p class="field-error" id="email-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="phone">Phone number <span class="required-marker" aria-hidden="true">*</span></label>
+                        <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" autocomplete="tel" required aria-required="true" @error('phone') aria-invalid="true" aria-describedby="phone-error" @enderror>
+                        @error('phone')<p class="field-error" id="phone-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="district">District <span class="optional">(optional)</span></label>
+                        <input id="district" name="district" type="text" value="{{ old('district') }}" @error('district') aria-invalid="true" aria-describedby="district-error" @enderror>
+                        @error('district')<p class="field-error" id="district-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="password">Password <span class="required-marker" aria-hidden="true">*</span></label>
+                        <input id="password" name="password" type="password" autocomplete="new-password" minlength="12" required aria-required="true" @error('password') aria-invalid="true" aria-describedby="password-error" @enderror>
+                        @error('password')<p class="field-error" id="password-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="password_confirmation">Confirm password <span class="required-marker" aria-hidden="true">*</span></label>
+                        <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="12" required aria-required="true" @error('password_confirmation') aria-invalid="true" aria-describedby="password_confirmation-error" @enderror>
+                        @error('password_confirmation')<p class="field-error" id="password_confirmation-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+                <button class="auth-submit" type="submit">Create account</button>
+            </section>
         </div>
-        @php $policyDocs=\App\Services\Policies::all(); @endphp
-        <div class="policy-reading" data-policy-reading>
-            <p class="policy-reading-intro">Before you create your account, please read both documents. Open each one and scroll to the end.</p>
-            <div class="policy-reading-list">
-                @foreach($policyDocs as $key=>$doc)
-                    <button type="button" class="policy-open secondary" data-policy-open="{{ $key }}" aria-haspopup="dialog"><i class="fas fa-file-alt" aria-hidden="true"></i> <span>{{ $doc['title'] }}</span><span class="policy-status" data-policy-status="{{ $key }}">@if(old($key.'_read'))<i class="fas fa-check-circle" aria-hidden="true"></i> Read @else Not read yet @endif</span></button>
-                    <input type="hidden" name="{{ $key }}_read" value="{{ old($key.'_read')?'1':'' }}" data-policy-input="{{ $key }}">
-                @endforeach
-            </div>
-            @error('terms_read')<p class="field-error" role="alert">{{ $message }}</p>@enderror
-            @error('privacy_read')<p class="field-error" role="alert">{{ $message }}</p>@enderror
-        </div>
-        <label class="consent-label"><input type="checkbox" name="consent" value="1" required aria-required="true" data-policy-consent @checked(old('consent')) @error('consent') aria-invalid="true" aria-describedby="consent-error" @enderror><span>I have read and agree to the terms of use and the privacy notice.</span></label>
-        @error('consent')<p class="field-error" id="consent-error" role="alert">{{ $message }}</p>@enderror
-        <button class="auth-submit" type="submit">Create account</button>
         <p class="auth-switch">Already have an account? <a href="/login">Sign in</a></p>
     </form>
     @foreach($policyDocs as $key=>$doc)

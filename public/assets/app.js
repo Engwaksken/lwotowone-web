@@ -647,7 +647,23 @@ if(registerForm){
     });
     registerForm.querySelectorAll('[data-policy-open]').forEach(button=>button.addEventListener('click',()=>open(button.dataset.policyOpen)));
     consent.addEventListener('change',()=>{const next=unread();if(consent.checked&&next){consent.checked=false;open(next);}});
-    registerForm.addEventListener('submit',event=>{const next=unread();if(next){event.preventDefault();open(next);}});
+    // The form is split into tabs: first the terms and privacy notice, then the account details.
+    const showTab=name=>document.getElementById(`register-tab-${name}`)?.click();
+    registerForm.querySelector('[data-register-next]')?.addEventListener('click',()=>{
+        const next=unread();
+        if(next){open(next);return;}
+        if(!consent.checked){consent.focus();consent.reportValidity();return;}
+        showTab('details');
+        registerForm.querySelector('#register-panel-details input:not([type=hidden]),#register-panel-details select')?.focus();
+    });
+    // A required field on a hidden tab can't be pointed out by the browser, so show its tab first.
+    let switched=false;
+    registerForm.addEventListener('invalid',event=>{
+        if(switched)return;switched=true;setTimeout(()=>{switched=false;});
+        const panel=event.target.closest('[role="tabpanel"]');
+        if(panel?.hidden)document.getElementById(panel.getAttribute('aria-labelledby'))?.click();
+    },true);
+    registerForm.addEventListener('submit',event=>{const next=unread();if(next){event.preventDefault();showTab('policies');open(next);}});
 }
 
 // Learner profile: update the completion bar live as required answers are filled in.

@@ -31,6 +31,19 @@ class ProfileAndPoliciesTest extends TestCase
             ->assertSee('name="terms_read"', false)->assertSee('name="privacy_read"', false);
     }
 
+    public function test_register_page_puts_terms_and_privacy_in_the_first_tab(): void
+    {
+        $this->get('/register')->assertOk()
+            ->assertSeeInOrder(['1. Terms and privacy', '2. Your details', 'id="register-panel-policies"', 'data-policy-open="terms"', 'data-policy-open="privacy"', 'name="consent"', 'id="register-panel-details"', 'name="email"'], false)
+            ->assertSee('id="register-tab-policies" aria-controls="register-panel-policies" aria-selected="true"', false);
+
+        // A details error reopens the details tab; a policy error keeps the first tab open.
+        $this->withSession(['errors' => (new \Illuminate\Support\ViewErrorBag)->put('default', new \Illuminate\Support\MessageBag(['email' => 'Taken']))])
+            ->get('/register')->assertSee('id="register-tab-details" aria-controls="register-panel-details" aria-selected="true"', false);
+        $this->withSession(['errors' => (new \Illuminate\Support\ViewErrorBag)->put('default', new \Illuminate\Support\MessageBag(['email' => 'Taken', 'consent' => 'Agree first']))])
+            ->get('/register')->assertSee('id="register-tab-policies" aria-controls="register-panel-policies" aria-selected="true"', false);
+    }
+
     public function test_registration_requires_reading_both_policies_and_records_acceptance(): void
     {
         Notification::fake();
