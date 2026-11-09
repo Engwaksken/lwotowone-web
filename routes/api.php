@@ -13,7 +13,7 @@ Route::middleware(['auth:sanctum','active','throttle:api'])->group(function(){
     Route::get('/lessons/{id}/download',[PortalController::class,'lessonMedia']);
   });
   Route::post('/profile',[PortalController::class,'profile']);
-  Route::post('/enrollment-requests',[PortalController::class,'requestEnrollment'])->middleware('throttle:10,1');
+  Route::post('/enrollments',[PortalController::class,'enroll'])->middleware('throttle:10,1');
   Route::post('/download-requests',[\App\Http\Controllers\DownloadController::class,'store'])->middleware('throttle:20,1');
   Route::get('/downloads/{id}',[\App\Http\Controllers\DownloadController::class,'download'])->whereNumber('id')->middleware('throttle:30,1');
   Route::get('/downloads/{id}/attachments/{attachment}',[\App\Http\Controllers\DownloadController::class,'download'])->whereNumber(['id','attachment'])->middleware('throttle:30,1');

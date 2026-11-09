@@ -69,16 +69,18 @@ class PortalController extends Controller {
     $snapshot=Snapshot::get($r->user());
     if($section==='mentorship')$snapshot['mentors']=app(\App\Services\MentorMatcher::class)->rank($r->user(),collect($snapshot['mentors']));
     return view('portal.section',['section'=>$section,'data'=>$snapshot,'earnings'=>$earnings,
-      'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters,
-      'enrollmentRequests'=>$section==='learn'?DB::table('enrollment_requests')->where('user_id',$r->user()->id)->get()->keyBy('course_id'):collect()]);
+      'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters]);
   }
-  public function requestEnrollment(Request $r){
+  /** Learners enroll themselves: one course per cohort, and only staff can change it afterwards. */
+  public function enroll(Request $r){
     abort_unless($r->user()->role==='participant',403,'Participant access required.');
-    $d=$r->validate(['course_id'=>'required|integer|exists:courses,id','message'=>'nullable|string|max:2000']);
-    $message=trim((string)($d['message']??''))?:null;
-    app(\App\Services\Enrollment::class)->request((int)$r->user()->id,(int)$d['course_id'],$message);
-    if($r->expectsJson())return response()->json(['message'=>'Enrollment request sent. An administrator will review it.'],201);
-    return redirect('/portal/learn#panel-course-catalog')->with('success','Enrollment request sent. An administrator will review it.');
+    $d=$r->validate(['course_id'=>'required|integer|exists:courses,id','cohort_id'=>'nullable|integer|exists:mel_cohorts,id']);
+    $cohortId=$d['cohort_id']??$r->user()->cohort_id;
+    if(!$cohortId)throw \Illuminate\Validation\ValidationException::withMessages(['cohort_id'=>'Choose a cohort.']);
+    app(\App\Services\Enrollment::class)->selfEnroll((int)$r->user()->id,(int)$d['course_id'],(int)$cohortId);
+    $title=DB::table('courses')->where('id',$d['course_id'])->value('title');
+    if($r->expectsJson())return response()->json(['message'=>"You are enrolled in {$title}."],201);
+    return redirect('/portal/learn')->with('success',"You are enrolled in {$title}.");
   }
   public function course(Request $r,string $id){abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');Workflow::enrolled($r->user(),$id);$enrollment=\App\Services\LearningAccess::enrollment($r->user(),(int)$id);abort_unless($enrollment->trial_started_at||\App\Services\LearningAccess::allowed($r->user(),(int)$id),403,'Payment confirmation is required.');$data=Snapshot::get($r->user());$course=DB::table('courses')->find($id);if($r->user()->preferred_language==='lg')\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg','summary'=>'summary_lg']);$uploaded=fn($table)=>DB::table($table)->where('course_id',$id)->whereNotNull('file_path')->where(fn($q)=>$q->where('content_source','upload')->orWhereNull('content_source'))->pluck('id');
    $downloadable=['lessons'=>$uploaded('lessons')->merge(DB::table('learning_attachments')->where('entity_type','lesson')->whereIn('entity_id',DB::table('lessons')->where('course_id',$id)->select('id'))->pluck('entity_id'))->unique()->values(),'resources'=>$uploaded('resources')];
@@ -168,9 +170,10 @@ class PortalController extends Controller {
       $r->user()->update($d);return ['ok'=>true];
      }
       $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>"required|in:No formal education,Primary,O-Level,A-Level,Certificate,Diploma,Bachelor's degree,Postgraduate,Other",'employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
-     $samePaidCourse=$r->user()->learning_access_paid&&(int)$r->user()->selected_course_id===(int)$d['selected_course_id'];
-     abort_unless($samePaidCourse||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
-     abort_unless(!$r->user()->learning_access_paid||$samePaidCourse,422,'Contact your programme administrator to change your paid course selection.');
+     $courseLocked=$r->user()->learning_access_paid||DB::table('enrolments')->where('user_id',$r->user()->id)->exists();
+     $sameCourse=(int)$r->user()->selected_course_id===(int)$d['selected_course_id'];
+     abort_unless(($courseLocked&&$sameCourse)||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
+     abort_unless(!$courseLocked||$sameCourse,422,'Only an administrator or instructor can change your course.');
      $d['settlement']=!empty($d['settlement_id'])?DB::table('mel_settlements')->where('id',$d['settlement_id'])->where('active',true)->value('name'):null;
      abort_unless(empty($d['settlement_id'])||$d['settlement']!==null,422,'Select a current settlement.');
      unset($d['settlement_id']);$d['pwd']=(bool)$d['pwd'];$d['refugee']=(bool)$d['refugee'];

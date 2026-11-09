@@ -25,6 +25,7 @@ class Enrollment
             if (!$cohort || !str_contains($cohort->learner_number_format, '{sequence}')) {
                 throw ValidationException::withMessages(['enrollment'=>'Select an active cohort with a valid number format.']);
             }
+            $this->ensureCohortFree($learnerId, $cohortId, 'enrollment', 'The learner is already taking %s in this cohort. Change that course instead, or choose another cohort.', $courseId);
             $sequence = (int) $cohort->next_sequence;
             $number=$learner->learner_no;
             if(!$number){
@@ -36,32 +37,61 @@ class Enrollment
             DB::table('mel_cohorts')->where('id', $cohortId)->update(['next_sequence'=>$sequence+1, 'updated_at'=>now()]);
             }
             DB::table('users')->where('id', $learnerId)->update(['cohort_id'=>$cohortId, 'learner_no'=>$number, 'enrollment_category'=>$cohort->enrollment_category, 'enrollment_date'=>today()->toDateString(), 'learner_status'=>'Active', 'learning_access_paid'=>true, 'updated_at'=>now()]);
-            DB::table('enrolments')->updateOrInsert(['user_id'=>$learnerId, 'course_id'=>$courseId], ['payment_confirmed_at'=>now(),'created_at'=>$existing?->created_at??now(), 'updated_at'=>now()]);
+            DB::table('enrolments')->updateOrInsert(['user_id'=>$learnerId, 'course_id'=>$courseId], ['cohort_id'=>$cohortId,'payment_confirmed_at'=>now(),'created_at'=>$existing?->created_at??now(), 'updated_at'=>now()]);
             DB::table('audit_logs')->insert(['user_id'=>$actorId, 'action'=>'confirm-payment', 'module'=>'learners', 'record_id'=>$learnerId, 'created_at'=>now(), 'updated_at'=>now()]);
             return true;
         });
     }
 
-    /** A learner asks to join a course. A rejected request can be sent again. */
-    public function request(int $learnerId, int $courseId, ?string $message=null): void
+    /**
+     * A learner enrolls themselves in a course under an active cohort.
+     * A learner takes one course per cohort; only admins and instructors can change it afterwards.
+     * Learners who have already paid for programme access start straight away; others get the usual trial.
+     */
+    public function selfEnroll(int $learnerId, int $courseId, int $cohortId): void
     {
-        DB::transaction(function () use ($learnerId, $courseId, $message) {
+        DB::transaction(function () use ($learnerId, $courseId, $cohortId) {
             $learner = DB::table('users')->where('id', $learnerId)->where('role', 'participant')->lockForUpdate()->first();
             if (!$learner || !$learner->profile_complete) {
-                throw ValidationException::withMessages(['course_id'=>'Complete your learner profile before requesting a course.']);
+                throw ValidationException::withMessages(['course_id'=>'Complete your learner profile before enrolling in a course.']);
             }
-            if (!DB::table('courses')->where('id', $courseId)->where('status', 'published')->exists()) {
+            $course = DB::table('courses')->where('id', $courseId)->where('status', 'published')->first();
+            if (!$course) {
                 throw ValidationException::withMessages(['course_id'=>'This course is not available.']);
+            }
+            if (!DB::table('mel_cohorts')->where('id', $cohortId)->where('active', true)->exists()) {
+                throw ValidationException::withMessages(['cohort_id'=>'Choose an open cohort.']);
             }
             if (DB::table('enrolments')->where('user_id', $learnerId)->where('course_id', $courseId)->exists()) {
                 throw ValidationException::withMessages(['course_id'=>'You are already enrolled in this course.']);
             }
-            $existing = DB::table('enrollment_requests')->where('user_id', $learnerId)->where('course_id', $courseId)->first();
-            if ($existing?->status === 'pending') {
-                throw ValidationException::withMessages(['course_id'=>'Your request for this course is already waiting for review.']);
+            $this->ensureCohortFree($learnerId, $cohortId, 'cohort_id', 'You are already taking %s in this cohort. Ask an administrator or instructor if you need to change your course.');
+            if ($course->prerequisite_course_id && !LearningAccess::completionReady(\App\Models\User::find($learnerId), (int) $course->prerequisite_course_id)) {
+                $title = DB::table('courses')->where('id', $course->prerequisite_course_id)->value('title');
+                throw ValidationException::withMessages(['course_id'=>"Finish {$title} before enrolling in this course."]);
             }
-            DB::table('enrollment_requests')->updateOrInsert(['user_id'=>$learnerId, 'course_id'=>$courseId], ['status'=>'pending', 'message'=>$message, 'decision_note'=>null, 'decided_by'=>null, 'decided_at'=>null, 'created_at'=>$existing?->created_at ?? now(), 'updated_at'=>now()]);
+            $firstCourse = !DB::table('enrolments')->where('user_id', $learnerId)->exists();
+            $trial = $learner->learning_access_paid ? [] : ['trial_started_at'=>now(), 'trial_expires_at'=>now()->addHours(12)];
+            DB::table('enrolments')->insert(['user_id'=>$learnerId, 'course_id'=>$courseId, 'cohort_id'=>$cohortId, 'created_at'=>now(), 'updated_at'=>now()] + $trial);
+            if ($firstCourse) {
+                DB::table('users')->where('id', $learnerId)->update(['selected_course_id'=>$courseId, 'updated_at'=>now()]);
+            }
+            // Requests sent before self-enrollment existed are settled by enrolling.
+            DB::table('enrollment_requests')->where('user_id', $learnerId)->where('course_id', $courseId)->where('status', 'pending')->update(['status'=>'approved', 'decided_at'=>now(), 'updated_at'=>now()]);
+            DB::table('audit_logs')->insert(['user_id'=>$learnerId, 'action'=>'self-enroll', 'module'=>'learners', 'record_id'=>$learnerId, 'created_at'=>now(), 'updated_at'=>now()]);
         });
+    }
+
+    /** Throws when the learner already has a course (other than $exceptCourseId) in the cohort. */
+    private function ensureCohortFree(int $learnerId, int $cohortId, string $field, string $message, ?int $exceptCourseId=null): void
+    {
+        $taken = DB::table('enrolments')->join('courses', 'courses.id', '=', 'enrolments.course_id')
+            ->where('enrolments.user_id', $learnerId)->where('enrolments.cohort_id', $cohortId)
+            ->when($exceptCourseId, fn($q)=>$q->where('enrolments.course_id', '!=', $exceptCourseId))
+            ->value('courses.title');
+        if ($taken !== null) {
+            throw ValidationException::withMessages([$field=>sprintf($message, $taken)]);
+        }
     }
 
     /** Approving enrolls the learner in the requested course under the chosen cohort. */

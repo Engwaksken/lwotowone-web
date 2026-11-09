@@ -9,6 +9,8 @@ class Snapshot {
   $out['user']['profile_complete']=(bool)$u->profile_complete;$out['user']['learning_access_paid']=(bool)$u->learning_access_paid;
   $freeEnds=FreeAccess::endsAt();
   $out['access']=['free_access'=>FreeAccess::active(),'free_access_ends_at'=>$freeEnds?->toIso8601String(),'learning_open'=>$u->role!=='participant'||((bool)$u->profile_complete&&$u->learningAccessOpen()),'profile_complete'=>(bool)$u->profile_complete,'profile_percent'=>ProfileProgress::percent($u),'profile_missing'=>ProfileProgress::missing($u)];
+  // Open cohorts a learner can enroll under; each enrolment row carries its cohort_id (one course per cohort).
+  $out['cohorts']=DB::table('mel_cohorts')->where('active',true)->orderBy('name')->get(['id','name']);
   $out['settlements']=DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name']);
    foreach(['programs','courses','skills','opportunities','events','posts','announcements'] as $t){$q=DB::table($t)->where('status','published');if($t==='opportunities')$q->whereDate('deadline','>=',today());$rows=$q->orderByDesc('id')->get();if($u->preferred_language==='lg'){$translations=match($t){'programs'=>['title'=>'title_lg','summary'=>'summary_lg','body'=>'body_lg'],'courses'=>['title'=>'title_lg','summary'=>'summary_lg'],default=>[]};$rows->each(fn($row)=>LearnerContent::useLuganda($row,$translations));}$out[$t]=$rows;}
    $ids=DB::table('enrolments')->where('user_id',$u->id)->pluck('course_id');$access=[];$lessonAccess=[];$lessonOrder=[];$done=DB::table('lesson_progress')->where('user_id',$u->id)->pluck('lesson_id');

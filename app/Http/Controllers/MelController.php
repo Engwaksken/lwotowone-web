@@ -55,13 +55,19 @@ return view('admin.mel',['categories'=>self::CATEGORIES,'records'=>$rowsByCatego
    return redirect('/admin/enrollment#enrollment-panel-requests')->with('success','Request rejected.');
   }
   private const PROGRESS_STATUSES=['not_started'=>'Not started','in_progress'=>'In progress','completed'=>'All lessons completed','no_lessons'=>'No lessons in their language'];
+  /** Admins see every course; instructors only the courses assigned to them. */
+  private function staffCourseIds(Request $r): ?\Illuminate\Support\Collection {
+   abort_unless($r->user()->manager()||$r->user()->role==='instructor',403);
+   return $r->user()->manager()?null:\App\Services\Catalog::query('courses')->assignedToInstructor((int)$r->user()->id)->pluck('id');
+  }
   public function progress(Request $r){
-   $this->authorize($r);
+   $scope=$this->staffCourseIds($r);
    $filters=$r->validate(['q'=>'nullable|string|max:255','course_id'=>'nullable|integer','language'=>'nullable|in:all,en,lg','status'=>'nullable|in:all,'.implode(',',array_keys(self::PROGRESS_STATUSES))]);
    $filters=array_merge(['q'=>'','course_id'=>null,'language'=>'all','status'=>'all'],array_filter($filters,fn($value)=>$value!==null&&$value!==''));
    $rows=DB::table('enrolments')->join('users','users.id','=','enrolments.user_id')->join('courses','courses.id','=','enrolments.course_id')->where('users.role','participant')
      ->select('enrolments.user_id','enrolments.course_id','enrolments.payment_confirmed_at','users.name','users.email','users.learner_no','users.preferred_language','courses.title')->orderBy('users.name')->orderBy('courses.title');
    if($filters['q']!==''){$pattern='%'.str_replace(['!','%','_'],['!!','!%','!_'],$filters['q']).'%';$rows->where(fn($q)=>$q->whereRaw("users.name LIKE ? ESCAPE '!'",[$pattern])->orWhereRaw("users.email LIKE ? ESCAPE '!'",[$pattern])->orWhereRaw("users.learner_no LIKE ? ESCAPE '!'",[$pattern]));}
+   if($scope!==null)$rows->whereIn('enrolments.course_id',$scope);
    if($filters['course_id'])$rows->where('enrolments.course_id',$filters['course_id']);
    if($filters['language']==='lg')$rows->where('users.preferred_language','lg');elseif($filters['language']==='en')$rows->where(fn($q)=>$q->where('users.preferred_language','!=','lg')->orWhereNull('users.preferred_language'));
    $rows=$rows->get();$progress=\App\Services\LearningProgress::forEnrolments($rows);
@@ -74,14 +80,15 @@ return view('admin.mel',['categories'=>self::CATEGORIES,'records'=>$rowsByCatego
    $perPage=25;$page=\Illuminate\Pagination\Paginator::resolveCurrentPage();
    $paginated=new \Illuminate\Pagination\LengthAwarePaginator($rows->forPage($page,$perPage)->values(),$rows->count(),$perPage,$page,['path'=>$r->url(),'query'=>$r->query()]);
    return view('admin.learner-progress',['rows'=>$paginated,'progress'=>$progress,'stats'=>$stats,'statuses'=>self::PROGRESS_STATUSES,'filters'=>$filters,
-     'courses'=>DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title']),
+     'courses'=>DB::table('courses')->where('status','published')->when($scope!==null,fn($q)=>$q->whereIn('id',$scope))->orderBy('title')->get(['id','title']),
      'learnerCourses'=>DB::table('enrolments')->whereIn('user_id',$paginated->getCollection()->pluck('user_id'))->get(['user_id','course_id'])->groupBy('user_id')->map->pluck('course_id')]);
   }
   public function changeCourse(Request $r,string $id,string $course){
-   $this->authorize($r);$d=$r->validate(['course_id'=>'required|integer|exists:courses,id']);
+   $scope=$this->staffCourseIds($r);$d=$r->validate(['course_id'=>'required|integer|exists:courses,id']);
+   abort_unless($scope===null||($scope->contains((int)$course)&&$scope->contains((int)$d['course_id'])),403,'You can only move learners between courses you teach.');
    app(\App\Services\Enrollment::class)->changeCourse((int)$id,(int)$course,(int)$d['course_id'],(int)$r->user()->id);
    $title=DB::table('courses')->where('id',$d['course_id'])->value('title');
-   \App\Services\Workflow::notify((int)$id,'Your course was changed',"An administrator moved your enrollment to {$title}.");
+   \App\Services\Workflow::notify((int)$id,'Your course was changed',"Your enrollment was moved to {$title}.");
    return back()->with('success',"Learner moved to {$title}.");
   }
   public function enrollmentTemplate(Request $r){
@@ -100,7 +107,7 @@ return view('admin.mel',['categories'=>self::CATEGORIES,'records'=>$rowsByCatego
   }
  public function updateLearner(Request $r,string $id){$this->authorize($r);$learner=DB::table('users')->where('id',$id)->where('role','participant')->first();abort_unless($learner,404);$d=$r->validate(['verified_outcomes'=>'nullable|string|max:5000','other_verified_outcome'=>'nullable|string|max:5000','after_work_status'=>'nullable|in:Working,Self-employed,Studying,Seeking work,Other','after_work_pathway'=>'nullable|string|max:255']);DB::table('users')->where('id',$id)->update($d+['updated_at'=>now()]);DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'action'=>'update-outcomes','module'=>'learners','record_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Learner outcomes updated.');}
  public function saveCohort(Request $r,?string $id=null){$this->authorize($r);$d=$r->validate(['name'=>'required|string|max:120','enrollment_category'=>'required|string|max:100','learner_number_prefix'=>'required|string|max:32','learner_number_format'=>'required|string|max:100|regex:/^[A-Za-z0-9{}._-]+$/','next_sequence'=>'required|integer|min:1|max:999999999','sequence_padding'=>'required|integer|min:1|max:10','active'=>'nullable|boolean']);abort_unless(str_contains($d['learner_number_format'],'{sequence}'),422,'Number format must include the {sequence} token.');$d['active']=$r->boolean('active');$d['updated_at']=now();if($id){DB::table('mel_cohorts')->where('id',$id)->update($d);return back()->with('success','Cohort settings updated.');}$d['created_at']=now();DB::table('mel_cohorts')->insert($d);return back()->with('success','Learner cohort added.');}
- public function deleteCohort(Request $r,string $id){$this->authorize($r);abort_if(DB::table('users')->where('cohort_id',$id)->exists(),422,'This cohort has enrolled learners and cannot be removed.');DB::table('mel_cohorts')->where('id',$id)->delete();return back()->with('success','Cohort removed.');}
+ public function deleteCohort(Request $r,string $id){$this->authorize($r);abort_if(DB::table('users')->where('cohort_id',$id)->exists()||DB::table('enrolments')->where('cohort_id',$id)->exists(),422,'This cohort has enrolled learners and cannot be removed.');DB::table('mel_cohorts')->where('id',$id)->delete();return back()->with('success','Cohort removed.');}
  public function addSettlement(Request $r){$this->authorize($r);$d=$r->validate(['name'=>'required|string|max:160|unique:mel_settlements,name']);DB::table('mel_settlements')->insert($d+['active'=>true,'created_at'=>now(),'updated_at'=>now()]);return back()->with('success','Settlement added.');}
  public function deleteSettlement(Request $r,string $id){$this->authorize($r);$settlement=DB::table('mel_settlements')->find($id);abort_unless($settlement,404);abort_if(DB::table('users')->where('settlement',$settlement->name)->exists(),422,'This settlement is assigned to a learner and cannot be removed.');DB::table('mel_settlements')->where('id',$id)->delete();return back()->with('success','Settlement removed.');}
   public function saveGateway(Request $r){
