@@ -19,7 +19,7 @@
     <h1 class="page-title">{{ auth()->user()->role==='admin'?'Website appearance':'Payment settings' }}</h1>
     <p class="page-intro">Manage how the site looks and how learners pay.</p>
     <div class="tabs settings-tabs" data-tabs><div class="tab-list" role="tablist" aria-label="Site settings">
-        @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-appearance" aria-controls="settings-panel-appearance" aria-selected="true">Website appearance</button><button type="button" role="tab" id="settings-tab-video" aria-controls="settings-panel-video" aria-selected="false" tabindex="-1">Introduction video</button>@endif
+        @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-appearance" aria-controls="settings-panel-appearance" aria-selected="true">Website appearance</button><button type="button" role="tab" id="settings-tab-video" aria-controls="settings-panel-video" aria-selected="false" tabindex="-1">Introduction video</button><button type="button" role="tab" id="settings-tab-contact" aria-controls="settings-panel-contact" aria-selected="false" tabindex="-1">Contact details</button>@endif
         <button type="button" role="tab" id="settings-tab-payments" aria-controls="settings-panel-payments" aria-selected="{{ auth()->user()->role==='admin'?'false':'true' }}" @if(auth()->user()->role==='admin')tabindex="-1"@endif>Payment gateway settings</button>
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-ai" aria-controls="settings-panel-ai" aria-selected="false" tabindex="-1">AI API settings</button>@endif
         @if(auth()->user()->role==='admin')<button type="button" role="tab" id="settings-tab-email" aria-controls="settings-panel-email" aria-selected="false" tabindex="-1">Email settings</button><button type="button" role="tab" id="settings-tab-backups" aria-controls="settings-panel-backups" aria-selected="false" tabindex="-1">Backups</button>@endif
@@ -48,6 +48,21 @@
             </div>
         </section>
         <div class="settings-save"><button type="submit"><i class="fas fa-check" aria-hidden="true"></i> Save appearance</button></div>
+    </form>
+    </section>
+    <section class="tab-panel" role="tabpanel" id="settings-panel-contact" aria-labelledby="settings-tab-contact" hidden>
+    <form class="panel settings-form" id="contact-details-form" method="post" action="/admin/site-settings/contact">
+        @csrf @method('PUT')
+        <section class="settings-group"><h2>Contact details</h2><p>Shown on the Contact us page next to the enquiry form. Leave a field blank to hide it.</p>
+            <div class="settings-fields">
+                <div class="field"><label for="contact_phone">Phone number <span class="optional">(optional)</span></label><input id="contact_phone" type="tel" name="contact_phone" value="{{ old('contact_phone',$settings['contact_phone']??'') }}" maxlength="60">@error('contact_phone')<p class="field-error" role="alert">{{ $message }}</p>@enderror</div>
+                <div class="field"><label for="contact_email">Email address <span class="optional">(optional)</span></label><input id="contact_email" type="email" name="contact_email" value="{{ old('contact_email',$settings['contact_email']??'') }}" maxlength="190">@error('contact_email')<p class="field-error" role="alert">{{ $message }}</p>@enderror</div>
+                <div class="field"><label for="contact_address">Address <span class="optional">(optional)</span></label><textarea id="contact_address" name="contact_address" rows="3" maxlength="500">{{ old('contact_address',$settings['contact_address']??'') }}</textarea>@error('contact_address')<p class="field-error" role="alert">{{ $message }}</p>@enderror</div>
+                <div class="field"><label for="contact_hours">Office hours <span class="optional">(optional)</span></label><textarea id="contact_hours" name="contact_hours" rows="3" maxlength="300" placeholder="Monday to Friday, 8:00 am – 5:00 pm">{{ old('contact_hours',$settings['contact_hours']??'') }}</textarea>@error('contact_hours')<p class="field-error" role="alert">{{ $message }}</p>@enderror</div>
+                <div class="field"><label for="contact_map_location">Map location <span class="optional">(optional)</span></label><input id="contact_map_location" name="contact_map_location" value="{{ old('contact_map_location',$settings['contact_map_location']??'') }}" maxlength="300" placeholder="Business name and town, or latitude,longitude"><small>What to search for on the map. If blank, the address is used. If both are blank, no map is shown.</small>@error('contact_map_location')<p class="field-error" role="alert">{{ $message }}</p>@enderror</div>
+            </div>
+        </section>
+        <div class="settings-save"><button type="submit"><i class="fas fa-check" aria-hidden="true"></i> Save contact details</button> <a class="button secondary" href="/contact" target="_blank" rel="noopener">View contact page<span class="sr-only"> (opens in a new tab)</span></a></div>
     </form>
     </section>
     <section class="tab-panel" role="tabpanel" id="settings-panel-video" aria-labelledby="settings-tab-video" hidden>

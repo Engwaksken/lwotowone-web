@@ -25,6 +25,14 @@ class CmsController extends Controller {
  public static function introVideoMaxKilobytes(): int {
   return \App\Services\UploadLimit::fileKilobytes(200);
  }
+ /** Contact details shown beside the enquiry form on the public Contact us page. */
+ public function saveContactDetails(Request $r){
+  abort_unless($r->user()->role==='admin',403);
+  $data=$r->validate(['contact_phone'=>['nullable','string','max:60'],'contact_email'=>['nullable','email','max:190'],'contact_address'=>['nullable','string','max:500'],'contact_hours'=>['nullable','string','max:300'],'contact_map_location'=>['nullable','string','max:300']]);
+  foreach($data as $key=>$value)DB::table('settings')->updateOrInsert(['key'=>$key],['value'=>trim((string)$value),'updated_at'=>now(),'created_at'=>now()]);
+  DB::table('audit_logs')->insert(['user_id'=>$r->user()->id,'module'=>'settings','action'=>'update-contact','record_id'=>0,'created_at'=>now(),'updated_at'=>now()]);
+  return redirect('/admin/site-settings#settings-panel-contact')->with('success','Contact details updated.');
+ }
  public function saveIntroVideo(Request $r){
   abort_unless($r->user()->role==='admin',403);
   $data=$r->validate([

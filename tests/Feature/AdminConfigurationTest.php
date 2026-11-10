@@ -86,4 +86,21 @@ class AdminConfigurationTest extends TestCase
         $this->post('/admin/site-settings/payment-gateways',$common+['provider_type'=>'Other','provider'=>'Service','instructions'=>'Pay using the link','payment_url'=>'https://payments.example.test/pay'])->assertSessionHasNoErrors();
         $this->assertDatabaseCount('payment_gateways',3);
     }
+
+    public function test_contact_page_shows_the_form_beside_saved_contact_details_and_map(): void
+    {
+        $this->get('/contact')->assertOk()->assertSee('Send us a message')->assertDontSee('<iframe',false);
+        $data=['contact_phone'=>'+256 700 000 000','contact_email'=>'hello@example.test','contact_address'=>"Plot 1 Main Street\nKampala",'contact_hours'=>'Monday to Friday','contact_map_location'=>'Kampala, Uganda'];
+        $this->actingAs($this->user())->get('/dashboard')->assertOk()->assertSee('/admin/site-settings#settings-panel-contact',false);
+        $this->get('/admin/site-settings')->assertOk()->assertSee('id="contact-details-form"',false);
+        $this->put('/admin/site-settings/contact',['contact_email'=>'not-an-email']+$data)->assertSessionHasErrors('contact_email');
+        $this->put('/admin/site-settings/contact',$data)->assertRedirect('/admin/site-settings#settings-panel-contact')->assertSessionHasNoErrors();
+        $this->actingAs($this->user('manager'))->put('/admin/site-settings/contact',$data)->assertForbidden();
+        auth()->logout();
+        $this->get('/contact')->assertOk()->assertSeeInOrder(['contact-form','contact-details','contact-map'],false)
+            ->assertSee('href="tel:+256700000000"',false)->assertSee('mailto:hello@example.test',false)->assertSee('Plot 1 Main Street<br />',false)
+            ->assertSee('https://www.google.com/maps?q=Kampala%2C+Uganda&amp;output=embed',false);
+        $this->post('/contact',['name'=>'Visitor','email'=>'visitor@example.test','message'=>'Hello'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('contacts',['email'=>'visitor@example.test']);
+    }
 }
