@@ -44,6 +44,26 @@ class Enrollment
     }
 
     /**
+     * Enrolls a learner in the course they selected (at sign-up or on their profile), under their own cohort
+     * when it is open, otherwise the newest open cohort. Returns [course title, null] on success,
+     * or [null, reason] when it could not be done, so the learner can enroll from the course catalog instead.
+     */
+    public function enrollInSelectedCourse(\App\Models\User $learner): array
+    {
+        if ($learner->role !== 'participant' || !$learner->selected_course_id) return [null, null];
+        if (DB::table('enrolments')->where('user_id', $learner->id)->where('course_id', $learner->selected_course_id)->exists()) return [null, null];
+        $cohortId = ($learner->cohort_id ? DB::table('mel_cohorts')->where('id', $learner->cohort_id)->where('active', true)->value('id') : null)
+            ?? DB::table('mel_cohorts')->where('active', true)->orderByDesc('id')->value('id');
+        if (!$cohortId) return [null, 'There is no open cohort yet, so you could not be enrolled in your course. You can enroll from the course catalog once one opens.'];
+        try {
+            $this->selfEnroll((int) $learner->id, (int) $learner->selected_course_id, (int) $cohortId);
+        } catch (ValidationException $e) {
+            return [null, collect($e->errors())->flatten()->first()];
+        }
+        return [DB::table('courses')->where('id', $learner->selected_course_id)->value('title'), null];
+    }
+
+    /**
      * A learner enrolls themselves in a course under an active cohort.
      * A learner takes one course per cohort; only admins and instructors can change it afterwards.
      * Learners who have already paid for programme access start straight away; others get the usual trial.

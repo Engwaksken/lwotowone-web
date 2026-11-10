@@ -2,15 +2,17 @@
 namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Auth,Hash,Password};
+use Illuminate\Support\Facades\{Auth,DB,Hash,Password};
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\{Rule,ValidationException};
 class AuthController extends Controller {
  public function form(){return view('auth.login');}
- public function registerForm(){return view('auth.register');}
+ public function registerForm(){return view('auth.register',['courses'=>DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title','level','duration_hours'])]);}
  public function register(Request $r){
      $phone=$r->is('api/*')?'nullable':'required';
-    $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>$phone.'|string|max:40','district'=>'nullable|string|max:100','preferred_language'=>'sometimes|in:en,lg','consent'=>'accepted']+($r->is('api/*')?[]:['terms_read'=>'accepted','privacy_read'=>'accepted']),['terms_read.accepted'=>'Open and read the terms of use before creating your account.','privacy_read.accepted'=>'Open and read the privacy notice before creating your account.']);unset($d['consent'],$d['password_confirmation'],$d['terms_read'],$d['privacy_read']);
+     // The web form asks for a course whenever one is open; the learner is enrolled in it once their profile is complete.
+     $course=!$r->is('api/*')&&DB::table('courses')->where('status','published')->exists()?'required':'nullable';
+    $d=$r->validate(['name'=>'required|string|max:100','email'=>'required|email|max:190|unique:users','password'=>'required|string|min:12|max:128|confirmed','phone'=>$phone.'|string|max:40','district'=>'nullable|string|max:100','preferred_language'=>'sometimes|in:en,lg','selected_course_id'=>[$course,'integer',Rule::exists('courses','id')->where('status','published')],'consent'=>'accepted']+($r->is('api/*')?[]:['terms_read'=>'accepted','privacy_read'=>'accepted']),['terms_read.accepted'=>'Open and read the terms of use before creating your account.','privacy_read.accepted'=>'Open and read the privacy notice before creating your account.','selected_course_id.required'=>'Choose the course you want to take.','selected_course_id.exists'=>'Choose a course from the list.']);unset($d['consent'],$d['password_confirmation'],$d['terms_read'],$d['privacy_read']);
     $u=User::create($d+['preferred_language'=>'en','role'=>'participant','status'=>'active','requires_email_verification'=>true]);$u->forceFill(['terms_accepted_at'=>now()])->save();
    $u->notify(new \App\Notifications\AccountSetup());
    if($r->is('api/*'))return response()->json(['message'=>'Verify your email address before signing in.'],201);

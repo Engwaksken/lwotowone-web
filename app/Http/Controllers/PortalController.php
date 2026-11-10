@@ -179,7 +179,12 @@ class PortalController extends Controller {
      unset($d['settlement_id']);$d['pwd']=(bool)$d['pwd'];$d['refugee']=(bool)$d['refugee'];
      if(!$d['pwd'])$d['impairment']=null;
      $d['employed']=(bool)$d['employed'];if(!$d['employed'])$d['employer_name']=null;
-     $d['learner_status']='Active';$d['profile_complete']=true;$r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Learner profile saved.');
+     $d['learner_status']='Active';$d['profile_complete']=true;$r->user()->update($d);
+     // Enroll the learner in the course they chose when they signed up, the first time their profile is complete.
+     [$enrolled,$problem]=$courseLocked?[null,null]:app(\App\Services\Enrollment::class)->enrollInSelectedCourse($r->user()->fresh());
+     if($r->is('api/*'))return ['ok'=>true,'enrolled_course'=>$enrolled,'enrollment_message'=>$problem];
+     if($enrolled)return redirect('/portal/learn')->with('success',"Learner profile saved. You are enrolled in {$enrolled}.");
+     return back()->with('success',trim('Learner profile saved. '.$problem));
    }
   public function resource(Request $r,string $id){
     $item=DB::table('resources')->find($id);abort_unless($item,404);

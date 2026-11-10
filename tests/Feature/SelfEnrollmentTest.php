@@ -155,4 +155,46 @@ class SelfEnrollmentTest extends TestCase
         $this->assertDatabaseHas('enrollment_requests',['id'=>$old,'status'=>'approved']);
         $this->post('/portal/enrollment-requests',['course_id'=>$third])->assertStatus(405);
     }
+
+    private function signupPayload(array $overrides=[]): array
+    {
+        return $overrides+['name'=>'New Learner','email'=>'learner-'.uniqid().'@example.test','phone'=>'+256700000001','password'=>'A-long-test-password','password_confirmation'=>'A-long-test-password','consent'=>1,'terms_read'=>1,'privacy_read'=>1];
+    }
+
+    private function profilePayload(int $course): array
+    {
+        return ['name'=>'New Learner','phone'=>'+256700000001','selected_course_id'=>$course,'gender'=>'Female','location'=>'Kampala','urban_rural'=>'Urban','learner_age'=>22,'refugee'=>0,'pwd'=>0,'education_level'=>'O-Level','employed'=>0];
+    }
+
+    public function test_course_chosen_at_signup_is_enrolled_once_the_profile_is_complete(): void
+    {
+        Notification::fake();
+        $course=$this->course('Chosen course');$draft=$this->course('Draft course','draft');$cohort=$this->cohort();
+        $this->get('/register?course='.$course)->assertOk()->assertSee('Chosen course')->assertDontSee('Draft course')->assertSee('value="'.$course.'" selected',false);
+        $this->post('/register',$this->signupPayload())->assertSessionHasErrors('selected_course_id');
+        $this->post('/register',$this->signupPayload(['selected_course_id'=>$draft]))->assertSessionHasErrors('selected_course_id');
+        $this->post('/register',$this->signupPayload(['email'=>'chooser@example.test','selected_course_id'=>$course]))->assertRedirect('/login')->assertSessionHasNoErrors();
+
+        $learner=User::where('email','chooser@example.test')->firstOrFail();
+        $this->assertSame($course,(int)$learner->selected_course_id);
+        $this->assertDatabaseMissing('enrolments',['user_id'=>$learner->id]);
+
+        $learner->forceFill(['email_verified_at'=>now(),'requires_email_verification'=>false])->save();
+        $this->actingAs($learner)->post('/profile',$this->profilePayload($course))->assertRedirect('/portal/learn')->assertSessionHas('success','Learner profile saved. You are enrolled in Chosen course.');
+        $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$course,'cohort_id'=>$cohort]);
+        $this->assertDatabaseHas('users',['id'=>$learner->id,'learner_status'=>'Active','profile_complete'=>true]);
+
+        // Saving the profile again does not enroll a second time.
+        $this->post('/profile',$this->profilePayload($course))->assertSessionHasNoErrors();
+        $this->assertSame(1,DB::table('enrolments')->where('user_id',$learner->id)->count());
+    }
+
+    public function test_profile_still_saves_when_no_cohort_is_open_for_the_chosen_course(): void
+    {
+        $course=$this->course('Waiting course');
+        $learner=$this->user('participant',['selected_course_id'=>$course]);
+        $this->actingAs($learner)->post('/profile',$this->profilePayload($course))->assertRedirect()->assertSessionHas('success',fn($m)=>str_contains($m,'There is no open cohort yet'));
+        $this->assertDatabaseHas('users',['id'=>$learner->id,'profile_complete'=>true]);
+        $this->assertDatabaseMissing('enrolments',['user_id'=>$learner->id]);
+    }
 }

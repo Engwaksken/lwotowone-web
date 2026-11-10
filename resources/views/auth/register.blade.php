@@ -4,7 +4,7 @@
 @php
     $policyDocs=\App\Services\Policies::all();
     // After a failed submit, reopen the tab that holds the first problem.
-    $detailsFirst=$errors->hasAny(['preferred_language','name','email','phone','district','password','password_confirmation'])&&!$errors->hasAny(['terms_read','privacy_read','consent']);
+    $detailsFirst=$errors->hasAny(['preferred_language','selected_course_id','name','email','phone','district','password','password_confirmation'])&&!$errors->hasAny(['terms_read','privacy_read','consent']);
 @endphp
 <section class="auth-card auth-card-wide">
     <a class="auth-brand" href="/" aria-label="Lwotowone Enterprises Ltd home">@include('partials.brand-logo',['logoClass'=>'auth-logo'])</a>
@@ -45,6 +45,19 @@
                         <small>Choose the language you prefer for course materials.</small>
                         @error('preferred_language')<p class="field-error" role="alert">{{ $message }}</p>@enderror
                     </div>
+                    @if($courses->isNotEmpty())
+                    <div class="field">
+                        <label for="selected_course_id">Course <span class="required-marker" aria-hidden="true">*</span></label>
+                        <select id="selected_course_id" name="selected_course_id" required aria-required="true" aria-describedby="selected_course_id-help @error('selected_course_id') selected_course_id-error @enderror" @error('selected_course_id') aria-invalid="true" @enderror>
+                            <option value="">Choose a course</option>
+                            @foreach($courses as $course)
+                                <option value="{{ $course->id }}" @selected((string)old('selected_course_id',request('course'))===(string)$course->id)>{{ $course->title }}@if($course->level) · {{ $course->level }}@endif</option>
+                            @endforeach
+                        </select>
+                        <small id="selected_course_id-help">You will be enrolled in this course once you finish your learner profile.</small>
+                        @error('selected_course_id')<p class="field-error" id="selected_course_id-error" role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    @endif
                     <div class="field">
                         <label for="name">Full name <span class="required-marker" aria-hidden="true">*</span></label>
                         <input id="name" name="name" type="text" value="{{ old('name') }}" autocomplete="name" required aria-required="true" @error('name') aria-invalid="true" aria-describedby="name-error" @enderror>
