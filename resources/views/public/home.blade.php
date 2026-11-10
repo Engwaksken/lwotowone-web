@@ -111,7 +111,7 @@
 <section class="home-courses" aria-labelledby="home-courses-title">
     <div class="home-section-heading"><h2 id="home-courses-title">Recent courses</h2><a href="/courses">All courses &rarr;</a></div>
     @if($courses->isNotEmpty())
-        <div class="home-course-grid">
+        <div class="home-course-grid course-grid">
             @foreach($courses as $course)
                 <a class="home-course" href="/courses/{{ $course->id }}">
                     @if(!empty($course->image_path))<img class="course-card-image" src="{{ $course->image_path }}" alt="" loading="lazy">@endif

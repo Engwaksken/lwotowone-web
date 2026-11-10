@@ -2,7 +2,7 @@
 @section('content')
 <span class="eyebrow">Discover your next step</span>
 <h1>{{ ['programs'=>'Programmes','posts'=>'Stories'][$type]??ucfirst($type) }}</h1>
-<div class="grid public-list-grid">
+<div class="grid public-list-grid{{ $type==='courses'?' course-grid':'' }}">
     @forelse($rows as $row)
         <article class="card">
             @if(!empty($row->image_path))<img class="course-card-image" src="{{ $row->image_path }}" alt="" loading="lazy">@endif
