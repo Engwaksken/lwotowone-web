@@ -179,7 +179,7 @@ class PortalController extends Controller {
      unset($d['settlement_id']);$d['pwd']=(bool)$d['pwd'];$d['refugee']=(bool)$d['refugee'];
      if(!$d['pwd'])$d['impairment']=null;
      $d['employed']=(bool)$d['employed'];if(!$d['employed'])$d['employer_name']=null;
-     $d['learner_status']=$r->user()->learning_access_paid?'Active':'Pending Payment';$d['profile_complete']=true;$r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Learner profile saved.');
+     $d['learner_status']='Active';$d['profile_complete']=true;$r->user()->update($d);return $r->is('api/*')?['ok'=>true]:back()->with('success','Learner profile saved.');
    }
   public function resource(Request $r,string $id){
     $item=DB::table('resources')->find($id);abort_unless($item,404);

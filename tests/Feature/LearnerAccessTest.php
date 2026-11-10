@@ -54,7 +54,7 @@ class LearnerAccessTest extends TestCase
             'urban_rural' => 'Urban', 'learner_age' => 22, 'refugee' => 0, 'pwd' => 0,
             'education_level' => 'O-Level', 'employed' => 0,
         ])->assertRedirect();
-        $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learning_access_paid' => false, 'learner_no' => null, 'enrollment_category' => null, 'enrollment_date' => null]);
+        $this->assertDatabaseHas('users', ['id' => $learner->id, 'profile_complete' => true, 'learner_status' => 'Active', 'learning_access_paid' => false, 'learner_no' => null, 'enrollment_category' => null, 'enrollment_date' => null]);
         $this->get('/portal/learn')->assertOk();
         $this->travel(25)->hours();
         $this->get('/portal/learn')->assertRedirect('/portal/payment');

@@ -74,7 +74,7 @@ class Enrollment
             $trial = $learner->learning_access_paid ? [] : ['trial_started_at'=>now(), 'trial_expires_at'=>now()->addHours(12)];
             DB::table('enrolments')->insert(['user_id'=>$learnerId, 'course_id'=>$courseId, 'cohort_id'=>$cohortId, 'created_at'=>now(), 'updated_at'=>now()] + $trial);
             if ($firstCourse) {
-                DB::table('users')->where('id', $learnerId)->update(['selected_course_id'=>$courseId, 'updated_at'=>now()]);
+                DB::table('users')->where('id', $learnerId)->update(['selected_course_id'=>$courseId, 'learner_status'=>'Active', 'updated_at'=>now()]);
             }
             // Requests sent before self-enrollment existed are settled by enrolling.
             DB::table('enrollment_requests')->where('user_id', $learnerId)->where('course_id', $courseId)->where('status', 'pending')->update(['status'=>'approved', 'decided_at'=>now(), 'updated_at'=>now()]);
