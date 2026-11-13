@@ -22,12 +22,12 @@
         <div class="grid course-grid">@forelse($enrolledCourses as $c)<article class="card">@if(!empty($c->image_path))<img class="course-card-image" src="{{ $c->image_path }}" alt="" loading="lazy">@endif<span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p>@include('portal.progress',['progressCourseId'=>$c->id])<a class="button" href="/learning/{{ $c->id }}">Continue learning</a></article>@empty<div class="empty">You are not enrolled in any course yet. Browse courses to get started.</div>@endforelse</div>
     </section>
     <section class="tab-panel" role="tabpanel" id="panel-course-catalog" aria-labelledby="tab-course-catalog">
-        @php $usedCohorts=collect($data['enrolments'])->pluck('cohort_id')->filter();$freeCohorts=collect($data['cohorts'])->reject(fn($cohort)=>$usedCohorts->contains($cohort->id))->values();$defaultCohort=auth()->user()->cohort_id; @endphp
-        <p class="muted">You can take one course in each cohort. Once you enroll, only an administrator or instructor can change your course.</p>
+        @php $usedCohorts=collect($data['enrolments'])->reject(fn($row)=>!empty($row->finished))->pluck('cohort_id')->filter();$freeCohorts=collect($data['cohorts'])->reject(fn($cohort)=>$usedCohorts->contains($cohort->id))->values();$defaultCohort=auth()->user()->cohort_id; @endphp
+        <p class="muted">You can take one course at a time in each cohort. When you finish a course you can enroll in the next one straight away; until then only an administrator or instructor can change it.</p>
         <div class="grid course-grid">@forelse($availableCourses as $c)<article class="card">@if(!empty($c->image_path))<img class="course-card-image" src="{{ $c->image_path }}" alt="" loading="lazy">@endif<span class="tag">{{ $c->level }} · {{ $c->duration_hours }} hours</span><h3>{{ $c->title }}</h3><p>{{ $c->summary }}</p>
             @if($freeCohorts->isEmpty())<p class="notice" role="status">You already have a course in every open cohort.</p>
             @else
-                <form method="post" action="/portal/enrollments" data-confirm="Enroll in {{ $c->title }}? You won't be able to switch courses in this cohort yourself.">@csrf<input type="hidden" name="course_id" value="{{ $c->id }}">
+                <form method="post" action="/portal/enrollments" data-confirm="Enroll in {{ $c->title }}? You won't be able to switch courses in this cohort yourself until you finish it.">@csrf<input type="hidden" name="course_id" value="{{ $c->id }}">
                     @if($freeCohorts->count()===1)<input type="hidden" name="cohort_id" value="{{ $freeCohorts[0]->id }}"><p><small>Cohort: {{ $freeCohorts[0]->name }}</small></p>
                     @else<div class="field"><label for="enroll-cohort-{{ $c->id }}">Cohort</label><select id="enroll-cohort-{{ $c->id }}" name="cohort_id" required><option value="">Choose a cohort</option>@foreach($freeCohorts as $cohort)<option value="{{ $cohort->id }}" @selected($cohort->id===$defaultCohort)>{{ $cohort->name }}</option>@endforeach</select></div>@endif
                     <button type="submit">Enroll</button></form>

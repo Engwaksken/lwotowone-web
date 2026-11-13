@@ -48,7 +48,7 @@ class SelfEnrollmentTest extends TestCase
         $this->assertSame($first,(int)DB::table('enrolments')->where('user_id',$learner->id)->value('cohort_id'));
 
         // Only the cohort without a course is offered.
-        $this->actingAs($learner)->get('/portal/learn')->assertOk()->assertSee('action="/portal/enrollments"',false)->assertSee('one course in each cohort')->assertSee('name="cohort_id" value="'.$second.'"',false);
+        $this->actingAs($learner)->get('/portal/learn')->assertOk()->assertSee('action="/portal/enrollments"',false)->assertSee('one course at a time in each cohort')->assertSee('name="cohort_id" value="'.$second.'"',false);
         $this->post('/portal/enrollments',['course_id'=>$poultry,'cohort_id'=>$first])->assertSessionHasErrors('cohort_id');
         $this->post('/portal/enrollments',['course_id'=>$poultry,'cohort_id'=>$second])->assertRedirect('/portal/learn')->assertSessionHasNoErrors();
 
@@ -96,7 +96,7 @@ class SelfEnrollmentTest extends TestCase
         $this->post('/profile',$profile+['selected_course_id'=>$other])->assertStatus(422);
         $this->post('/profile',$profile+['selected_course_id'=>$course])->assertRedirect();
         $this->assertSame($course,(int)$learner->fresh()->selected_course_id);
-        $this->get('/profile')->assertSee('Only an administrator or instructor can change this course');
+        $this->get('/profile')->assertSee('Finish Tailoring to choose your next course')->assertSee('only an administrator or instructor can change this course');
 
         $this->put("/admin/enrollment/learners/{$learner->id}/courses/$course",['course_id'=>$other])->assertForbidden();
         $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$course]);
@@ -196,5 +196,51 @@ class SelfEnrollmentTest extends TestCase
         $this->actingAs($learner)->post('/profile',$this->profilePayload($course))->assertRedirect()->assertSessionHas('success',fn($m)=>str_contains($m,'There is no open cohort yet'));
         $this->assertDatabaseHas('users',['id'=>$learner->id,'profile_complete'=>true]);
         $this->assertDatabaseMissing('enrolments',['user_id'=>$learner->id]);
+    }
+
+    /** Completes every published lesson of a course for the learner (the course has no assessments). */
+    private function finishCourse(User $learner, int $course): void
+    {
+        $lesson=Workflow::insert('lessons',['course_id'=>$course,'title'=>'Lesson','body'=>'Text','content_format'=>'text','content_source'=>'write','content_body'=>'Text','content_language'=>'en','position'=>1,'status'=>'published']);
+        DB::table('lesson_progress')->insert(['user_id'=>$learner->id,'lesson_id'=>$lesson,'completed_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
+    }
+
+    public function test_learner_who_finished_a_course_chooses_the_next_one_on_their_profile_and_is_enrolled_automatically(): void
+    {
+        Notification::fake();
+        $cohort=$this->cohort();$first=$this->course('Tailoring');$next=$this->course('Poultry');
+        $learner=$this->user('participant',['selected_course_id'=>$first,'email_verified_at'=>now()]);
+        $this->actingAs($learner)->post('/profile',$this->profilePayload($first))->assertRedirect('/portal/learn');
+        $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$first,'cohort_id'=>$cohort]);
+
+        // Still in progress: the course is locked.
+        $this->post('/profile',$this->profilePayload($next))->assertStatus(422);
+        $this->post('/portal/enrollments',['course_id'=>$next,'cohort_id'=>$cohort])->assertSessionHasErrors('cohort_id');
+
+        $this->finishCourse($learner,$first);
+        $this->get('/profile')->assertSee('You have finished your course')->assertSee('name="selected_course_id"',false)->assertDontSee('Finish Tailoring to choose');
+        $this->post('/profile',$this->profilePayload($next))->assertRedirect('/portal/learn')->assertSessionHas('success','Learner profile saved. You are enrolled in Poultry.');
+
+        $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$next,'cohort_id'=>$cohort]);
+        $this->assertDatabaseHas('enrolments',['user_id'=>$learner->id,'course_id'=>$first]);
+        $this->assertSame($next,(int)$learner->fresh()->selected_course_id);
+        // The new course is now the one to finish.
+        $this->post('/profile',$this->profilePayload($first))->assertStatus(422);
+    }
+
+    public function test_finished_course_frees_its_cohort_in_the_catalog(): void
+    {
+        $cohort=$this->cohort();$first=$this->course('Tailoring');$next=$this->course('Poultry');
+        $learner=$this->enrolledLearner($first,$cohort);
+        $this->actingAs($learner)->get('/portal/learn')->assertSee('You already have a course in every open cohort');
+
+        // A certificate also counts as finishing the course.
+        DB::table('course_certificates')->insert(['user_id'=>$learner->id,'course_id'=>$first,'recommended_by'=>$this->user('instructor')->id,'recommended_at'=>now(),'reference'=>'LW-T-'.uniqid(),'created_at'=>now(),'updated_at'=>now()]);
+        $this->get('/portal/learn')->assertDontSee('You already have a course in every open cohort')->assertSee('name="cohort_id" value="'.$cohort.'"',false);
+        $this->post('/portal/enrollments',['course_id'=>$next,'cohort_id'=>$cohort])->assertRedirect('/portal/learn')->assertSessionHasNoErrors();
+
+        $row=DB::table('enrolments')->where('user_id',$learner->id)->where('course_id',$next)->first();
+        $this->assertNull($row->trial_started_at,'A learner who already paid for access starts straight away.');
+        $this->assertSame($next,(int)$learner->fresh()->selected_course_id);
     }
 }

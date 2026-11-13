@@ -8,6 +8,30 @@ use Illuminate\Validation\ValidationException;
 
 class Enrollment
 {
+    /** A course is finished once all its lessons and assessments are done, or a certificate was issued for it. */
+    public static function finished(int $learnerId, int $courseId): bool
+    {
+        if (DB::table('course_certificates')->where('user_id', $learnerId)->where('course_id', $courseId)->exists()) return true;
+        $learner = \App\Models\User::find($learnerId);
+        return $learner !== null && LearningAccess::completionReady($learner, $courseId);
+    }
+
+    /**
+     * The course a learner has to finish before they can choose another one themselves, or null when they are free to choose.
+     * Learners who paid for access before enrolments were recorded keep their selected course until staff change it.
+     */
+    public static function blockingCourse(\App\Models\User $learner): ?object
+    {
+        $enrolments = DB::table('enrolments')->join('courses', 'courses.id', '=', 'enrolments.course_id')
+            ->where('enrolments.user_id', $learner->id)->orderBy('enrolments.id')->get(['courses.id', 'courses.title']);
+        if ($enrolments->isEmpty()) {
+            return $learner->learning_access_paid && $learner->selected_course_id
+                ? DB::table('courses')->where('id', $learner->selected_course_id)->first(['id', 'title'])
+                : null;
+        }
+        return $enrolments->first(fn ($course) => !self::finished((int) $learner->id, (int) $course->id));
+    }
+
     public function confirm(int $learnerId, int $cohortId, int $actorId, ?int $courseId=null): bool
     {
         return DB::transaction(function () use ($learnerId, $cohortId, $actorId, $courseId) {
@@ -45,7 +69,8 @@ class Enrollment
 
     /**
      * Enrolls a learner in the course they selected (at sign-up or on their profile), under their own cohort
-     * when it is open, otherwise the newest open cohort. Returns [course title, null] on success,
+     * when it is open, otherwise the newest open cohort. This runs when the profile is first complete and again
+     * whenever a learner who has finished their course picks the next one. Returns [course title, null] on success,
      * or [null, reason] when it could not be done, so the learner can enroll from the course catalog instead.
      */
     public function enrollInSelectedCourse(\App\Models\User $learner): array
@@ -65,7 +90,8 @@ class Enrollment
 
     /**
      * A learner enrolls themselves in a course under an active cohort.
-     * A learner takes one course per cohort; only admins and instructors can change it afterwards.
+     * A learner takes one unfinished course per cohort; only admins and instructors can change it before it is finished.
+     * Once it is finished the learner can enroll in another course, in the same cohort or another.
      * Learners who have already paid for programme access start straight away; others get the usual trial.
      */
     public function selfEnroll(int $learnerId, int $courseId, int $cohortId): void
@@ -85,15 +111,16 @@ class Enrollment
             if (DB::table('enrolments')->where('user_id', $learnerId)->where('course_id', $courseId)->exists()) {
                 throw ValidationException::withMessages(['course_id'=>'You are already enrolled in this course.']);
             }
-            $this->ensureCohortFree($learnerId, $cohortId, 'cohort_id', 'You are already taking %s in this cohort. Ask an administrator or instructor if you need to change your course.');
+            $this->ensureCohortFree($learnerId, $cohortId, 'cohort_id', 'You are still taking %s in this cohort. Finish it before enrolling in another course, or ask an administrator or instructor to change it.');
             if ($course->prerequisite_course_id && !LearningAccess::completionReady(\App\Models\User::find($learnerId), (int) $course->prerequisite_course_id)) {
                 $title = DB::table('courses')->where('id', $course->prerequisite_course_id)->value('title');
                 throw ValidationException::withMessages(['course_id'=>"Finish {$title} before enrolling in this course."]);
             }
-            $firstCourse = !DB::table('enrolments')->where('user_id', $learnerId)->exists();
+            // The new course becomes the learner's current one when they have no other course still in progress.
+            $current = self::blockingCourse(\App\Models\User::find($learnerId)) === null;
             $trial = $learner->learning_access_paid ? [] : ['trial_started_at'=>now(), 'trial_expires_at'=>now()->addHours(12)];
             DB::table('enrolments')->insert(['user_id'=>$learnerId, 'course_id'=>$courseId, 'cohort_id'=>$cohortId, 'created_at'=>now(), 'updated_at'=>now()] + $trial);
-            if ($firstCourse) {
+            if ($current) {
                 DB::table('users')->where('id', $learnerId)->update(['selected_course_id'=>$courseId, 'learner_status'=>'Active', 'updated_at'=>now()]);
             }
             // Requests sent before self-enrollment existed are settled by enrolling.
@@ -102,15 +129,16 @@ class Enrollment
         });
     }
 
-    /** Throws when the learner already has a course (other than $exceptCourseId) in the cohort. */
+    /** Throws when the learner already has an unfinished course (other than $exceptCourseId) in the cohort. */
     private function ensureCohortFree(int $learnerId, int $cohortId, string $field, string $message, ?int $exceptCourseId=null): void
     {
         $taken = DB::table('enrolments')->join('courses', 'courses.id', '=', 'enrolments.course_id')
             ->where('enrolments.user_id', $learnerId)->where('enrolments.cohort_id', $cohortId)
             ->when($exceptCourseId, fn($q)=>$q->where('enrolments.course_id', '!=', $exceptCourseId))
-            ->value('courses.title');
+            ->get(['courses.id', 'courses.title'])
+            ->first(fn ($course) => !self::finished($learnerId, (int) $course->id));
         if ($taken !== null) {
-            throw ValidationException::withMessages([$field=>sprintf($message, $taken)]);
+            throw ValidationException::withMessages([$field=>sprintf($message, $taken->title)]);
         }
     }
 

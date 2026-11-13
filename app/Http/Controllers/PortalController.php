@@ -27,7 +27,7 @@ class PortalController extends Controller {
   public function section(Request $r,string $section){
      abort_unless(in_array($section,['learn','practice','mentorship','opportunities','enterprise','events','notifications','profile','payment']),404);
      abort_unless($r->user()->role==='participant'||$section==='profile',403);
-      if($section==='profile'){$courses=DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title','title_lg']);if($r->user()->preferred_language==='lg')$courses->each(fn($course)=>\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg']));return view('portal.profile',['user'=>$r->user(),'courses'=>$courses,'settlements'=>DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name'])]);}
+      if($section==='profile'){$courses=DB::table('courses')->where('status','published')->orderBy('title')->get(['id','title','title_lg']);if($r->user()->preferred_language==='lg')$courses->each(fn($course)=>\App\Services\LearnerContent::useLuganda($course,['title'=>'title_lg']));return view('portal.profile',['user'=>$r->user(),'courses'=>$courses,'blockingCourse'=>$r->user()->role==='participant'?\App\Services\Enrollment::blockingCourse($r->user()):null,'hasEnrolments'=>DB::table('enrolments')->where('user_id',$r->user()->id)->exists(),'settlements'=>DB::table('mel_settlements')->where('active',true)->orderBy('name')->get(['id','name'])]);}
     if($section==='payment')return view('portal.payment',['user'=>$r->user(),'gateways'=>DB::table('payment_gateways')->where('active',true)->orderBy('name')->get()]);
     abort_unless($r->user()->profile_complete,403,'Complete your learner profile first.');
      if($section==='learn'&&!$r->user()->learningAccessOpen()&&!DB::table('enrolments')->where('user_id',$r->user()->id)->exists())return redirect('/portal/payment');
@@ -71,7 +71,7 @@ class PortalController extends Controller {
     return view('portal.section',['section'=>$section,'data'=>$snapshot,'earnings'=>$earnings,
       'practiceLogs'=>$practiceLogs,'practiceFilters'=>$practiceFilters]);
   }
-  /** Learners enroll themselves: one course per cohort, and only staff can change it afterwards. */
+  /** Learners enroll themselves: one unfinished course per cohort; only staff can change a course before it is finished. */
   public function enroll(Request $r){
     abort_unless($r->user()->role==='participant',403,'Participant access required.');
     $d=$r->validate(['course_id'=>'required|integer|exists:courses,id','cohort_id'=>'nullable|integer|exists:mel_cohorts,id']);
@@ -170,17 +170,20 @@ class PortalController extends Controller {
       $r->user()->update($d);return ['ok'=>true];
      }
       $d=$r->validate(['name'=>'required|string|max:100','phone'=>'required|string|max:40','selected_course_id'=>'required|integer|exists:courses,id','gender'=>'required|in:Female,Male,Other,Prefer not to say','location'=>'required|string|max:255','urban_rural'=>'required|in:Urban,Rural','learner_age'=>'required|integer|min:10|max:100','refugee'=>'required|boolean','settlement_id'=>'exclude_unless:refugee,1|required|integer|exists:mel_settlements,id','pwd'=>'required|boolean','impairment'=>'exclude_unless:pwd,1|required|in:Physical,Visual,Hearing,Speech,Intellectual,Psychosocial,Multiple,Other','education_level'=>"required|in:No formal education,Primary,O-Level,A-Level,Certificate,Diploma,Bachelor's degree,Postgraduate,Other",'employed'=>'required|boolean','employer_name'=>'exclude_unless:employed,1|required|string|max:255','transformation_objective'=>'nullable|string|max:5000']);
-     $courseLocked=$r->user()->learning_access_paid||DB::table('enrolments')->where('user_id',$r->user()->id)->exists();
+     // The course choice is locked only while the learner still has a course to finish.
+     $blocking=\App\Services\Enrollment::blockingCourse($r->user());$courseLocked=$blocking!==null;
      $sameCourse=(int)$r->user()->selected_course_id===(int)$d['selected_course_id'];
-     abort_unless(($courseLocked&&$sameCourse)||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
-     abort_unless(!$courseLocked||$sameCourse,422,'Only an administrator or instructor can change your course.');
+     $enrolledInSame=$sameCourse&&DB::table('enrolments')->where('user_id',$r->user()->id)->where('course_id',$d['selected_course_id'])->exists();
+     abort_unless(($sameCourse&&($courseLocked||$enrolledInSame))||DB::table('courses')->where('id',$d['selected_course_id'])->where('status','published')->exists(),422,'Select an available course.');
+     abort_unless(!$courseLocked||$sameCourse,422,"Finish {$blocking?->title} before choosing another course. Only an administrator or instructor can change a course you have not finished.");
      $d['settlement']=!empty($d['settlement_id'])?DB::table('mel_settlements')->where('id',$d['settlement_id'])->where('active',true)->value('name'):null;
      abort_unless(empty($d['settlement_id'])||$d['settlement']!==null,422,'Select a current settlement.');
      unset($d['settlement_id']);$d['pwd']=(bool)$d['pwd'];$d['refugee']=(bool)$d['refugee'];
      if(!$d['pwd'])$d['impairment']=null;
      $d['employed']=(bool)$d['employed'];if(!$d['employed'])$d['employer_name']=null;
      $d['learner_status']='Active';$d['profile_complete']=true;$r->user()->update($d);
-     // Enroll the learner in the course they chose when they signed up, the first time their profile is complete.
+     // Enroll the learner in their chosen course automatically: the first time their profile is complete,
+     // and again whenever they finish a course and choose the next one.
      [$enrolled,$problem]=$courseLocked?[null,null]:app(\App\Services\Enrollment::class)->enrollInSelectedCourse($r->user()->fresh());
      if($r->is('api/*'))return ['ok'=>true,'enrolled_course'=>$enrolled,'enrollment_message'=>$problem];
      if($enrolled)return redirect('/portal/learn')->with('success',"Learner profile saved. You are enrolled in {$enrolled}.");

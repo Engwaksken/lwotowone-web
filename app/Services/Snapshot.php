@@ -32,6 +32,8 @@ class Snapshot {
   $out['mentors']=User::where('role','mentor')->where('status','active')->get(['id','name','bio','expertise']);
   foreach(['enrolments','lesson_progress','submissions','practice_logs','bookings','applications','enterprises','transactions','event_registrations'] as $t)$out[$t]=DB::table($t)->where('user_id',$u->id)->orderByDesc('id')->get()->map(function($r)use($t){if($t==='submissions')unset($r->file_path);if($t==='bookings'){$slot=DB::table('slots')->find($r->slot_id);$r->session_title=$slot?->title;$r->starts_at=$slot?->starts_at;$r->ends_at=$slot?->ends_at;$r->location=$slot?->location;$r->mode=$slot?->mode;$r->mentor_name=User::find($slot?->mentor_id)?->name;}return $r;});
   $currency=DB::table('payment_gateways')->where('active',true)->orderBy('name')->value('currency')??'UGX';$out['events']=$out['events']->map(function($event)use($currency){$event->registration_open=now()->lt($event->starts_at);$event->fee_due=(float)($event->payment_amount??0)>0&&!FreeAccess::active();$event->currency=$currency;return $event;});
+   // A finished course frees its cohort, so the learner can enroll in the next course there.
+   $out['enrolments']->each(function($row){$row->finished=\App\Services\Enrollment::finished((int)$row->user_id,(int)$row->course_id);});
    $out['course_progress']=LearningProgress::fromSnapshot($out);
    $out['course_access']=collect($out['enrolments'])->map(fn($row)=>['course_id'=>$row->course_id,'allowed'=>$access[$row->course_id]??false,'trial_expires_at'=>$row->trial_expires_at,'paid'=>(bool)$row->payment_confirmed_at])->all();
    $out['enrollment_requests']=DB::table('enrollment_requests')->where('user_id',$u->id)->get(['course_id','status','message','decision_note','updated_at']);
